@@ -177,6 +177,21 @@ def nearest(*args):
     return _bpfconstr('nearest', *args)
 
 
+def smooth(*args):
+    # type: (*Any) -> core.Smooth
+    X, Y, kws = parseargs(*args)
+    return core.Smooth(X, Y)
+
+def recurse(N, bpf):
+    if isinstance(N, int):
+        out = bpf
+        for _ in range(N):
+            out = out | bpf
+        return out
+    else:
+        raise TypeError("bpf: expected a BPF")
+
+
 def multi(*args):
     """
     Example: define the following BPF  

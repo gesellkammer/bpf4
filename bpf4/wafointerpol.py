@@ -12,8 +12,7 @@ from scipy.interpolate import PiecewisePolynomial
 import pylab as plb
 from numpy import pi, any, all, array, asarray, r_, dot, sign, conj, inf
 from scipy.misc.common import pade
-from six.moves import range
-from six.moves import zip
+
 
 __all__ = ['PPform', 'savitzky_golay', 'savitzky_golay_piecewise', 'sgolay2d','SmoothSpline', 
            'slopes','pchip_slopes','slopes2','stineman_interp', 'Pchip','StinemanInterp', 'CubicHermiteSpline']

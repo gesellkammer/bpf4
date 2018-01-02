@@ -29,7 +29,8 @@ _CONSTRUCTORS = {
     'nearest': core.Nearest,
     'halfcos2m': core.Halfcos2m,
     'halfcosexpm': core.HalfcosExpm,
-    'halfcosm': core.HalfcosExpm
+    'halfcosm': core.HalfcosExpm,
+    'smooth': core.Smooth
 }
 
 

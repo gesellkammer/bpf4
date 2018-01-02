@@ -119,13 +119,28 @@ class BpfInversionError(ValueError): pass
 cdef inline double _interpol_linear(double x, double x0, double y0, double x1, double y1, double unused0) nogil:
     return y0 + (y1 - y0) * ((x - x0) / (x1 - x0))
 
+@cython.cdivision(True)
+cdef inline double intrp_linear(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
+    return y0 + (y1 - y0) * ((x - x0) / (x1 - x0))
+
+
 cdef inline double _interpol_nointerpol(double x, double x0, double y0, double x1, double y1, double unused0) nogil:
     return y0 if x < x1 else y1
+
+cdef inline double intrp_nointerpol(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
+    return y0 if x < x1 else y1
+
 
 cdef inline double _interpol_nearest(double x, double x0, double y0, double x1, double y1, double unused0) nogil:
     if (x - x0) <= (x1 - x):
         return y0
     return y1
+
+cdef inline double intrp_nearest(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
+    if (x - x0) <= (x1 - x):
+        return y0
+    return y1
+
 
 @cython.cdivision(True)
 cdef inline double _interpol_halfcos(double x, double x0, double y0, double x1, double y1, double unused0) nogil:
@@ -134,11 +149,36 @@ cdef inline double _interpol_halfcos(double x, double x0, double y0, double x1, 
     return y0 + ((y1 - y0) * (1 + cos(dx)) / 2.0)
 
 @cython.cdivision(True)
+cdef inline double intrp_halfcos(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
+    cdef double dx
+    cdef double x1x0 = x1 - x0
+    cdef double y1y0 = y1 - y0
+    cdef int i
+    for i in range(self.numiter):
+        dx = ((x - x0) / x1x0) * 3.14159265358979323846 + 3.14159265358979323846
+        x = y0 + (y1y0 * (1 + cos(dx)) / 2.0)
+    return x
+
+
+@cython.cdivision(True)
 cdef inline double _interpol_halfcosexp(double x, double x0, double y0, double x1, double y1, double exp) nogil:
     cdef double dx
     dx = pow((x - x0) / (x1 - x0), exp)
     dx = (dx + 1.0) * 3.14159265358979323846
     return y0 + ((y1 - y0) * (1 + cos(dx)) / 2.0)
+
+@cython.cdivision(True)
+cdef inline double intrp_halfcosexp(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
+    cdef double dx
+    cdef double x1x0 = x1 - x0
+    cdef double y1y0 = y1 - y0
+    cdef int i
+    cdef double exp = self.exp
+    for i in range(self.numiter):
+        dx = pow((x - x0) / x1x0, exp)
+        dx = (dx + 1.0) * 3.14159265358979323846
+        x = y0 + (y1y0 * (1 + cos(dx)) / 2.0)
+    return x
 
 @cython.cdivision(True)
 cdef inline double _interpol_halfcosexpm(double x, double x0, double y0, double x1, double y1, double exp) nogil:
@@ -169,7 +209,22 @@ cdef inline double _interpol_expon(double x, double x0, double y0, double x1, do
     return y0 + pow(dx, exp) * (y1 - y0)
 
 @cython.cdivision(True)
+cdef inline double intrp_expon(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
+    cdef double exp = self.exp
+    cdef double dx = (x - x0) / (x1 - x0)
+    return y0 + pow(dx, exp) * (y1 - y0)
+
+
+@cython.cdivision(True)
 cdef inline double _interpol_exponm(double x, double x0, double y0, double x1, double y1, double exp) nogil:
+    if y1 < y0:
+        exp = 1/exp
+    cdef double dx = (x - x0) / (x1 - x0)
+    return y0 + pow(dx, exp) * (y1 - y0)
+
+@cython.cdivision(True)
+cdef inline double intrp_exponm(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
+    cdef double exp = self.exp
     if y1 < y0:
         exp = 1/exp
     cdef double dx = (x - x0) / (x1 - x0)
@@ -202,14 +257,19 @@ cdef inline double _interpol_fib(double x, double x0, double y0, double x1, doub
     cdef double dx3 = (dx2 - 102334155) / (165580141)
     return y0 + (y1 - y0) * dx3
 
-def interp_fib(double x, double x0, double y0, double x1, double y1):
+@cython.cdivision(True)
+cdef inline double intrp_fib(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
     """
     fibonacci interpolation. it is assured that if x is equidistant to
     x0 and x1, then for the result y it should be true that
 
     y1 / y == y / y0 == ~0.618
     """
-    return _interpol_fib(x, x0, y0, x1, y1, 0)
+    cdef double dx = (x - x0) / (x1 - x0)
+    cdef double dx2 = _fib(40 + dx * 2)
+    cdef double dx3 = (dx2 - 102334155) / (165580141)
+    return y0 + (y1 - y0) * dx3
+
 
 @cython.cdivision(True)
 cdef inline double _interpol_smooth(double x, double x0, double y0, double x1, double y1, double unused0) nogil:
@@ -225,6 +285,21 @@ cdef inline double _interpol_smooth(double x, double x0, double y0, double x1, d
     v = v*v*(3 - 2*v)
     return y0 + (y1 - y0) * v
     
+@cython.cdivision(True)
+cdef inline double intrp_smooth(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
+    """
+    #define SMOOTHSTEP(x) (x) * (x) * (3 - 2 * x)
+    for (i = 0; i < N; i++) {
+      v = i / N;
+      v = SMOOTHSTEP(v);
+      X = (A * v) + (B * (1 - v));
+    }   --> http://sol.gfxile.net/interpolation/
+    """
+    cdef double v = (x - x0)/(x1 - x0)
+    v = v*v*(3 - 2*v)
+    return y0 + (y1 - y0) * v
+
+
 @cython.cdivision(True)
 cdef inline double _integr_trapz(double *xs, int xs_size, double dx) nogil:
     """
@@ -379,6 +454,7 @@ ctypedef struct InterpolFunc
 ctypedef struct InterpolFunc:
     t_func func
     double exp
+    int numiter
     double mix
     InterpolFunc* blend_func
     char *name
@@ -402,6 +478,8 @@ cdef inline InterpolFunc* InterpolFunc_new(t_func func, double exp, char *name, 
     InterpolFunc_init_with_name(out, func, exp, name, needs_free)
     return out
 
+
+
 cdef inline InterpolFunc* InterpolFunc_new_blend(t_func func0, double exp0, t_func func1, double exp1, double mix):
     cdef InterpolFunc* out, 
     cdef InterpolFunc* blend
@@ -422,15 +500,15 @@ cdef inline InterpolFunc* InterpolFunc_new_blend_from_descr(descr0, descr1, doub
     out.mix = mix
     return out
 
-cdef InterpolFunc* InterpolFunc_new_from_descriptor(descr):
+cdef InterpolFunc* InterpolFunc_new_from_descriptor(str descr):
     cdef InterpolFunc* out = NULL
     cdef double exp = 1.0
+    cdef str func_name
     if "(" in descr:
         func_name, param = descr.split("(")
         exp = float(param[:len(param)-1])
     else:
         func_name = descr
-    func_name = func_name.lower()
     if func_name == 'linear':
         out = InterpolFunc_linear
     elif func_name == 'expon':
@@ -448,8 +526,10 @@ cdef InterpolFunc* InterpolFunc_new_from_descriptor(descr):
         out = InterpolFunc_nointerpol
     elif func_name == 'fib':
         out = InterpolFunc_fib
-    else:
-        out = NULL
+    elif func_name == 'nearest':
+        out = InterpolFunc_nearest
+    elif func_name == 'smooth':
+        out = InterpolFunc_smooth
     return out
 
 cdef inline double InterpolFunc_call(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
@@ -475,7 +555,7 @@ cdef inline str InterpolFunc_get_descriptor(InterpolFunc *self):
         return self.name   
 
 # create the most used interpolation functions, which are shared across BPFs
-cdef InterpolFunc* InterpolFunc_linear       = InterpolFunc_new(_interpol_linear,  1.0, 'linear',  0)
+cdef InterpolFunc* _InterpolFunc_linear       = InterpolFunc_new(_interpol_linear,  1.0, 'linear',  0)
 cdef InterpolFunc* InterpolFunc_halfcos      = InterpolFunc_new(_interpol_halfcos, 1.0, 'halfcos', 0)
 cdef InterpolFunc* InterpolFunc_nointerpol   = InterpolFunc_new(_interpol_nointerpol,  1.0, 'nointerpol',  0)
 cdef InterpolFunc* InterpolFunc_fib          = InterpolFunc_new(_interpol_fib,  1.0, 'fib',  0)
@@ -1925,6 +2005,7 @@ cdef class Halfcos2m(Halfcos2):
     def __init__(self, xs, ys, double exp):
         _BpfBase.__init__(self, xs, ys)
         self.interpol_func = InterpolFunc_new(_interpol_halfcos2m, exp, 'halfcos2m', 1)  # must be freed
+
 
 cdef class _BlendShape(_BpfBase):
    def __init__(self, xs, ys, shape0, shape1, double mix):

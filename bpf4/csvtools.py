@@ -3,8 +3,7 @@ import csv as _csv
 import os as _os
 from fractions import Fraction as _Fraction
 from collections import namedtuple as _namedtuple
-import six
-from six.moves import map
+
 
 def _could_be_number(s, accept_fractions=False):
     try:
@@ -124,7 +123,6 @@ def readcsv(csvfile, rowname=None, transform_numbers=True, astuple=False, prefer
     for row in r:
         if transform_numbers:
             row = [_as_number_if_possible(cell, accept_fractions=prefer_fractions) for cell in row]
-            #row = map(_to_number, row)
         if not astuple:
             if len(row) == numcolumns:
                 rows.append(Row(*row))
@@ -163,7 +161,7 @@ def writecsv(namedtuples, outfile, column_names=None, write_row_name=False):
         def parse_fraction(cell):
             if isinstance(cell, Fraction):
                 return "0 %s" % str(cell)
-            elif isinstance(cell, six.string_types) and "/" in cell:
+            elif isinstance(cell, str) and "/" in cell:
                 return '"%s"' % str(cell)
             return cell
         row = list(map(parse_fraction, row))

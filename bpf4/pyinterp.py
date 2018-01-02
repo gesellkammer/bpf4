@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 from . import core
 import numpy
-import six
 OUTBOUND_CACHE = 1
 
 
@@ -21,7 +20,7 @@ class _NumpyInterp(core._FunctionWrap_Object):
         return out0
     
     def map(self, xs, out=None):
-        if isinstance(xs, six.integer_types):
+        if isinstance(xs, int):
             return self.mapn_between(xs, self.x0, self.x1)
         return self._interpolator(xs)
     
