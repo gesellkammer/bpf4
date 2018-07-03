@@ -30,8 +30,7 @@ cdef extern from "math.h":
     double tan(double x) nogil
     double sinh(double x) nogil
     double log1p(double x) nogil
-    double M_PI
-
+    
 #cdef extern from "string.h":
 #    ctypedef void* const_void_ptr "const void *"
 #    void *memcpy(void *s1, const_void_ptr s2, size_t n) nogil
@@ -41,7 +40,6 @@ from libc.stdlib cimport malloc, free # , realloc
 from libc.stdlib cimport rand, srand, RAND_MAX
 from cpython cimport PyList_GET_SIZE, PyList_GET_ITEM, PyTuple_New, PyTuple_SetItem
 cimport cython
-cimport numpy
 cimport numpy as c_numpy
 from cython.view cimport array as cvarray
 from numpy cimport (
@@ -63,12 +61,9 @@ from numpy cimport (
     )
 
 # ---------------------------- import std-lib
-import math
-import operator
+# import math
 import sys
-import time  # <--- used for calibration
 import random
-import collections as _collections
 
 # ---------------------------- import others
 import numpy
@@ -76,7 +71,7 @@ from numpy import array
 
 # ---------------------------- own imports
 from config import CONFIG
-from . import plot as _plot
+# from . import plot as _plot
 
 # ---------------------------- init
 import_array()
@@ -97,13 +92,6 @@ DEF QUAD_LIMIT = 100
 DEF SIMPSONS_ACCURACY = 1e-10
 DEF SIMPSONS_MAXITER = 100
 
-# ---------------------------- test if scipy is available
-cdef int SCIPY_AVAILABLE
-try:
-    from scipy.integrate import quad as _quad
-    SCIPY_AVAILABLE = 1
-except ImportError:
-    SCIPY_AVAILABLE = 0
 
 # -------------------------------------------------------------------
 #       ERROR TYPES
@@ -114,6 +102,7 @@ class BpfInversionError(ValueError): pass
 # -------------------------------------------------------------------
 #       INLINE FUNCS
 # -------------------------------------------------------------------
+ctypedef struct InterpolFunc
 
 @cython.cdivision(True)
 cdef inline double _interpol_linear(double x, double x0, double y0, double x1, double y1, double unused0) nogil:
@@ -129,7 +118,6 @@ cdef inline double _interpol_nointerpol(double x, double x0, double y0, double x
 
 cdef inline double intrp_nointerpol(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
     return y0 if x < x1 else y1
-
 
 cdef inline double _interpol_nearest(double x, double x0, double y0, double x1, double y1, double unused0) nogil:
     if (x - x0) <= (x1 - x):
@@ -150,14 +138,19 @@ cdef inline double _interpol_halfcos(double x, double x0, double y0, double x1, 
 
 @cython.cdivision(True)
 cdef inline double intrp_halfcos(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
-    cdef double dx
-    cdef double x1x0 = x1 - x0
-    cdef double y1y0 = y1 - y0
-    cdef int i
-    for i in range(self.numiter):
-        dx = ((x - x0) / x1x0) * 3.14159265358979323846 + 3.14159265358979323846
-        x = y0 + (y1y0 * (1 + cos(dx)) / 2.0)
-    return x
+    cdef:
+        double dx, y
+        double x1x0 = x1 - x0
+        int i
+    if self.numiter > 1:
+        for i in range(self.numiter - 1):
+            dx = (x - x0) / x1x0    
+            dx = (dx + 1) * 3.14159265358979323846
+            x = x0 + x1x0 * (1 + cos(dx)) / 2.0
+    dx = (x - x0) / x1x0    
+    dx = (dx + 1) * 3.14159265358979323846
+    y = y0 + (y1 - y0) * (1 + cos(dx)) / 2.0
+    return y
 
 
 @cython.cdivision(True)
@@ -169,17 +162,21 @@ cdef inline double _interpol_halfcosexp(double x, double x0, double y0, double x
 
 @cython.cdivision(True)
 cdef inline double intrp_halfcosexp(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
-    cdef double dx
-    cdef double x1x0 = x1 - x0
-    cdef double y1y0 = y1 - y0
-    cdef int i
-    cdef double exp = self.exp
-    for i in range(self.numiter):
-        dx = pow((x - x0) / x1x0, exp)
-        dx = (dx + 1.0) * 3.14159265358979323846
-        x = y0 + (y1y0 * (1 + cos(dx)) / 2.0)
-    return x
+    cdef:
+        double dx
+        double x1x0 = x1 - x0
+        int i
+        double exp = self.exp
+    if self.numiter > 1:
+        for i in range(self.numiter - 1):
+            dx = pow((x - x0) / x1x0, exp)    
+            dx = (dx + 1) * 3.14159265358979323846
+            x = x0 + x1x0 * (1 + cos(dx)) / 2.0
+    dx = pow((x - x0) / x1x0, exp)    
+    dx = (dx + 1) * 3.14159265358979323846        
+    return y0 + (y1 - y0) * (1 + cos(dx)) / 2.0
 
+    
 @cython.cdivision(True)
 cdef inline double _interpol_halfcosexpm(double x, double x0, double y0, double x1, double y1, double exp) nogil:
     cdef double dx
@@ -190,18 +187,29 @@ cdef inline double _interpol_halfcosexpm(double x, double x0, double y0, double 
     return y0 + ((y1 - y0) * (1 + cos(dx)) / 2.0)
 
 @cython.cdivision(True)
+cdef inline double intrp_halfcosexpm(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
+    cdef:
+        double dx
+        double x1x0 = x1 - x0
+        double exp = self.exp
+        int i
+    if y1 < y0:
+        exp = 1/exp    
+    if self.numiter > 1:
+        for i in range(self.numiter - 1):
+            dx = pow((x - x0) / x1x0, exp)    
+            dx = (dx + 1) * 3.14159265358979323846
+            x = x0 + x1x0 * (1 + cos(dx)) / 2.0
+    dx = pow((x - x0) / x1x0, exp)    
+    dx = (dx + 1) * 3.14159265358979323846        
+    return y0 + (y1 - y0) * (1 + cos(dx)) / 2.0
+
+@cython.cdivision(True)
 cdef inline double _interpol_halfcos2(double x, double x0, double y0, double x1, double y1, double exp) nogil:
     cdef double x2
     x2 = _interpol_halfcosexp(x, x0, x0, x1, x1, exp)
     return _interpol_halfcos(x2, x0, y0, x1, y1, 0)
     
-@cython.cdivision(True)
-cdef inline double _interpol_halfcos2m(double x, double x0, double y0, double x1, double y1, double exp) nogil:
-    cdef double x2
-    if y1 < y0:
-        exp = 1/exp
-    x2 = _interpol_halfcosexp(x, x0, x0, x1, x1, exp)
-    return _interpol_halfcos(x2, x0, y0, x1, y1, 0)
     
 @cython.cdivision(True)
 cdef inline double _interpol_expon(double x, double x0, double y0, double x1, double y1, double exp) nogil:
@@ -210,8 +218,16 @@ cdef inline double _interpol_expon(double x, double x0, double y0, double x1, do
 
 @cython.cdivision(True)
 cdef inline double intrp_expon(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
-    cdef double exp = self.exp
-    cdef double dx = (x - x0) / (x1 - x0)
+    cdef: 
+        double exp = self.exp
+        double dx
+        double x1x0 = x1 - x0
+        int i
+    if self.numiter > 1:
+        for i in range(self.numiter - 1):
+            dx = (x - x0) / x1x0
+            x = x0 + pow(dx, exp) * x1x0
+    dx = (x - x0) / x1x0
     return y0 + pow(dx, exp) * (y1 - y0)
 
 
@@ -224,10 +240,18 @@ cdef inline double _interpol_exponm(double x, double x0, double y0, double x1, d
 
 @cython.cdivision(True)
 cdef inline double intrp_exponm(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
-    cdef double exp = self.exp
+    cdef: 
+        double exp = self.exp
+        double dx
+        double x1x0 = x1 - x0
+        int i
     if y1 < y0:
         exp = 1/exp
-    cdef double dx = (x - x0) / (x1 - x0)
+    if self.numiter > 1:
+        for i in range(self.numiter - 1):
+            dx = (x - x0) / x1x0
+            x = x0 + pow(dx, exp) * x1x0
+    dx = (x - x0) / x1x0
     return y0 + pow(dx, exp) * (y1 - y0)
 
 cdef inline double _interpol_log(double x, double x0, double y0, double x1, double y1, double NOTUSED) nogil:
@@ -295,10 +319,21 @@ cdef inline double intrp_smooth(InterpolFunc *self, double x, double x0, double 
       X = (A * v) + (B * (1 - v));
     }   --> http://sol.gfxile.net/interpolation/
     """
-    cdef double v = (x - x0)/(x1 - x0)
+    cdef:
+        double x1x0 = x1 - x0
+        double v
+        int i
+    if self.numiter > 1:
+        for i in range(self.numiter - 1):
+            v = (x - x0) / x1x0
+            v = v*v*(3 - 2*v)
+            x = x0 + x1x0 * v
+    v = (x - x0) / x1x0
     v = v*v*(3 - 2*v)
     return y0 + (y1 - y0) * v
 
+
+# ------------------------------------------------------------------------------------------------
 
 @cython.cdivision(True)
 cdef inline double _integr_trapz(double *xs, int xs_size, double dx) nogil:
@@ -407,23 +442,25 @@ cdef inline double _ntodx(size_t n, double x0, double x1):
 cdef double _a4 = 442.0
 DEF loge_2 = 0.6931471805599453094172321214581766
 
+
+def setA4(double freq):
+    global _a4
+    _a4 = freq
+
+
 @cython.cdivision(True)
 cdef double m2f(double midinote) nogil:
     global _a4
     if 0.0 <= midinote:
-        # return _a4 * (2.0 ** ((midinote - 69.0) / 12.0))
         return _a4 * pow(2.0, (midinote - 69.0) / 12.0)
     return 0.
 
 @cython.cdivision(True)
 cdef double f2m(double freq) nogil:
     global _a4
-    if freq <= 0:
-        return 0
-    cdef double res
-    if freq < 8.2129616379875419:   # this is the corresponding freq to midi 0
-        return 0
-    return 12 * (log(freq / _a4) / loge_2) + 69.0
+    if 8.2129616379875419 < freq:    # this is the freq. of midi 0
+        return 12 * (log(freq / _a4) / loge_2) + 69.0
+    return 0
 
 # ---------------------------- TYPES
 ctypedef double(*t_unfunc)(double) nogil
@@ -448,8 +485,8 @@ UNFUNCS[:] = [
     # f2m     # 15
 ]
 
-ctypedef double(*t_func)(double, double, double, double, double, double) nogil
-ctypedef struct InterpolFunc
+ctypedef double(*t_func0)(double, double, double, double, double, double) nogil
+ctypedef double(*t_func)(InterpolFunc *, double, double, double, double, double) nogil
 
 ctypedef struct InterpolFunc:
     t_func func
@@ -461,12 +498,13 @@ ctypedef struct InterpolFunc:
     unsigned int needs_free
 
 DTYPE = numpy.float #np.float64
-ctypedef numpy.float_t DTYPE_t
+ctypedef c_numpy.float_t DTYPE_t
 
-# ---------------------------- InterpolFunc
-cdef inline void InterpolFunc_init_with_name(InterpolFunc *self, t_func func, double exp, char *name, unsigned int needs_free):
+# InterpolFunc
+cdef inline void InterpolFunc_init(InterpolFunc *self, t_func func, double exp, char *name, unsigned int needs_free):
     self.func = func
     self.exp = exp
+    self.numiter = 1
     self.mix = -1
     self.blend_func = NULL
     self.name = name
@@ -475,32 +513,17 @@ cdef inline void InterpolFunc_init_with_name(InterpolFunc *self, t_func func, do
 cdef inline InterpolFunc* InterpolFunc_new(t_func func, double exp, char *name, unsigned int needs_free):
     cdef InterpolFunc* out
     out = <InterpolFunc *>malloc(sizeof(InterpolFunc))
-    InterpolFunc_init_with_name(out, func, exp, name, needs_free)
+    InterpolFunc_init(out, func, exp, name, needs_free)
     return out
 
-
-
-cdef inline InterpolFunc* InterpolFunc_new_blend(t_func func0, double exp0, t_func func1, double exp1, double mix):
-    cdef InterpolFunc* out, 
-    cdef InterpolFunc* blend
-    out = InterpolFunc_new(func0, exp0, "", 1)
-    blend = InterpolFunc_new(func1, exp1, "", 1)
+cdef inline InterpolFunc* InterpolFunc_new_blend_from_descr(str descr0, str descr1, double mix):
+    cdef InterpolFunc* out = InterpolFunc_new_from_descriptor(descr0, 1)  # force new 
+    cdef InterpolFunc* blend = InterpolFunc_new_from_descriptor(descr1, 1)  # force new
     out.blend_func = blend
     out.mix = mix
     return out
 
-cdef inline InterpolFunc* InterpolFunc_new_blend_from_descr(descr0, descr1, double mix):
-    cdef InterpolFunc* out
-    cdef InterpolFunc* blend
-    out = InterpolFunc_new_from_descriptor(descr0)
-    blend = InterpolFunc_new_from_descriptor(descr1)
-    if out is NULL or blend is NULL:
-        return NULL
-    out.blend_func = blend
-    out.mix = mix
-    return out
-
-cdef InterpolFunc* InterpolFunc_new_from_descriptor(str descr):
+cdef InterpolFunc* InterpolFunc_new_from_descriptor(str descr, int forcenew=0):
     cdef InterpolFunc* out = NULL
     cdef double exp = 1.0
     cdef str func_name
@@ -510,18 +533,19 @@ cdef InterpolFunc* InterpolFunc_new_from_descriptor(str descr):
     else:
         func_name = descr
     if func_name == 'linear':
-        out = InterpolFunc_linear
+        if not forcenew:
+            out = InterpolFunc_linear
+        else:
+            out = InterpolFunc_new(intrp_linear, 1, '', 1)
     elif func_name == 'expon':
-        out = InterpolFunc_new(_interpol_expon, exp, 'expon', 1)
+        out = InterpolFunc_new(intrp_expon, exp, 'expon', 1)
     elif func_name == 'halfcos':
-        if exp == 1.0:
+        if exp == 1.0 and not forcenew:
             out = InterpolFunc_halfcos
         else:
-            out = InterpolFunc_new(_interpol_halfcosexp, exp, 'halfcosexp', 1)
+            out = InterpolFunc_new(intrp_halfcosexp, exp, 'halfcosexp', 1)
     elif func_name == 'halfcosexp':
-        out = InterpolFunc_new(_interpol_halfcosexp, exp, 'halfcosexp', 1)
-    elif func_name == 'halfcos2':
-        out = InterpolFunc_new(_interpol_halfcos2, exp, 'halfcos2', 1)
+        out = InterpolFunc_new(intrp_halfcosexp, exp, 'halfcosexp', 1)
     elif func_name == 'nointerpol':
         out = InterpolFunc_nointerpol
     elif func_name == 'fib':
@@ -534,12 +558,16 @@ cdef InterpolFunc* InterpolFunc_new_from_descriptor(str descr):
 
 cdef inline double InterpolFunc_call(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
     cdef double v0, v1
-    if self.mix == -1:
-        return self.func(x, x0, y0, x1, y1, self.exp)
+    if self.mix <= 0:
+        return self.func(self, x, x0, y0, x1, y1)
     else:
-        v0 = self.func(x, x0, y0, x1, y1, self.exp)
-        v1 = self.blend_func.func(x, x0, y0, x1, y1, self.blend_func.exp) # the blend_func cannot be itself a blend
+        v0 = self.func(self, x, x0, y0, x1, y1)
+        v1 = self.blend_func.func(self.blend_func, x, x0, y0, x1, y1)
         return v0 * (1 - self.mix) + v1 * self.mix
+
+#cdef inline double InterpolFunc_call(InterpolFunc *self, double x, double x0, double y0, double x1, double y1) nogil:
+#    cdef double y = self.func(self, x, x0, y0, x1, y1)
+#    return y
 
 cdef inline void InterpolFunc_free(InterpolFunc *self):
     if self is not NULL:
@@ -555,15 +583,13 @@ cdef inline str InterpolFunc_get_descriptor(InterpolFunc *self):
         return self.name   
 
 # create the most used interpolation functions, which are shared across BPFs
-cdef InterpolFunc* _InterpolFunc_linear       = InterpolFunc_new(_interpol_linear,  1.0, 'linear',  0)
-cdef InterpolFunc* InterpolFunc_halfcos      = InterpolFunc_new(_interpol_halfcos, 1.0, 'halfcos', 0)
-cdef InterpolFunc* InterpolFunc_nointerpol   = InterpolFunc_new(_interpol_nointerpol,  1.0, 'nointerpol',  0)
-cdef InterpolFunc* InterpolFunc_fib          = InterpolFunc_new(_interpol_fib,  1.0, 'fib',  0)
-cdef InterpolFunc* InterpolFunc_nearest      = InterpolFunc_new(_interpol_nearest,  1.0, 'nearest',  0)
-cdef InterpolFunc* InterpolFunc_smooth   = InterpolFunc_new(_interpol_smooth, 1.0, 'smooth', 0)
-
-cdef double radians(double deg) nogil:
-    return fmod(deg, 360) / 180 * M_PI
+# cdef InterpolFunc* InterpolFunc_linear  = InterpolFunc_new(_interpol_linear,  1.0, 'linear',  0)
+cdef InterpolFunc* InterpolFunc_linear    = InterpolFunc_new(intrp_linear, 1.0, 'linear',  0)
+cdef InterpolFunc* InterpolFunc_halfcos    = InterpolFunc_new(intrp_halfcos, 1.0, 'halfcos', 0)
+cdef InterpolFunc* InterpolFunc_nointerpol = InterpolFunc_new(intrp_nointerpol,  1.0, 'nointerpol',  0)
+cdef InterpolFunc* InterpolFunc_fib       = InterpolFunc_new(intrp_fib,  1.0, 'fib',  0)
+cdef InterpolFunc* InterpolFunc_nearest   = InterpolFunc_new(intrp_nearest,  1.0, 'nearest',  0)
+cdef InterpolFunc* InterpolFunc_smooth    = InterpolFunc_new(intrp_smooth, 1.0, 'smooth', 0)
 
 cdef inline ndarray EMPTY1D(int size): #new_empty_doublearray_1D(int size):
     cdef npy_intp *dims = [size]
@@ -576,59 +602,35 @@ DEF INFNEG = float('-inf')
 cdef double MAX_FLOAT = 3.40282346638528860e+38
 CONST_XS_FOR_RENDERING = numpy.linspace(0., 1., NUM_XS_FOR_RENDERING)
 DEF NOCOPY = False
+
 # behaviour for cropping
 DEF OUTBOUND_DEFAULT    = -1
 DEF OUTBOUND_DONOTHING  = 0     # do nothing, just return the value of the original bpf. in this case, cropping only sets the bounds
 DEF OUTBOUND_CACHE      = 1     # cache the value of the bpf at creation time and return this value outside the bounds
 DEF OUTBOUND_SET        = 2     # set the value outside the bounds
 
-cdef int _numpy_issorted(c_numpy.ndarray[DTYPE_t, ndim=1] xs):
+
+cpdef int _array_issorted(double[:] xs):
+    """
+    Returns:
+       -1 - not sorted
+        0 - array is sorted, with dups
+        1 - array is sorted, no dups
+
+    """
     cdef int i
-    cdef int imax = xs.shape[0] # PyArray_DIM(xs, 0)
-    cdef double maxx = INFNEG
-    cdef DTYPE_t *data
-    cdef double x
-    cdef double[:] xsv
-    # if xs.flags.c_contiguous:
-    if PyArray_ISCONTIGUOUS(xs):
-        data = <DTYPE_t *>(xs.data)
-        with nogil:
-            for i in range(imax):
-                x = data[i]
-                if x <= maxx:
-                    return 0
-                maxx = x
-    else:  # generic iteration
-        xsv = xs
-        with nogil:
-            for i in range(imax):
-                x = xsv[i]
-                if x <= maxx:
-                    return 0
-                maxx = x
-    return 1
-
-
-# cpdef int array_is_sorted(double [:]xs, int allowduplicates=0) nogil:
-#     """
-#     xs: a (numpy) array of double
-#     """
-#     cdef double x0 = INFNEG
-#     cdef double x
-#     if not allowduplicates:
-#         for i in range(xs.shape[0]):
-#             x = xs[i]
-#             if x < x0:
-#                 return 0
-#             x0 = x
-#         return 1        
-#     else:
-#         for i in range(xs.shape[0]):
-#             x = xs[i]
-#             if x <= x0:
-#                 return 0
-#             x0 = x
-#         return 1
+    cdef double x0, x1
+    cdef int nodups = 1
+    x1 = xs[0]
+    with nogil:
+        for i in range(1, xs.shape[0]):
+            x0 = x1
+            x1 = xs[i]
+            if x1 < x0:
+                return -1
+            elif x1 == x0:
+                nodups = 0
+    return nodups
 
 
 cdef inline int _searchsorted(double [:]xs, double x) nogil:
@@ -730,10 +732,8 @@ cdef _BpfInterface _as_bpf(obj):
         else:
             return None
 
-# ----------------------------------------------------------
-# ----------------------------------------------------------
-# -------    BpfInterface   --------------------------------
-# ----------------------------------------------------------
+# ~~~~~~~~~~~~~~~~~~~ BpfInterface ~~~~~~~~~~~~~~~~~~~~~
+
 cdef class _BpfInterface:
     cdef double _x0, _x1
     cdef int _integration_mode  # 0: dont use scipy, 1: use scipy, -1: calibrate
@@ -848,37 +848,46 @@ cdef class _BpfInterface:
             if callable(a):
                 return _BpfLambdaPow(_FunctionWrap(a), b, b.bounds())
             return _BpfLambdaRPowConst(b, a, (INFNEG, INF))
+        return NotImplemented
+
     def __neg__(self):
         return self * -1
+    
     def __mod__(self, other):
         return _create_lambda(self, other, _BpfLambdaMod, _BpfLambdaModConst)
+    
     def __abs__(self):
         return self.abs()
+    
     def __or__(a, b):
+        """
+        a | b
+        """
         if isinstance(a, _BpfInterface) and isinstance(b, _BpfInterface):
             out = _BpfCompose_new(a, b)
         elif isinstance(a, _BpfInterface) and callable(b):
             out = _BpfCompose_new(a, _FunctionWrap(b))
-        elif callable(b) and isinstance(a, _BpfInterface):
-            out = _BpfCompose_new(_FunctionWrap(b, bounds=(a.x0, a.x1)), a)
+        elif callable(a) and isinstance(b, _BpfInterface):
+            out = _BpfCompose_new(_FunctionWrap(b), a)
         else:
-            raise ValueError
+            return NotImplemented 
         return out
+    
     def __rshift__(a, b):
         if isinstance(a, _BpfInterface):
             return a.shifted(b)
-        else:
-            raise NotImplementedError
+        return NotImplemented
+
     def __lshift__(a, b):
         if isinstance(a, _BpfInterface):
             return a.shifted(-b)
-        else:
-            raise NotImplementedError
+        return NotImplemented
+        
     def __xor__(a, b): # ^
         if isinstance(a, _BpfInterface):
             return a.stretched(b)
-        else:
-            raise NotImplementedError
+        return NotImplemented
+
     def __richcmp__(_BpfInterface self, other, int t):
         if t == 0:      # <
             return _create_lambda(self, other, _BpfLambdaLowerThan, _BpfLambdaLowerThanConst)
@@ -905,7 +914,6 @@ cdef class _BpfInterface:
             n = NUM_XS_FOR_RENDERING
         xs = self._get_xs_for_rendering(n)
         ys = self.map(xs)
-        #ys = self.mapn_between(len(xs), xs[0], xs[n-1])
         return xs, ys
     
     def render(self, xs, interpolation='linear'):
@@ -945,7 +953,8 @@ cdef class _BpfInterface:
         """
         cdef int n = keys.pop('n', -1)
         xs, ys = self._get_points_for_rendering(n)
-        _plot.plot_coords(xs, ys, **keys)
+        from . import plot
+        plot.plot_coords(xs, ys, **keys)
         return self
     
     cpdef _BpfInterface sampled(self, double dx, interpolation='linear'):
@@ -1013,6 +1022,8 @@ cdef class _BpfInterface:
         >>> out = thisbpf.mapn_between(100, 0, 10, out)   # <--- this is the right way to pass a result array
         """
         cdef ndarray[DTYPE_t, ndim=1] X = numpy.linspace(x0, x1, n)
+        if out is None:
+            out = X
         return self.map(X, out=out)
 
     cpdef ndarray map(self, xs, ndarray out=None):
@@ -1037,66 +1048,25 @@ cdef class _BpfInterface:
         """
         cdef ndarray [DTYPE_t, ndim=1] _xs
         cdef ndarray [DTYPE_t, ndim=1] result
-        cdef DTYPE_t *data1
         cdef DTYPE_t *data0
-        cdef list xs_as_list
-        cdef tuple xs_as_tuple
         cdef int i, nx
         cdef double x0,x1, dx
-        if isinstance(xs, (int, long)):
+        if isinstance(xs, int):
             return self.mapn_between(xs, self._x0, self._x1, out)
+        _xs = <ndarray>xs
+        nx = PyArray_DIM(_xs, 0)
+        if out is None:
+            result = EMPTY1D(nx)
         else:
-            if out is None:
-                nx = len(xs)
-                result = EMPTY1D(nx)
-            else:
-                result = <ndarray>out
-                nx = PyArray_DIM(<ndarray>result, 0)
-            if isinstance(xs, ndarray):
-                if PyArray_ISCONTIGUOUS(<ndarray>xs):
-                    data1 = <DTYPE_t *>((<ndarray>xs).data)
-                    if PyArray_ISCONTIGUOUS(result):
-                        data0 = <DTYPE_t *>result.data
-                        with nogil:
-                            for i in range(nx):
-                                data0[i] = self.__ccall__(data1[i])
-                    else:
-                        nx = PyArray_DIM(<ndarray>xs, 0)
-                        with nogil:
-                            for i in range(nx):
-                                result[i] = self.__ccall__(data1[i])
-                else:
-                    _xs = <ndarray>xs
-                    if PyArray_ISCONTIGUOUS(result):
-                        nx = PyArray_DIM(<ndarray>xs, 0)
-                        with nogil:
-                            data0 = <DTYPE_t *>(result.data)
-                            for i in range(nx):
-                                data0[i] = self.__ccall__(_xs[i])
-                    else:
-                        for i in range(PyArray_DIM(xs, 0)):
-                            result[i] = self.__ccall__(_xs[i])
-            else:
-                if isinstance(xs, list):
-                    if PyArray_ISCONTIGUOUS(result):
-                        data0 = <DTYPE_t *>(result.data)
-                        for i in range(nx):
-                            data0[i] = self.__ccall__((<list>xs)[i])
-                    else:
-                        for i in range(nx):
-                            result[i] = self.__ccall__((<list>xs)[i])
-                elif isinstance(xs, tuple):
-                    xs_as_tuple = xs
-                    if PyArray_ISCONTIGUOUS(result):
-                        data0 = <DTYPE_t *>(result.data)
-                        for i in range(nx):
-                            data0[i] = self.__ccall__(xs_as_tuple[i])
-                    else:
-                        for i in range(len(xs_as_tuple)):
-                            result[i] = self.__ccall__(xs_as_tuple[i])
-                else:
-                    for i in range(nx):
-                        result[i] = self.__ccall__(xs[i])
+            result = <ndarray>out
+        if PyArray_ISCONTIGUOUS(result):
+            data0 = <DTYPE_t *>(result.data)
+            with nogil:
+                for i in range(nx):
+                    data0[i] = self.__ccall__(_xs[i])
+        else:
+            for i in range(nx):
+                result[i] = self.__ccall__(_xs[i])
         return result
     
     cpdef _BpfInterface concat(self, _BpfInterface other, double fadetime=0, fadeshape='expon(3)'):
@@ -1114,51 +1084,52 @@ cdef class _BpfInterface:
         return _BpfLambdaRound(self)
     cpdef _BpfRand rand(self):
         return _BpfRand(self)
-    cpdef _BpfUnaryFunc cos(self):
-        return _BpfUnaryFunc_new_from_index(self, 0)
-    cpdef _BpfUnaryFunc sin(self):
-        return _BpfUnaryFunc_new_from_index(self, 1)
-    cpdef _BpfUnaryFunc ceil(self):
-        return _BpfUnaryFunc_new_from_index(self, 2)
-    cpdef _BpfUnaryFunc exp(self):
-        return _BpfUnaryFunc_new_from_index(self, 4)
-    cpdef _BpfUnaryFunc floor(self):
-        return _BpfUnaryFunc_new_from_index(self, 5)
-    cpdef _BpfUnaryFunc tanh(self):
-        return _BpfUnaryFunc_new_from_index(self, 6)
-    cpdef _BpfUnaryFunc abs(self):
-        return _BpfUnaryFunc_new_from_index(self, 7)
-    cpdef _BpfUnaryFunc sqrt(self):
-        return _BpfUnaryFunc_new_from_index(self, 8)
-    cpdef _BpfUnaryFunc acos(self):
-        return _BpfUnaryFunc_new_from_index(self, 9)
-    cpdef _BpfUnaryFunc asin(self):
-        return _BpfUnaryFunc_new_from_index(self, 10)
-    cpdef _BpfUnaryFunc tan(self):
-        return _BpfUnaryFunc_new_from_index(self, 11)
-    cpdef _BpfUnaryFunc sinh(self):
-        return _BpfUnaryFunc_new_from_index(self, 12)
-    cpdef _BpfUnaryFunc log10(self):
-        return _BpfUnaryFunc_new_from_index(self, 13)
-    cpdef _BpfLambdaLog log(self, double base=M_E):
-        return _BpfLambdaLog(self, base, self.bounds())
-    cpdef _BpfM2F m2f(self):
-        return _BpfM2F(self)
-    cpdef _BpfF2M f2m(self):
-        return _BpfF2M(self)
-    cpdef _Bpf_db2amp db2amp(self):
-        return _Bpf_db2amp(self)
-    cpdef _Bpf_amp2db amp2db(self):
-        return _Bpf_amp2db(self)
-    cpdef _BpfLambdaFib fib(self):
-        return _BpfLambdaFib(self)
-    cpdef _BpfLambdaClip clip(self, double y0=INFNEG, double y1=INF):
-        return _BpfLambdaClip_new(self, y0, y1)
+    
+    cpdef _BpfUnaryFunc cos(self):  return _BpfUnaryFunc_new_from_index(self, 0)
+    
+    cpdef _BpfUnaryFunc sin(self):  return _BpfUnaryFunc_new_from_index(self, 1)
+    
+    cpdef _BpfUnaryFunc ceil(self): return _BpfUnaryFunc_new_from_index(self, 2)
+    
+    cpdef _BpfUnaryFunc exp(self):  return _BpfUnaryFunc_new_from_index(self, 4)
+    
+    cpdef _BpfUnaryFunc floor(self): return _BpfUnaryFunc_new_from_index(self, 5)
+    
+    cpdef _BpfUnaryFunc tanh(self): return _BpfUnaryFunc_new_from_index(self, 6)
+    
+    cpdef _BpfUnaryFunc abs(self):  return _BpfUnaryFunc_new_from_index(self, 7)
+    
+    cpdef _BpfUnaryFunc sqrt(self): return _BpfUnaryFunc_new_from_index(self, 8)
+    
+    cpdef _BpfUnaryFunc acos(self): return _BpfUnaryFunc_new_from_index(self, 9)
+    
+    cpdef _BpfUnaryFunc asin(self): return _BpfUnaryFunc_new_from_index(self, 10)
+    
+    cpdef _BpfUnaryFunc tan(self):  return _BpfUnaryFunc_new_from_index(self, 11)
+    
+    cpdef _BpfUnaryFunc sinh(self): return _BpfUnaryFunc_new_from_index(self, 12)
+    
+    cpdef _BpfUnaryFunc log10(self): return _BpfUnaryFunc_new_from_index(self, 13)
+    
+    cpdef _BpfLambdaLog log(self, double base=M_E): return _BpfLambdaLog(self, base, self.bounds())
+    
+    cpdef _BpfM2F m2f(self): return _BpfM2F(self)
+    
+    cpdef _BpfF2M f2m(self): return _BpfF2M(self)
+    
+    cpdef _Bpf_db2amp db2amp(self): return _Bpf_db2amp(self)
+    
+    cpdef _Bpf_amp2db amp2db(self): return _Bpf_amp2db(self)
+    
+    cpdef _BpfLambdaFib fib(self): return _BpfLambdaFib(self)
+    
+    cpdef _BpfLambdaClip clip(self, double y0=INFNEG, double y1=INF): return _BpfLambdaClip_new(self, y0, y1)
+
     cpdef _BpfInterface derivative(self):
         """
-        return a BPF which represents the derivative of the this BPF
+        Return a curve which represents the derivative of this curve
 
-        if implements Newtons difference quotiont, so that
+        It implements Newtons difference quotiont, so that
 
         derivative(x) = bpf(x + h) - bpf(x)
                         -------------------
@@ -1168,7 +1139,7 @@ cdef class _BpfInterface:
 
     cpdef _BpfInterface integrated(self):
         """
-        return a bpf representing the integration of this bpf at a given point
+        Return a bpf representing the integration of this bpf at a given point
         """
         if self._x0 == INFNEG:
             raise ValueError("Cannot integrate a function with an infinite negative bound")
@@ -1176,7 +1147,7 @@ cdef class _BpfInterface:
     
     cpdef double integrate(self):
         """
-        return the result of the integration of this bpf. If any of the bounds is inf,
+        Return the result of the integration of this bpf. If any of the bounds is inf,
         the result is also inf.
 
         Tip: to determine the limits of the integration, first crop the bpf via a slice
@@ -1226,16 +1197,10 @@ cdef class _BpfInterface:
         # override mode when N is given
         if N > 0:
             mode = 0
-        if   mode == 1:   # use quad, no singularities
-            inbound = _quad(self, x0, x1, limit=QUAD_LIMIT)[0]
-        elif mode == 2:   # use simpons
+        if mode == 1 or mode == 2:
             inbound = integrate_simpsons(self, x0, x1, SIMPSONS_ACCURACY, SIMPSONS_MAXITER)
-        elif mode == 0:
-            inbound = self.trapz_integrate_between(x0, x1, N)
         else:
-            _calibrate_integrate_between(self, x0, x1, N, &get_mode, &out)
-            self._integration_mode = get_mode
-            inbound = out
+            inbound = self.trapz_integrate_between(x0, x1, N)
         return outbound0 + inbound + outbound1
 
     cpdef list zeros(self, double h=0.01, int N=0, double x0=NAN, double x1=NAN, int maxzeros=0):
@@ -1260,27 +1225,6 @@ cdef class _BpfInterface:
         NB: to calculate one zero 
         """
         return bpf_zero_crossings(self, h=h, N=N, x0=x0, x1=x1, maxzeros=maxzeros)
-
-    #def as_transition(self, a, b):
-    #    """
-    #    use this bpf to generate a transition between a and b
-        
-    #    Example
-    #    -------
-        
-    #    >>> shape = bpf.linear(0, 0, 1, 1)    # a cross-fade from a to b 
-    #    >>> a = bpf.halfcos(0, 5, 1, 10)
-    #    >>> b = bpf.expon(0, 0, 1, 100, exp=2)
-    #    >>> blended = shape.as_transition(a, b)
-    #    >>> blended(0) == a(0)
-    #    True
-    #    >>> blended(1) == b(1)
-    #    True
-    #    >>> blended(0.5) == (a(0.5) + b(0.5)) / 2
-    #    True
-    #    """
-    #    return _BpfBlend(_as_bpf(a), _as_bpf(b), self)
-
 
     def max(self, b):
         if isinstance(b, _BpfInterface):
@@ -1322,12 +1266,9 @@ cdef class _BpfInterface:
         """
         return _BpfKeepSlope(self, EPSILON)
 
-    def outbound(self, y0, y1=None):
+    def outbound(self, double y0, double y1):
         """
         return a new Bpf with the given values outside the bounds
-
-        NB: you can specify one value for lower and one for upper bounds, 
-            or just one value for both
 
         Example 1:
 
@@ -1339,10 +1280,8 @@ cdef class _BpfInterface:
 
         Example 2: fallback to another curve outside self
 
-        a = bpf.linear(0, 1, 1, 10).outbound(0) + bpf.expon(-1, 2, 4, 10)
+        a = bpf.linear(0, 1, 1, 10).outbound(0, 0) + bpf.expon(-1, 2, 4, 10)
         """
-        if y1 is None:
-            y1 = y0
         return _BpfCrop_new(self, self._x0, self._x1, OUTBOUND_SET, y0, y1)
 
     def apply(self, func):
@@ -1379,8 +1318,7 @@ cdef class _BpfInterface:
 
         NB: A_bpf.preapply(B_bpf) is the same as B_bpf | A_bpf
         """
-        #return _BpfPreApply(func, self)
-        return _BpfCompose_new(_FunctionWrap(func, self.bounds()), self)
+        return _BpfCompose_new(_FunctionWrap(func), self)
 
     def periodic(self):
         """
@@ -1447,13 +1385,13 @@ cdef class _BpfInterface:
         """
         return _BpfProjection(self, rx=1, dx=-dx)
 
-    cpdef _BpfInverted inverted(self):
+    def inverted(self):
         """
-        Return a new BPF which is the inversion of this BPF, or None if the function is not
-        invertible.
+        Return a new BPF which is the inversion of this BPF, or None if the function is 
+        not invertible.
 
-        In an inverted function the coordinates are swaped: the inverted version of a BPF
-        indicates which x corresponds to a given y
+        In an inverted function the coordinates are swaped: the inverted version of a 
+        BPF indicates which x corresponds to a given y
         
         so f.inverted()(f(x)) = x
         
@@ -1494,7 +1432,7 @@ cdef class _BpfInterface:
         """
         cdef ndarray data
         cdef int lenpoints
-        if isinstance(points[0], _collections.Sequence):
+        if isinstance(points[0], (list, tuple)):
             # (x0, y0), (x1, y1), ...
             data = numpy.asarray(points, dtype=DTYPE)
             return cls(data[:,0], data[:,1], **kws)
@@ -1512,25 +1450,6 @@ cdef class _BpfInterface:
             else:
                 return cls(points[::2], points[1::2], **kws)
 
-    @classmethod
-    def fromdict(cls, dict d, **kws):
-        """
-        Bpf.fromdict({ x0:y0, x1:y1, x2:y2 }) == Bpf((x0, x1, x2), (y0, y1, y2))
-        """
-        pairs = d.items()
-        pairs.sort()
-        cdef ndarray data = numpy.asarray(pairs, dtype=DTYPE)
-        return cls(data[:,0], data[:,1], **kws)
-
-    @classmethod
-    def fromxy(cls, xs, ys, **kws):  # default constructor, here to make it explicit
-        """
-        this is the default constructor, it is here when you want to make it explicit
-
-        xs and ys are sequences of the same length defining the points.
-        """
-        return cls(xs, ys, **kws)
-    
     def copy(self):
         state = self.__getstate__()
         obj = self.__class__(*state)
@@ -1554,46 +1473,6 @@ cdef class _BpfInterface:
                 self._integration_mode = value
             return self._integration_mode
         
-
-cdef int _check_for_repeated_points(double[:] xs, list to_be_removed):
-    """
-    check to see if xs has repeated values. 
-
-    Returns
-    =======
-
-    0: the array is NOT sorted
-    1: the array is sorted
-    2: some elements in the array need to be removed
-   
-    If we find a pair of repeated values in xs, we shift the first value to the left by EPS.
-
-    # we want a shape which is 0.5 between 0 and 1, and at 1 it shifts to 2 and stays until the end
-    >>> a = bpf.linear(0, 0.5, 1, 0.5, 1, 2, 3, 2)
-
-    TODO: implement the syntax to allow the following
-    >>> a = bpf.linear(0, 0.5, 1, (0.5, 2), 3, 2)
-    """
-    cdef int equal = 0, is_sorted = 1
-    cdef double x0, x1
-    for i in range(1, xs.shape[0]):
-        x0 = xs[i-1]
-        x1 = xs[i]
-        if x1 == x0:
-            if equal == 0:
-                xs[i - 1] = xs[i - 1] - EPS
-            else:
-                # the previous pair was already equal: remove the left value
-                to_be_removed.append(i)
-            equal = 1
-        elif x1 < x0:
-            is_sorted = 0
-        else:
-            equal = 0
-    if len(to_be_removed) > 0:
-        return 2  # some elements in the array need to be removed
-    return is_sorted
-
 cdef inline ndarray _asarray(obj): 
     return <ndarray>(PyArray_GETCONTIGUOUS(array(obj, DTYPE, False)))
 
@@ -1601,8 +1480,8 @@ cdef class _BpfBase(_BpfInterface):
     cdef ndarray xs, ys
     cdef DTYPE_t* xs_data
     cdef DTYPE_t* ys_data
-    cdef double cached_y0, cached_y1
-    # cdef Rect cached_bounds
+    cdef int outbound_mode
+    cdef double outbound0, outbound1
     cdef double cached_bounds_x0, cached_bounds_x1, cached_bounds_y0, cached_bounds_y1
     cdef InterpolFunc *interpol_func
     cdef Py_ssize_t xs_size
@@ -1622,34 +1501,24 @@ cdef class _BpfBase(_BpfInterface):
         """
         xs and ys are arrays of points (x, y)
         """
-        cdef ndarray [DTYPE_t, ndim=1] _xs
-        cdef ndarray [DTYPE_t, ndim=1] _ys
-        cdef int len_xs, len_ys, is_sorted
-        cdef list xs_to_be_removed = []
-        _xs = numpy.ascontiguousarray(xs, DTYPE)
-        _ys = numpy.ascontiguousarray(ys, DTYPE)
-        is_sorted = _check_for_repeated_points(_xs, xs_to_be_removed)
-        if is_sorted == 0:
-            raise BpfPointsError("points along the x coord should be sorted")
-        elif xs_to_be_removed:
-            _xs = numpy.delete(_xs, xs_to_be_removed)
-            _ys = numpy.delete(_ys, xs_to_be_removed)
-            xs_to_be_removed = []
-            is_sorted = _check_for_repeated_points(_xs, xs_to_be_removed)
-            if is_sorted != 1:
-                raise BpfPointsError("points along the x coord should be sorted!!")
+        cdef int len_xs, len_ys
+        cdef ndarray [DTYPE_t, ndim=1] _xs = numpy.ascontiguousarray(xs, DTYPE)
+        if _array_issorted(_xs) < 1:
+            raise BpfPointsError(f"Points along the x coord should be sorted without duplicates.\n xs:\n{xs}")
+        cdef ndarray [DTYPE_t, ndim=1] _ys = numpy.ascontiguousarray(ys, DTYPE)
         len_xs = PyArray_DIM(_xs, 0)
         len_ys = PyArray_DIM(_ys, 0)
         if len_xs != len_ys:
-            raise ValueError("the xs and ys must be of equal length")
+            raise ValueError("xs and ys must be of equal length")
         if len_xs < 1:
-            raise ValueError("cannot creat a BPF of cero points")
+            raise ValueError("Can't creat a BPF of 0 points")
         self.xs = _xs
         self.ys = _ys
         self.xs_size = PyArray_DIM(_xs, 0)
         self._set_bounds(_xs[0], _xs[len_xs - 1])
-        self.cached_y0 = _ys[0]
-        self.cached_y1 = _ys[len_ys - 1]
+        self.outbound_mode = OUTBOUND_CACHE
+        self.outbound0 = _ys[0]
+        self.outbound1 = _ys[len_ys - 1]
         self.xs_data = <DTYPE_t*>(self.xs.data)
         self.ys_data = <DTYPE_t*>(self.ys.data)
         self.cached_bounds_x0 = self.xs[0]
@@ -1671,12 +1540,25 @@ cdef class _BpfBase(_BpfInterface):
         self.cached_bounds_x1 = 0
         self.cached_bounds_y1 = 0
         self.cached_index1 = 0
-        if self.ys_data != NULL:
-            self.cached_y0 = (<DTYPE_t *>(self.ys_data))[0]
-            self.cached_y1 = (<DTYPE_t *>(self.ys_data))[last_index]
-        else:
-            self.cached_y0 = NAN
-            self.cached_y1 = NAN
+        if self.ys_data != NULL and self.outbound_mode == OUTBOUND_CACHE:
+            self.outbound0 = (<DTYPE_t *>(self.ys_data))[0]
+            self.outbound1 = (<DTYPE_t *>(self.ys_data))[last_index]
+        
+    def outbound(self, double y0, double y1):
+        """
+        Set the values (INPLACE) which are returned when this bpf is evaluated
+        outside its bounds.
+
+        The default behaviour is to interpret the values at the bounds to extend to infinity.
+
+        In order to not change this bpf inplace, use
+
+        b.copy().outbound(y0, y1)
+        """
+        self.outbound_mode = OUTBOUND_SET
+        self.outbound0 = y0
+        self.outbound1 = y1
+        return self
 
     def __getstate__(self):
         return (self.xs, self.ys)
@@ -1691,13 +1573,13 @@ cdef class _BpfBase(_BpfInterface):
         cdef DTYPE_t *ys_data
         if self.cached_bounds_x0 <= x < self.cached_bounds_x1:
             res = InterpolFunc_call(self.interpol_func, x, self.cached_bounds_x0, self.cached_bounds_y0, self.cached_bounds_x1, self.cached_bounds_y1)
-        elif x <= self._x0:
-            res = self.cached_y0
-        elif x >= self._x1:
-            res = self.cached_y1
+        elif x < self._x0:
+            res = self.outbound0
+        elif x > self._x1:
+            res = self.outbound1
         elif (self.cached_index1 < self.xs_size - 2) and (self.cached_bounds_x1 <= x < self.xs_data[self.cached_index1+1]):
             # usual situation: cross to next bin
-            index1 = self.cached_index1+1
+            index1 = self.cached_index1 + 1
             x1 = self.xs_data[index1]
             y1 = self.ys_data[index1]
             res = InterpolFunc_call(self.interpol_func, x, self.cached_bounds_x1, self.cached_bounds_y1, x1, y1)
@@ -1715,70 +1597,22 @@ cdef class _BpfBase(_BpfInterface):
             self.cached_bounds_x1 = x1 = self.xs_data[index1]
             self.cached_bounds_y1 = y1 = self.ys_data[index1]
             self.cached_index1 = index1
-            # self.cached_bounds.set(x0, y0, x1, y1)
             res = InterpolFunc_call(self.interpol_func, x, x0, y0, x1, y1)
         return res
 
     cpdef ndarray mapn_between(self, int n, double x0, double x1, ndarray out=None):
-        cdef ndarray [DTYPE_t, ndim=1] result
-        cdef DTYPE_t *xs_data
-        cdef DTYPE_t *ys_data
-        cdef int i, last_index, xs_size, return_dispath
-        cdef double dx = (x1 - x0) / (n - 1) # we account for the edge (x1 IS INCLUDED)
-        cdef double last_x0, last_x1, last_y0, last_y1, x, res, _x0, cached_y0, _x1, cached_y1
-        cdef InterpolFunc *interpol_func = self.interpol_func
-        last_x0 = self.xs_data[0]
-        last_x1 = self.xs_data[1]
-        last_y0 = self.ys_data[0]
-        last_y1 = self.ys_data[1]
-        xs_data = self.xs_data
-        ys_data = self.ys_data
-        xs_size = self.xs_size
-        last_index = 0
-        _x0 = self._x0
-        _x1 = self._x1
-        cached_y0 = self.cached_y0
-        cached_y1 = self.cached_y1
-        if out is not None and not PyArray_ISCONTIGUOUS(out):
+        cdef double[:] result = out if out is not None else EMPTY1D(n)
+        # cdef ndarray [DTYPE_t, ndim=1] result
+        cdef double dx = (x1 - x0) / (n - 1)   # we account for the edge (x1 IS INCLUDED)
+        with nogil:        
             for i in range(n):
-                out[i] = self.__ccall__(x0 + dx*i)
-            return out
-        else:
-            if out is None:
-                result = EMPTY1D(n)
-                data = <DTYPE_t *>result.data
-                return_dispath = 0
-            else:
-                data = <DTYPE_t *>out.data
-                return_dispath = 1
-            with nogil:        
-                for i in range(n):
-                    data[i] = self.__ccall__(x0 + dx*i)
-            if return_dispath == 0:
-                return result
-            elif return_dispath == 1:
-                return out
-       
+                result[i] = self.__ccall__(x0 + dx*i)
+        return numpy.asarray(result)
+        
     def __repr__(self):
         return "%s[%s:%s]" % (self.__class__.__name__, str(self._x0), str(self._x1))
 
-    @classmethod
-    def fromxy(cls, xs, ys, **kws):  # default constructor, here to make it explicit
-        """
-        this is the default constructor, it is here when you want to make it explicit
-
-        xs and ys are sequences of the same length defining the points.
-        """
-        return cls(xs, ys, **kws)
-    @classmethod
-    def frompoints(cls, *points, **kws):
-        """
-        Bpf.frompoints(x0, y0, x1, y1, x2, y2, ...) == Bpf((x0, x1, ...), (y0, y1, ...))
-        """
-        print "frompoints has been renamed to fromseq, use that!"
-        return cls.fromseq(*points, **kws)
-
-    def blendshape(self, double mix, descr):
+    def _blendshape(self, double mix, descr):
         """
         Returns a BPF with the same points as this one, 
         but using a mixed shape as interpolation between the points
@@ -1798,7 +1632,7 @@ cdef class _BpfBase(_BpfInterface):
 
         """
         xs, ys = self.points()
-        return _BlendShape(xs, ys, self.descriptor, descr, mix)
+        return BlendShape(xs, ys, self.descriptor, descr, mix)
 
     def stretch(self, double rx):
         """
@@ -1902,8 +1736,12 @@ cdef class _BpfBase(_BpfInterface):
             return self.interpol_func.exp
 
 cdef class Smooth(_BpfBase):
-    def __init__(self, xs, ys):
-        self.interpol_func = InterpolFunc_smooth
+    def __init__(self, xs, ys, int numiter=1):
+        if numiter == 1:
+            self.interpol_func = InterpolFunc_smooth
+        else:
+            self.interpol_func = InterpolFunc_new(intrp_smooth, 1, "smooth", 1)
+            self.interpol_func.numiter = numiter
         _BpfBase.__init__(self, xs, ys)
     
 cdef class Linear(_BpfBase):
@@ -1946,68 +1784,40 @@ cdef class Linear(_BpfBase):
         """
         import util
         return util.linearslice(self, x0, x1)
+
+    def inverted(self):
+        import util
+        return util.linear_inverted(self)
+        
         
 
 cdef class Halfcos(_BpfBase):
-    def __init__(self, xs, ys, exp=1.0):
-        if exp == 1.0:
+    def __init__(self, xs, ys, double exp=1.0, int numiter=1):
+        if exp == 1.0 and numiter == 1:
             self.interpol_func = InterpolFunc_halfcos
+        elif exp == 1:
+            self.interpol_func = InterpolFunc_new(intrp_halfcos, 1, 'halfcos', 1)
         else:
-            self.interpol_func = InterpolFunc_new(_interpol_halfcosexp, exp, 'halfcosexp', 1)
-        _BpfBase.__init__(self, xs, ys)
+            self.interpol_func = InterpolFunc_new(intrp_halfcosexp, exp, 'halfcosexp', 1)
+        self.interpol_func.numiter = numiter
+        super().__init__(xs, ys)
+    
     def __getstate__(self):
-        if self.interpol_func.exp == 0.0:
-            return self.xs, self.ys
-        return self.xs, self.ys, self.interpol_func.exp
+        return self.xs, self.ys, self.interpol_func.exp, self.interpol_func.numiter
 
     def __repr__(self):
-        cdef double exp = self.interpol_func.exp
-        if exp != 0:
-            return "%s[%s:%s] exp=%s" % (self.__class__.__name__, str(self._x0), str(self._x1), str(exp))
-        return _BpfBase.__repr__(self)
-
-cdef class HalfcosExp(_BpfBase):
-    def __init__(self, xs, ys, double exp):
-        _BpfBase.__init__(self, xs, ys)
-        self.interpol_func = InterpolFunc_new(_interpol_halfcosexp, exp, 'halfcosexp', 1)  # must be freed
-    
-    def set_exp(self, double exp):
-        """
-        change the exp
-        """
-        self.interpol_func.exp = exp
-    def __getstate__(self): return self.xs, self.ys, self.interpol_func.exp
-    def __repr__(self):
-        return "%s[%s:%s] exp=%s" % (self.__class__.__name__, str(self._x0), str(self._x1), str(self.interpol_func.exp))
+        exp = self.interpol_func.exp
+        return "%s[%s:%s] exp=%s" % (self.__class__.__name__, str(self._x0), str(self._x1), str(exp))
         
-cdef class HalfcosExpm(HalfcosExp):
-    def __init__(self, xs, ys, double exp):
+HalfcosExp = Halfcos
+        
+cdef class Halfcosm(Halfcos):
+    def __init__(self, xs, ys, double exp=1.0, int numiter=1):
+        self.interpol_func = InterpolFunc_new(intrp_halfcosexpm, exp, 'halfcosexpm', 1)
+        self.interpol_func.numiter = numiter
         _BpfBase.__init__(self, xs, ys)
-        self.interpol_func = InterpolFunc_new(_interpol_halfcosexpm, exp, 'halfcosexpm', 1)  # must be freed
 
-cdef class Halfcos2(_BpfBase):
-    def __init__(self, xs, ys, double exp):
-        _BpfBase.__init__(self, xs, ys)
-        self.interpol_func = InterpolFunc_new(_interpol_halfcos2, exp, 'halfcos2', 1)  # must be freed
-    
-    def set_exp(self, double exp):
-        """
-        change the exp
-        """
-        self.interpol_func.exp = exp
-    
-    def __getstate__(self): return self.xs, self.ys, self.interpol_func.exp
-    
-    def __repr__(self):
-        return "%s[%s:%s] exp=%s" % (self.__class__.__name__, str(self._x0), str(self._x1), str(self.interpol_func.exp))
-
-cdef class Halfcos2m(Halfcos2):
-    def __init__(self, xs, ys, double exp):
-        _BpfBase.__init__(self, xs, ys)
-        self.interpol_func = InterpolFunc_new(_interpol_halfcos2m, exp, 'halfcos2m', 1)  # must be freed
-
-
-cdef class _BlendShape(_BpfBase):
+cdef class BlendShape(_BpfBase):
    def __init__(self, xs, ys, shape0, shape1, double mix):
        _BpfBase.__init__(self, xs, ys)
        self.interpol_func = InterpolFunc_new_blend_from_descr(shape0, shape1, mix)
@@ -2015,13 +1825,12 @@ cdef class _BlendShape(_BpfBase):
            raise ValueError("interpolation shape not understood")
 
 cdef class Expon(_BpfBase):
-    def __init__(self, xs, ys, double exp):
+    def __init__(self, xs, ys, double exp, int numiter=1):
         _BpfBase.__init__(self, xs, ys)
-        self.interpol_func = InterpolFunc_new(_interpol_expon, exp, 'expon', 1)  # must be freed
+        self.interpol_func = InterpolFunc_new(intrp_expon, exp, 'expon', 1)  # must be freed
+        self.interpol_func.numiter = numiter
     
-    def __getstate__(self):
-        return self.xs, self.ys, self.interpol_func.exp
-    
+    def __getstate__(self): return self.xs, self.ys, self.interpol_func.exp
     def __setstate__(self, state):
         self.xs, self.ys, exp = state
         self.interpol_func.exp = exp
@@ -2030,32 +1839,17 @@ cdef class Expon(_BpfBase):
         return "%s[%s:%s] exp=%s" % (self.__class__.__name__, str(self._x0), str(self._x1), str(self.interpol_func.exp))
 
 cdef class Exponm(Expon):
-    def __init__(self, xs, ys, double exp):
+    def __init__(self, xs, ys, double exp, int numiter=1):
         _BpfBase.__init__(self, xs, ys)
-        self.interpol_func = InterpolFunc_new(_interpol_exponm, exp, 'exponm', 1)  # must be freed
+        self.interpol_func = InterpolFunc_new(intrp_exponm, exp, 'exponm', 1)  # must be freed
+        self.interpol_func.numiter = numiter
 
 cdef class Fib(_BpfBase):
     def __init__(self, xs, ys):
         _BpfBase.__init__(self, xs, ys)
         self.interpol_func = InterpolFunc_fib
-    def __getstate__(self):
-        return self.xs, self.ys
-    def __repr__(self):
-        return "%s[%s:%s]" % (self.__class__.__name__, str(self._x0), str(self._x1))
-
-cdef class Log(_BpfInterface):  # NB: not a subclass of _BpfBase!!
-    def __init__(self, xs, ys, double base=2.0):
-        # TODO
-        # pasos: convertir ys en una escala lineal, crear una bpf lineal y guardarla como una instance var
-        # en __call__(x), linear_bpf(x) = linear_y, y = base ** linear_y
-        raise NotImplementedError("BPFs with log interpolation are not implemented YET")
-    def maximum(self):
-        return self.base ** self.ys.max()
-    def minimum(self):
-        return self.base ** self.ys.min()
-    def __getstate__(self):
-        return self.xs, self.ys, self.base
-
+    def __getstate__(self): return self.xs, self.ys
+    def __repr__(self): return f"{self.__class__.__name__}[{self._x0}:{self._x1}]"
 
 cdef class NoInterpol(_BpfBase):
     def __init__(self, xs, ys):
@@ -2064,10 +1858,9 @@ cdef class NoInterpol(_BpfBase):
         
 cdef class Nearest(_BpfBase):
     def __init__(self, xs, ys):
-        _BpfBase.__init__(self, xs, ys)
+        super().__init__(xs, ys)
         self.interpol_func = InterpolFunc_nearest
-    def __getstate__(self):
-        return self.xs, self.ys
+    def __getstate__(self): return self.xs, self.ys
     
 ctypedef struct SplineS:
     int use_low_slope
@@ -2174,8 +1967,8 @@ cdef class Sampled(_BpfInterface):
     cdef int nointerpol
     cdef InterpolFunc* interpolfunc
     cdef DTYPE_t* data
-    
     cdef ndarray _cached_xs
+
     def __init__(self, samples, double dx, double x0=0, interpolation='linear'):
         """
         This class wraps a seq of values defined across a regular grid
@@ -2199,6 +1992,9 @@ cdef class Sampled(_BpfInterface):
         if interpolation == 'nointerpol':
             self.nointerpol = 1
             self.interpolfunc = NULL
+        elif interpolation == 'linear':
+            self.nointerpol = 0
+            self.interpolfunc = InterpolFunc_linear
         else:
             self.nointerpol = 0
             self.interpolfunc = InterpolFunc_new_from_descriptor(interpolation)
@@ -2268,7 +2064,7 @@ cdef class Sampled(_BpfInterface):
                 y0 = self.data[index0]
                 y1 = self.data[index0 + 1]
                 x0 = self.grid_x0 + index0 * self.grid_dx
-                out = self.interpolfunc.func(x, x0, y0, x0 + self.grid_dx, y1, self.interpolfunc.exp)
+                out = InterpolFunc_call(self.interpolfunc, x, x0, y0, x0+self.grid_dx, y1)
         return out
 
     @cython.cdivision(True)
@@ -2303,10 +2099,9 @@ cdef class Sampled(_BpfInterface):
         with nogil:
             while i < n:
                 x = x0 + dx * i
-                if x <= grid_x0:
-                    data[i] = self_y0
-                else:
+                if x > grid_x0:
                     break
+                data[i] = self_y0
                 i += 1
             while i < n:
                 x = x0 + dx * i
@@ -2317,23 +2112,22 @@ cdef class Sampled(_BpfInterface):
                     y = selfdata[index0]
                 else:
                     interp_x0 = grid_x0 + index0 * grid_dx
-                    y = interpolfunc(x, interp_x0, selfdata[index0], 
-                                      interp_x0 + grid_dx, selfdata[index0 + 1],
-                                      interpolfunc_exp)
+                    y = InterpolFunc_call(self.interpolfunc, x, interp_x0, selfdata[index0], interp_x0 + grid_dx, selfdata[index0+1])
                 data[i] = y
                 i += 1
             while i < n:
                 data[i] = self_y1
                 i += 1
         return out
+
     @classmethod
-    def fromxy(cls, *args, **kws):
-        raise NotImplementedError
+    def fromxy(cls, *args, **kws): raise NotImplementedError
+    
     @classmethod
-    def fromseq(cls, *args, **kws):
-        raise NotImplementedError
-    def _get_points_for_rendering(self, int n= -1):
-        return self.xs, self.ys
+    def fromseq(cls, *args, **kws): raise NotImplementedError
+    
+    def _get_points_for_rendering(self, int n= -1): return self.xs, self.ys
+    
     def segments(self):
         """
         returns an iterator where each item is
@@ -2371,9 +2165,25 @@ cdef class Sampled(_BpfInterface):
         dx = self.grid_dx
         return _integr_trapz_between_exact(self.data, self.samples_size, dx, self.grid_x0, x0, x1)
 
-    #cpdef _BpfInterface integrated(self):
-    #    return _BpfSampledIntegr(self)
+    cpdef _BpfInterface derivative(self):
+        """
+        Return a curve which represents the derivative of this curve
 
+        It implements Newtons difference quotiont, so that
+
+        derivative(x) = bpf(x + h) - bpf(x)
+                        -------------------
+                                  h
+        """
+        return _BpfDeriv(self, self.grid_dx*0.99)
+
+    def inverted(self):
+        if self.interpolation == 'linear':
+            import util
+            return util.linear_inverted(self)
+        return super().inverted()
+
+    
 cdef class Spline(_BpfInterface):
     cdef SplineS* _spline
 
@@ -2383,8 +2193,8 @@ cdef class Spline(_BpfInterface):
         cdef int N = len(xs)
         self._set_bounds(_xs[0], _xs[N - 1])
         self._integration_mode = 1  # use quad
-        if not _numpy_issorted(_xs):
-            raise ValueError("points along the x coord should be sorted")
+        if _array_issorted(_xs) < 1:
+            raise ValueError(f"Points along the x coord should be sorted without duplicates. \n{xs}")
         self._spline = SplineS_new(_xs, _ys, N)
     
     def __dealloc__(self):
@@ -2770,7 +2580,8 @@ cdef class Multi(_BpfInterface):
             res = self.y1
         else:
             if self.last_x0 <= x < self.last_x1:
-                res = self.last_interpol.func(x, self.last_x0, self.last_y0, self.last_x1, self.last_y1, self.last_interpol.exp)
+                # res = self.last_interpol.func(x, self.last_x0, self.last_y0, self.last_x1, self.last_y1, self.last_interpol.exp)
+                res = InterpolFunc_call(self.last_interpol, x, self.last_x0, self.last_y0, self.last_x1, self.last_y1)
             else:
                 index1 = _csearchsorted(self.xs, self.size, x)
                 index0 = index1 - 1
@@ -2779,7 +2590,8 @@ cdef class Multi(_BpfInterface):
                 self.last_y0 = y0 = self.ys[index0]
                 self.last_y1 = y1 = self.ys[index1]
                 self.last_interpol = self.interpolations[index0]
-                res = self.last_interpol.func(x, x0, y0, x1, y1, self.last_interpol.exp)
+                # res = self.last_interpol.func(x, x0, y0, x1, y1, self.last_interpol.exp)
+                res = InterpolFunc_call(self.last_interpol, x, x0, y0, x1, y1)
         return res
 
     def segments(self):
@@ -2798,14 +2610,14 @@ cdef class Multi(_BpfInterface):
 
 ctypedef double(*dfunc)(double) nogil
 
-def _FunctionWrap(f, bounds=(-numpy.inf, numpy.inf)):
+def _FunctionWrap(f, bounds=(INFNEG, INF)):
     return _FunctionWrap_Object(f, bounds)
 
 
 cdef class _FunctionWrap_Object(_BpfInterface):
     cdef object f
 
-    def __init__(self, f, bounds=(-numpy.inf, numpy.inf)):
+    def __init__(self, f, bounds=(INFNEG, INF)):
         self._set_bounds(bounds[0], bounds[1])
         self.f = f.__call__
 
@@ -2900,7 +2712,7 @@ cdef _FunctionWrap_Object_OutboundConst _FunctionWrap_Object_OutboundConst_new(_
 cdef class Const(_BpfInterface):
     cdef double value
     def __init__(self, double value):
-        self._set_bounds(-numpy.inf, numpy.inf)
+        self._set_bounds(INFNEG, INF)
         self.value = value
     def __call__(self, x): return self.value
     cdef double __ccall__(self, double x) nogil:
@@ -3002,6 +2814,7 @@ cdef class _BpfBinOp(_BpfInterface):
         with nogil:
             self._apply(<DTYPE_t *>(ys_a.data), <DTYPE_t *>(ys_b.data), n)
         return ys_a
+        
     cpdef ndarray map(self, xs, ndarray out=None):
         """
         the same as map(self, xs) but somewhat faster
@@ -3419,8 +3232,6 @@ cdef class _Bpf_amp2db(_BpfUnaryOp):
             A[i] = log10(x) * 20.0
             
 
-
-
 cdef class _BpfLambdaClip(_BpfInterface):
     cdef _BpfInterface bpf
     cdef double y0, y1
@@ -3485,17 +3296,18 @@ cdef _BpfLambdaClip _BpfLambdaClip_new(_BpfInterface bpf, double y0, double y1):
 
 cdef class _BpfDeriv(_BpfInterface):
     cdef _BpfInterface bpf
-    def __init__(self, _BpfInterface bpf):
+    cdef double h
+    def __init__(self, _BpfInterface bpf, double h=0):
+        self.h = h
         self.bpf = bpf
         self._x0, self._x1 = bpf.bounds()
 
     @cython.cdivision(True)
     cdef double __ccall__(self, double x) nogil:
-        cdef double h = SQRT_EPS if x == 0 else SQRT_EPS*x
-        cdef double xph = x+h
-        cdef double f1 = self.bpf.__ccall__(xph)
+        cdef double h = self.h if self.h > 0 else (SQRT_EPS if x == 0 else SQRT_EPS*x)
+        cdef double f1 = self.bpf.__ccall__(x+h)
         cdef double f0 = self.bpf.__ccall__(x)
-        return (f1 - f0) / (xph - x)    
+        return (f1 - f0) / h   
        
     def __getstate__(self):
         return (self.bpf,)
@@ -3594,6 +3406,7 @@ cdef class _BpfIntegrate(_BpfInterface):
 
     cpdef _BpfInterface derivative(self):
         return self.bpf
+
     def __getstate__(self):
         return (self.bpf, self.N, self.bounds(), self.min_N_ratio, self.Nexp)
         
@@ -3875,7 +3688,10 @@ cdef class _MultipleBpfs(_BpfInterface):
 
 cdef class Max(_MultipleBpfs):
     def __init__(self, *bpfs):
+        if len(bpfs) == 1 and isinstance(bpfs[0], (list, tuple)):
+            bpfs = bpfs[0]
         _MultipleBpfs.__init__(self, bpfs)
+
     cdef double __ccall__(self, double x) nogil:
         cdef double y = INFNEG
         cdef double res
@@ -3890,7 +3706,10 @@ cdef class Max(_MultipleBpfs):
 
 cdef class Min(_MultipleBpfs):
     def __init__(self, *bpfs):
+        if len(bpfs) == 1 and isinstance(bpfs[0], (list, tuple)):
+            bpfs = bpfs[0]
         _MultipleBpfs.__init__(self, bpfs)
+    
     cdef double __ccall__(self, double x) nogil:
         cdef double y = INF
         cdef double res
@@ -3912,6 +3731,7 @@ cdef class _BpfSelect(_MultipleBpfs):
     def __init__(self, which, bpfs):
         self.which = which
         _MultipleBpfs.__init__(self, bpfs)
+    
     cdef double __ccall__(self, double x) nogil:
         cdef int index = <int>(self.which.__ccall__(x))
         with gil:
@@ -3927,6 +3747,7 @@ cdef class _BpfSelectX(_MultipleBpfs):
         self.numbpfs = len(bpfs)
         self.func = InterpolFunc_new_from_descriptor(shape)
         _MultipleBpfs.__init__(self, bpfs)
+    
     cdef double __ccall__(self, double x) nogil:
         cdef double index = self.which.__ccall__(x)
         cdef double y0, y1, x0
@@ -3941,10 +3762,8 @@ cdef class _BpfSelectX(_MultipleBpfs):
         else:
             x0 = floor(index)
             with gil:
-                print("x0: %f" % x0)
                 b0 = <_BpfInterface>(self.bpfpointers[<int>x0])
                 b1 = <_BpfInterface>(self.bpfpointers[<int>x0 + 1])
-                print("got b0 b1")
             y0 = b0.__ccall__(x)
             y1 = b1.__ccall__(x)
 
@@ -4199,20 +4018,6 @@ cpdef list bpf_zero_crossings(_BpfInterface b, double h=0.01, int N=0, double x0
             if maxzeros > 0 and numzeros >= maxzeros:
                 break
     return out
-
-cdef void _calibrate_integrate_between(_BpfInterface self, double x0, double x1, size_t N, int *out_mode, double *out):
-    cdef double t, t_trapt, t_quad, result
-    t = time.time()
-    result = self.trapz_integrate_between(x0, x1, N)
-    t_trapz = time.time() - t
-    t = time.time()
-    result = _quad(self, x0, x1, limit=QUAD_LIMIT)[0]
-    t_quad = time.time() - t
-    if t_quad < t_trapz: # use t_quad
-        out_mode[0] = 1 
-    else:
-        out_mode[0] = 0
-    out[0] = result
 
 cdef inline double _integrate_adaptive_simpsons_inner(_BpfInterface f, double a, double b, double epsilon, 
                                                       double S, double fa, double fb, double fc, int bottom):

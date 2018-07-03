@@ -4,6 +4,7 @@ from .config import CONFIG
 import pylab as _pylab
 import numpy as np
 
+
 def plot_coords(xs, ys, show=None, **keys):
     _pylab.plot(xs, ys, **keys)
     plot_always_show = CONFIG['plot.always_show']
@@ -11,6 +12,7 @@ def plot_coords(xs, ys, show=None, **keys):
         _pylab.show()
     elif not plot_always_show and show is True:
         _pylab.show()
+
         
 def bpfplot(*bpfs, **keys):
     """
@@ -31,6 +33,7 @@ def bpfplot(*bpfs, **keys):
     _pylab.plot(*args, **keys)
     if keys.pop('show'):
         _pylab.show()
+
         
 def plot_stacked(*bpfs, **kws):
     """
@@ -85,6 +88,7 @@ def plot_stacked(*bpfs, **kws):
     ax1.legend(loc='upper left')
     if kws.get('show'):
         pp.show()
+
         
 def show():
     _pylab.show()

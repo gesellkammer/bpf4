@@ -2,3 +2,7 @@ build
 dist
 *sync-conflict*
 *.c
+.eggs
+.idea
+*.egg*
+__pycache__

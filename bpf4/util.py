@@ -7,7 +7,7 @@ import itertools as _itertools
 from functools import reduce
 from typing import Sequence as Seq
 
-import numpy as _np
+import numpy as np
 from scipy.integrate import quad as _quad
 from scipy.optimize import brentq as _brentq
 
@@ -20,16 +20,16 @@ _CONSTRUCTORS = {
     'expon': core.Expon,
     'halfcos': core.Halfcos,
     'nointerpol': core.NoInterpol,
-    'halfcosexp': core.HalfcosExp,
+    # 'halfcosexp': core.HalfcosExp,
     'spline': core.Spline,
     'uspline': core.USpline,
     'fib': core.Fib,
     'slope': core.Slope,
-    'halfcos2': core.Halfcos2,
+    # 'halfcos2': core.Halfcos2,
     'nearest': core.Nearest,
-    'halfcos2m': core.Halfcos2m,
-    'halfcosexpm': core.HalfcosExpm,
-    'halfcosm': core.HalfcosExpm,
+    # 'halfcos2m': core.Halfcos2m,
+    # 'halfcosexpm': core.HalfcosExpm,
+    'halfcosm': core.Halfcosm,
     'smooth': core.Smooth
 }
 
@@ -74,8 +74,8 @@ def csv_to_bpf(csvfile):
         else:
             constructor = get_bpf_constructor(interpolation)
         numrows = len(rows)
-        xs = _np.empty((numrows,), dtype=float)
-        ys = _np.empty((numrows,), dtype=float)
+        xs = np.empty((numrows,), dtype=float)
+        ys = np.empty((numrows,), dtype=float)
         for i in range(numrows):
             r = rows[i]
             xs[i] = r.x
@@ -187,7 +187,7 @@ def bpf_to_json(bpf, outfile=None):
             json.dump(asdict, f)
 
 
-def _bpf_to_yaml(bpf, outfile=None):
+def bpf_to_yaml(bpf, outfile=None):
     """
     convert this bpf to json format. if outfile is not given, it returns a string, as in dumps
     """
@@ -201,7 +201,7 @@ def _bpf_to_yaml(bpf, outfile=None):
         stream = open(outfile, 'w')
     dumper = yaml.Dumper(stream)
     dumper.add_representer(tuple, lambda du, instance: du.represent_list(instance))
-    dumper.add_representer(_np.float64, lambda du, instance: du.represent_float(instance))
+    dumper.add_representer(np.float64, lambda du, instance: du.represent_float(instance))
     dumper.open()
     dumper.represent(d)
     dumper.close()
@@ -297,7 +297,7 @@ def loadbpf(path, fmt='auto'):
     return dict_to_bpf(d)  
 
 
-def asbpf(obj, bounds=(-_np.inf, _np.inf)) -> core._BpfInterface:
+def asbpf(obj, bounds=(-np.inf, np.inf)) -> core._BpfInterface:
     """
     Convert obj to a bpf
 
@@ -731,8 +731,8 @@ def warped(bpf, dx=None, numpoints=1000):
     integrated = bpf.integrated()[::dx]
     integrated_at_x1 = integrated(bpf.x1)
     # N = int((x1 + dx - x0) / dx + 0.5)
-    xs = _np.arange(x0, x1+dx, dx)    
-    ys = _np.ones_like(xs) * _np.nan
+    xs = np.arange(x0, x1+dx, dx)    
+    ys = np.ones_like(xs) * np.nan
     for i in range(len(xs)):
         try:
             ys[i] = _brentq(integrated - xs[i]*integrated_at_x1, x0, x1)
@@ -743,7 +743,7 @@ def warped(bpf, dx=None, numpoints=1000):
         
 def _minimize(bpf, N, func=min, debug=False):
     x0, x1 = bpf.bounds()
-    xs = _np.linspace(x0, x1, N)
+    xs = np.linspace(x0, x1, N)
     from scipy.optimize import brent
     mins = [brent(bpf, brack=(xs[i], xs[-i])) for i in range(int(len(xs) * 0.5 + 0.5))]
     mins2 = [(bpf(m), m) for m in mins]  # if x0 <= m <= x1]
@@ -886,7 +886,7 @@ def blendwithceil(b, mix=0.5):
     # return b.blendwith(asbpf(b(maximum(b))), mix)[b.x0:b.x1]
 
 
-def smooth2(bpf, window, numproj=7):
+def smoothen2(bpf, window, numproj=7):
     """
     bpf: a bpf
     window: length (in the x coord) of the smoothing window
@@ -897,10 +897,10 @@ def smooth2(bpf, window, numproj=7):
     projs_left = [bpf << (alpha*i) for i in range(int(n / 2))]
     projs_right = [bpf >> (alpha*i) for i in range(int(n / 2))]
     bsmooth = (sum(projs_left) + sum(projs_right) + bpf) / (len(projs_left) + len(projs_right) + 1)
-    return bsmooth
+    return bsmooth[bpf.x0:bpf.x1]
 
 
-def smooth(b, window, N=1000):
+def smoothen(b, window, N=1000):
     """
     b      : a bpf
     window : the width (in x coords) of the smoothing window
@@ -908,10 +908,10 @@ def smooth(b, window, N=1000):
     """
     dx = min((b.x1 - b.x0) / N, window/7)
     nwin = int(window / dx)
-    box = _np.ones(nwin)/nwin
+    box = np.ones(nwin)/nwin
     Y = b[::dx].ys
-    Y2 = _np.convolve(Y, box, mode="same")
-    X = _np.linspace(b.x0, b.x1, len(Y2))
+    Y2 = np.convolve(Y, box, mode="same")
+    X = np.linspace(b.x0, b.x1, len(Y2))
     return core.Linear.fromxy(X, Y2)
 
 
@@ -937,13 +937,13 @@ def arrayslice(x0, x1, X, *Ys):
         raise ValueError("x0 should be less than x1")
 
     if x0 > X[0]:
-        i0 = _np.searchsorted(X, x0) - 1    
+        i0 = np.searchsorted(X, x0) - 1    
     else:
         i0 = 0
         x0 = X[0]
 
     if x1 < X[-1]:
-        i1 = _np.searchsorted(X, x1) + 1
+        i1 = np.searchsorted(X, x1) + 1
     else:
         i1 = len(X)
         x1 = X[-1]
@@ -954,7 +954,7 @@ def arrayslice(x0, x1, X, *Ys):
     out = [X2]  
     for Y in Ys:
         Y2 = Y[i0:i1].copy()
-        y0, y1 = _np.interp((x0, x1), X, Y)
+        y0, y1 = np.interp((x0, x1), X, Y)
         Y2[0] = y0
         Y2[-1] = y1
         out.append(Y2)
@@ -976,12 +976,12 @@ def _linearslice(linearbpf, x0, x1):
     X, Y = linearbpf.points()
     insert_head = x0 > X[0]
     if insert_head:
-        i = _np.searchsorted(X, x0)
+        i = np.searchsorted(X, x0)
         X = X[i-1:]
         Y = Y[i-1:]
     insert_tail = x1 < X[-1]
     if insert_tail:
-        i = _np.searchsorted(X, x1)
+        i = np.searchsorted(X, x1)
         X = X[:i+1]
         Y = Y[:i+1]
     if insert_head or insert_tail:
@@ -995,3 +995,16 @@ def _linearslice(linearbpf, x0, x1):
         X[i] = x1
         Y[i] = linearbpf(x1)    
     return core.Linear(X, Y)
+
+
+def linear_inverted(linearbpf):
+    res = core._array_issorted(linearbpf.ys)
+    if res == -1:  # not sorted
+        raise ValueError(f"bpf can't be inverted, ys should be always increasing.\nys={linearbpf.ys}")
+    elif res == 1: # sorted, no dups
+        ys = linearbpf.ys 
+        xs = linearbpf.xs
+    elif res == 0: # sorted, has dups
+        ys, unique_idx = np.unique(linearbpf.ys, return_index=True)
+        xs = linearbpf.xs[unique_idx]
+    return core.Linear(ys, xs)

@@ -3,7 +3,6 @@ API for bpf4
 """
 from . import core
 from .util import (
-    warped,
     _bpfconstr,
     minimum,
     maximum, 
@@ -21,12 +20,9 @@ from .core import (
     brentq,
 )
 
-from typing import Any
-
-
 
 def linear(*args):
-    # type: (*Any) -> core.Linear
+    # type: (...) -> core.Linear
     """
     Example: define an linear BPF with points = 0:0, 1:5, 2:20
 
@@ -50,12 +46,15 @@ def expon(*args, **kws):
 
     These all do the same thing:
 
-    expon(2, 0, 0, 1, 5, 2, 20)  # fast but rather unclear
+    expon(2, 0, 0, 1, 5, 2, 20)
     expon(2, (0, 0), (1, 5), (2, 20))
     expon(2, {0:0, 1:5, 2:20})
     expon(0, 0, 1, 5, 2, 20, exp=2)
     expon((0,0), (1, 5), (2, 20), exp=2)
     expon({0:0, 1:5, 2:20}, exp=2)
+
+    other kws:
+    * numiter=1  number of iterations. A higher number accentuates the effect
     """
     X, Y, kws = parseargs(*args, **kws)
     assert "exp" in kws
@@ -77,45 +76,44 @@ def halfcos(*args, **kws):
     Or as a keyword argument at the end:
     halfcos(x0, y0, x1, y1, ..., xn, yn, exp=0.5)
 
+    other kws:
+    * numiter=1  number of iterations. A higher number accentuates the effect
     """
     X, Y, kws = parseargs(*args, **kws)
     return core.Halfcos(X, Y, **kws)  
 
 
-def halfcosexp(*args, **kws):
-    # type: (*Any) -> core.HalfcosExp
-    """
-    Example: define an exponential halfcos BPF with exp=2 and points = 0:0, 1:5, 2:20
-
-    These all do the same thing:
-
-    halfcosexp(2, 0, 0, 1, 5, 2, 20)  # fast but rather unclear
-    halfcosexp(2, (0, 0), (1, 5), (2, 20))
-    halfcosexp(2, {0:0, 1:5, 2:20})
-    halfcosexp(0, 0, 1, 5, 2, 20, exp=2)
-    halfcosexp((0,0), (1, 5), (2, 20), exp=2)
-    halfcosexp({0:0, 1:5, 2:20}, exp=2)
-    """
-    X, Y, kws = parseargs(*args, **kws)
-    return core.HalfcosExp(X, Y, **kws)
+halfcosexp = halfcos
 
 
 def halfcosm(*args, **kws):
-    # type: (*Any) -> core.Halfcosm
+    # type: (...) -> core.Halfcosm
+    """
+    Similar to halfcos, but when used with an exponent, the exponent is inverted
+    for downwards segments (y1 > y0)
+
+    See halfcos for doc
+    """
     X, Y, kws = parseargs(*args, **kws)
-    return core.HalfcosExpm(X, Y, **kws)
+    return core.Halfcosm(X, Y, **kws)
 
 
 def halfcos2(*args, **kws):
-    # type: (*Any) -> core.Halfcos2
+    # type: (...) -> core.Halfcos
+    """
+    A shortcut for halfcos(..., numiter=2)
+    """
     X, Y, kws = parseargs(*args, **kws)
-    return core.Halfcos2(X, Y, **kws)
+    return core.Halfcos(X, Y, numiter=2, **kws)
 
 
 def halfcos2m(*args, **kws):
-    # type: (*Any) -> core.Halfcos2m
+    # type: (...) -> core.Halfcosm
+    """
+    A shortcut for halfcosm(..., numiter=2)
+    """
     X, Y, kws = parseargs(*args, **kws)
-    return core.Halfcos2m(X, Y, **kws)
+    return core.Halfcosm(X, Y, numiter=2, **kws)
 
 
 def spline(*args) -> core.Spline:
@@ -177,10 +175,11 @@ def nearest(*args):
     return _bpfconstr('nearest', *args)
 
 
-def smooth(*args):
-    # type: (*Any) -> core.Smooth
+def smooth(*args, numiter=1):
+    # type: (...) -> core.Smooth
     X, Y, kws = parseargs(*args)
-    return core.Smooth(X, Y)
+    return core.Smooth(X, Y, numiter=numiter)
+
 
 def recurse(N, bpf):
     if isinstance(N, int):
@@ -250,5 +249,10 @@ def slope(slope, offset=0, keepslope=True):
     same as linear(0, offset, 1, slope)
     """
     return core.Slope(slope, offset)
+
+
+def blendshape(shape0, shape1, mix, *args):
+    X, Y, kws = parseargs(*args)
+    return core.BlendShape(X, Y, shape0, shape1, mix)
 
 BpfInterface = core._BpfInterface
