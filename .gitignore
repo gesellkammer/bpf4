@@ -6,3 +6,4 @@ dist
 .idea
 *.egg*
 __pycache__
+*.so

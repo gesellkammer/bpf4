@@ -486,21 +486,19 @@ class _BpfConstructor:
         self.constructor = constructor
         self.exp = exp
 
+    def __call__(self, *args, **kws):
+        X, Y, kws = parseargs(*args, **kws)
+        return self.constructor(X, Y, **kws)
+
     def fromseq(self, *seq, **kws):
         k = {'exp':self.exp} if self.exp is not None else {}
         k.update(kws)
         return self.constructor.fromseq(*seq, **k)
 
-    def fromdict(self, d, **kws):
-        k = {'exp':self.exp} if self.exp is not None else {}
-        k.update(kws)
-        return self.constructor.fromdict(d, **k)
-
     def fromxy(self, xs, ys, **kws):
         k = {'exp':self.exp} if self.exp is not None else {}
         k.update(kws)
-        return self.constructor.fromxy(xs, ys, **k)
-    __call__ = fromseq
+        return self.constructor(xs, ys, **k)
 
 
 def multi_parseargs(args):

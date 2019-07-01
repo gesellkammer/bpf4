@@ -2112,7 +2112,8 @@ cdef class Sampled(_BpfInterface):
                     y = selfdata[index0]
                 else:
                     interp_x0 = grid_x0 + index0 * grid_dx
-                    y = InterpolFunc_call(self.interpolfunc, x, interp_x0, selfdata[index0], interp_x0 + grid_dx, selfdata[index0+1])
+                    y = InterpolFunc_call(self.interpolfunc, x, interp_x0, selfdata[index0],
+                                          interp_x0 + grid_dx, selfdata[index0+1])
                 data[i] = y
                 i += 1
             while i < n:
@@ -2248,7 +2249,8 @@ cdef class USpline(_BpfInterface):
         try:
             from scipy.interpolate import UnivariateSpline
         except ImportError:
-            raise ImportError("could not import scipy. USpline is implemented as a wrapper for scipy's UnivariateSpline and cannot be used without scipy")
+            raise ImportError("could not import scipy. USpline is a wrapper of UnivariateSpline"
+                              " and cant be used without scipy")
         self.spline = UnivariateSpline(xs, ys)
         self.spline__call__ = self.spline.__call__
         self.xs = numpy.asarray(xs)
@@ -3893,75 +3895,6 @@ cdef inline double _bpf_brentq(_BpfInterface bpf, double x0, double xa, double x
         funcalls += 1
     outfuncalls[0] = funcalls
     return xcur
-    
-"""
-double
-37	brentq(callback_type f, double xa, double xb, double xtol, double rtol, int iter, default_parameters *params)
-38	{
-39	    double xpre = xa, xcur = xb;
-40	    double xblk = 0.0, fpre, fcur, fblk = 0.0, spre = 0.0, scur = 0.0, sbis, tol;
-41	    double stry, dpre, dblk;
-42	    int i;
-43	
-44	    fpre = (*f)(xpre, params);
-45	    fcur = (*f)(xcur, params);
-46	    params->funcalls = 2;
-47	    if (fpre*fcur > 0) {ERROR(params,SIGNERR,0.0);}
-48	    if (fpre == 0) return xpre;
-49	    if (fcur == 0) return xcur;
-50	    params->iterations = 0;
-51	    for(i = 0; i < iter; i++) {
-52	        params->iterations++;
-53	        if (fpre*fcur < 0) {
-54	            xblk = xpre;
-55	            fblk = fpre;
-56	            spre = scur = xcur - xpre;
-57	        }
-58	        if (fabs(fblk) < fabs(fcur)) {
-59	            xpre = xcur; xcur = xblk; xblk = xpre;
-60	            fpre = fcur; fcur = fblk; fblk = fpre;
-61	        }
-63	        tol = xtol + rtol*fabs(xcur);
-64	        sbis = (xblk - xcur)/2;
-65	        if (fcur == 0 || fabs(sbis) < tol)
-66	            return xcur;
-68	        if (fabs(spre) > tol && fabs(fcur) < fabs(fpre)) {
-69	            if (xpre == xblk) {
-70	                /* interpolate */
-71	                stry = -fcur*(xcur - xpre)/(fcur - fpre);
-72	            }
-73	            else {
-74	                /* extrapolate */
-75	                dpre = (fpre - fcur)/(xpre - xcur);
-76	                dblk = (fblk - fcur)/(xblk - xcur);
-77	                stry = -fcur*(fblk*dblk - fpre*dpre)
-78	                    /(dblk*dpre*(fblk - fpre));
-79	            }
-80	            if (2*fabs(stry) < DMIN(fabs(spre), 3*fabs(sbis) - tol)) {
-81	                /* good short step */
-82	                spre = scur; scur = stry;
-83	            } else {
-84	                /* bisect */
-85	                spre = sbis; scur = sbis;
-86	            }
-87	        }
-88	        else {
-89	            /* bisect */
-90	            spre = sbis; scur = sbis;
-91	        }
-92	
-93	        xpre = xcur; fpre = fcur;
-94	        if (fabs(scur) > tol)
-95	            xcur += scur;
-96	        else
-97	            xcur += (sbis > 0 ? tol : -tol);
-98	
-99	        fcur = (*f)(xcur, params);
-100	        params->funcalls++;
-101	    }
-102	    ERROR(params,CONVERR, xcur);
-103	}
-"""
 
 @cython.boundscheck(False)
 @cython.cdivision(True)

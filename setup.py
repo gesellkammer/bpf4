@@ -6,12 +6,9 @@ A package implementing piece-wise interpolation functions in Cython
 from __future__ import print_function
 from setuptools import setup
 from setuptools import Extension
-from Cython.Distutils import build_ext
-import numpy as np
+# from Cython.Distutils import build_ext
 import os
 import sys
-
-USE_CYTHON = True  
 
 
 def get_version():
@@ -32,44 +29,40 @@ else:
         print("Could not convert README to RST")
         long_description = open('README.md').read()
     
-cmdclass     = {}
-ext_modules  = []
-compile_args = [] 
-
-if sys.platform == 'windows':
-    compile_args += ["-march=i686"]  # This is needed in windows to compile cleanly
-
-extra_link_args = compile_args 
+compiler_args = [] 
 versionstr = get_version()
 
-include_dirs = [
-    np.get_include(),
-    'bpf4'
-]
+if sys.platform == 'windows':
+    compiler_args += ["-march=i686"]  # This is needed in windows to compile cleanly
 
-ext_common_args = {
-    'extra_compile_args': compile_args,
-    'extra_link_args': extra_link_args, 
-    'include_dirs': include_dirs
-}
 
-ext_modules += [
-    Extension(
-        "bpf4.core", 
-        [ "bpf4/core.pyx" ], 
-        **ext_common_args
-        ),
-    ]
+class get_numpy_include(str):
 
-cmdclass.update({ 'build_ext': build_ext })
+    def __str__(self):
+        import numpy
+        return numpy.get_include()
+
+
+def get_includes():
+    return ['bpf4', get_numpy_include()]
+
 
 setup(
     name = "bpf4",
-    cmdclass = cmdclass,
-    ext_modules = ext_modules,
-    include_dirs = [np.get_include()],
-    setup_requires = ['cython>=0.19', 'numpy>=1.7'],
-    install_requires = ['numpy>=1.7', 'matplotlib'],
+    setup_requires = [
+        'setuptools>=18.0', 
+        'cython>=0.21', 
+        'numpy>=1.8',
+    ],
+    ext_modules = [
+        Extension("bpf4.core", 
+        sources=["bpf4/core.pyx"], 
+        include_dirs=get_includes(), 
+        extra_link_args=compiler_args, 
+        compiler_args=compiler_args),  
+    ],
+    include_dirs = get_includes(),
+    install_requires = ['numpy>=1.8', 'matplotlib', 'scipy'],
     packages = ['bpf4'],
 
     # metadata
