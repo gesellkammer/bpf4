@@ -49,6 +49,7 @@ def get_includes():
 
 setup(
     name = "bpf4",
+    python_requires='>3.6',
     setup_requires = [
         'setuptools>=18.0', 
         'cython>=0.21', 
