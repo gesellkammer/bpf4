@@ -3,6 +3,10 @@ language: python
 notifications:
   email: false
 
+python:
+  - 3.7
+
+
 matrix:
   include:
     - sudo: required
