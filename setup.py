@@ -4,9 +4,7 @@ BPF
 A package implementing piece-wise interpolation functions in Cython
 """
 from __future__ import print_function
-from setuptools import setup
-from setuptools import Extension
-# from Cython.Distutils import build_ext
+from setuptools import setup, Extension
 import os
 import sys
 
@@ -19,15 +17,7 @@ def get_version():
     version = d.get('__version__', (0, 0, 0))
     return ("%d.%d.%d" % version).strip()
 
-if not os.path.exists("README.md"):
-    long_description = ""
-else:
-    try:
-        import pypandoc
-        long_description = pypandoc.convert('README.md', 'rst')
-    except (IOError, ImportError):
-        print("Could not convert README to RST")
-        long_description = open('README.md').read()
+long_description = open('README.md').read()
     
 compiler_args = [] 
 versionstr = get_version()
@@ -75,6 +65,7 @@ setup(
     maintainer       = '',
     maintainer_email = '',
     long_description = long_description,
+    long_description_content_type = 'text/markdown',
     description = "Peace-wise interpolation and lazy evaluation in cython"
 )
 

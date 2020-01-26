@@ -4,7 +4,7 @@ notifications:
   email: false
 
 python:
-  - 3.6
+  - 3.7
 
 matrix:
   include:
@@ -29,5 +29,5 @@ install:
   - docker pull $DOCKER_IMAGE
 
 script:
-  - docker run --rm -e PLAT=$PLAT -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/travis/build-wheels.sh
+  - docker run --rm -e PLAT=$PLAT -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/docker/build-wheels.sh
   - ls wheelhouse/
