@@ -1,5 +1,10 @@
 language: python
 
+env:
+  global:
+    - TWINE_USERNAME=__token__
+    - TWINE_PASSWORD="pypi-AgEIcHlwaS5vcmcCJDVmYjQ3MWVhLTJlYzUtNGQ0Ni1iNDNlLTA4ZDM5OGI5NzM5ZAACJXsicGVybWlzc2lvbnMiOiAidXNlciIsICJ2ZXJzaW9uIjogMX0AAAYgRZ51c6JWwr8L8fKEp03VmrbEFFpqPZDUxg8govB6b4Y"  
+
 notifications:
   email: false
 
