@@ -1204,13 +1204,13 @@ cdef class _BpfInterface:
         return outbound0 + inbound + outbound1
 
     cpdef double mean(self):
-    	"""
-    	Calculate the mean value of this bpf. To constrain the calculation
-    	to a given portion, use:
+        """
+        Calculate the mean value of this bpf. To constrain the calculation
+        to a given portion, use:
 
-    	bpf.integrate_between(start, end) / (end-start)
-    	"""
-    	return self.integrate() / (self._x1 - self._x0)
+        bpf.integrate_between(start, end) / (end-start)
+        """
+        return self.integrate() / (self._x1 - self._x0)
 
     cpdef list zeros(self, double h=0.01, int N=0, double x0=NAN, double x1=NAN, int maxzeros=0):
         """
