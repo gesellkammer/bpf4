@@ -5,12 +5,11 @@ import operator as _operator
 import os as _os
 import itertools as _itertools
 from functools import reduce
-from typing import Sequence as Seq
+from typing import Sequence as Seq, Tuple, List
 
 import numpy as np
 from scipy.integrate import quad as _quad
 from scipy.optimize import brentq as _brentq
-
 from . import core
 
 _CSV_COLUMN_NAMES = ('x', 'y', 'interpolation', 'exponent')
@@ -297,14 +296,14 @@ def loadbpf(path, fmt='auto'):
     return dict_to_bpf(d)  
 
 
-def asbpf(obj, bounds=(-np.inf, np.inf)) -> core._BpfInterface:
+def asbpf(obj, bounds=(-np.inf, np.inf)) -> core.BpfInterface:
     """
     Convert obj to a bpf
 
     obj can be a function, a dict, a constant, or a bpf (in which case it
     is returned as is)
     """
-    if isinstance(obj, core._BpfInterface):
+    if isinstance(obj, core.BpfInterface):
         return obj
     elif callable(obj):
         return core._FunctionWrap(obj, bounds)
@@ -314,12 +313,12 @@ def asbpf(obj, bounds=(-np.inf, np.inf)) -> core._BpfInterface:
         raise TypeError("can't wrap %s" % str(obj))
  
 
-def parseargs(*args, **kws):
+def parseargs(*args, **kws) -> Tuple[List[float], List[float], dict]:
     """
-    Convert the args and kws to the canonical form:
+    Convert the args and kws to the canonical form (xs, ys, kws)
     
-    xs, ys, kws
-
+    Returns a tuple (xs:list[float], ys:list[float], kws:dict)
+    
     Raises ValueError if failed
     """
     L = len(args)
@@ -333,7 +332,8 @@ def parseargs(*args, **kws):
         xs, ys = list(zip(*items))
     elif L == 2:
         if not all(map(_isiterable, args)):
-            raise ValueError(f"parsing error: 2 args, expected a seq. [(x0, y1), (x1, y1)] or (xs, ys) but got {args}")
+            raise ValueError(f"parsing error: 2 args, expected a seq. "
+                             f"[(x0, y1), (x1, y1)] or (xs, ys) but got {args}")
         if len(args[0]) > 2:   # <--  (xs, ys)
             xs, ys = args
         else:                  # <--  ((x0, y0), (x1, y1))
@@ -345,7 +345,8 @@ def parseargs(*args, **kws):
             ys = args[1::2]
         else:
             if kws:
-                raise ValueError(f"Uneven number of args. No keywords allowed in this case, but got {kws}")
+                raise ValueError(f"Uneven number of args. No keywords allowed in "
+                                 f"this case, but got {kws}")
             kws = {'exp': args[0]}
             xs = args[1::2]
             ys = args[2::2]
@@ -356,21 +357,22 @@ def parseargs(*args, **kws):
     return xs, ys, kws
         
 
-def makebpf(descr:str, X:Seq[float], Y:Seq[float]) -> core._BpfInterface:
+def makebpf(descr:str, X:Seq[float], Y:Seq[float]) -> core.BpfInterface:
     """
-    - descr: a string descriptor of the interpolation
-        * linear
-        * expon(x)
-        * etc.
-    - X: the array of xs
-    - Y: the array of ys
+    Args:
+        descr: a string descriptor of the interpolation ("linear", "expon(xx)", ...)
+        X: the array of xs
+        Y: the array of ys
+
+    Returns:
+        the created bpf
     """
     return _bpfconstr(descr).fromxy(X, Y)
 
 
 def _bpfconstr(descr, *args, **kws):
     """
-    given a descriptor of an interpolation function, return 
+    Given a descriptor of an interpolation function, return 
     a constructor for a BPF with the given interpolation
 
     Examples:
@@ -632,13 +634,20 @@ def sum_(*elements):
 
 def select(which, bpfs) -> core._BpfSelect:
     """
-    which returns at any x, which bpf from bpfs should return the result
-    
-    >>> which = nointerpol(0, 0, 5, 1)
-    >>> bpfs = [linear(0, 0, 10, 10), linear(0, 10, 10, 0)]
-    >>> s = select(which, bpfs)
-    >>> s(1)     # at time=1, the first bpf will be selected
-    0
+    Args:
+        which: returns at any x, which bpf from bpfs should return the result
+        bpfs: a list of bpfs
+
+    Returns:
+        a BpfSelect
+
+    Example::    
+
+        >>> which = nointerpol(0, 0, 5, 1)
+        >>> bpfs = [linear(0, 0, 10, 10), linear(0, 10, 10, 0)]
+        >>> s = select(which, bpfs)
+        >>> s(1)     # at time=1, the first bpf will be selected
+        0
     """
     return core._BpfSelect(asbpf(which), list(map(asbpf, bpfs)))
 
@@ -704,17 +713,19 @@ def integrate(bpf, bounds=None):
     return _quad(bpf, x0, x1)[0]
 
 
-def warped(bpf, dx=None, numpoints=1000):
+def warped(bpf: core.BpfInterface, dx:float=None, numpoints=1000) -> core.Sampled:
     """
     bpf represents the curvature of a linear space. the result is a 
     warped bpf so that:
     
     position_bpf | warped_bpf = corresponding position after warping
     
-    dx: the accuracy of the measurement
-    numpoints: if dx is not given, the bpf is sampled `numpoints` times
-               across its bounds
+    Args:
+        dx: the accuracy of the measurement
+        numpoints: if dx is not given, the bpf is sampled `numpoints` times
+            across its bounds
     
+
     Example:
     find the theoretical position of a given point according to a probability distribution
     
@@ -768,7 +779,7 @@ def maximum(bpf, N=10):
     return _minimize(-bpf, N, min)
     
 
-def rms(bpf, rmstime=0.1):
+def rms(bpf: core.BpfInterface, rmstime=0.1) -> core.BpfInterface:
     bpf2 = bpf**2
     from math import sqrt
 
@@ -781,14 +792,15 @@ def binarymask(mask, durs=None, offset=0, cycledurs=True):
     """
     Creates a binary mask
 
-    mask: a sequence of states. A state is either 0 or 1
-          and can be represented also by 'x'(1) or 'o', '-'(0)
-    durs: a sequence of durations (default=[1])
+    Args:
+        mask: a sequence of states. A state is either 0 or 1
+              and can be represented also by 'x'(1) or 'o', '-'(0)
+        durs: a sequence of durations (default=[1])
 
     Example
     =======
 
-    mask = create_mask("x--x-x---")
+        >>> mask = create_mask("x--x-x---")
 
     """
     if durs is None:
@@ -854,21 +866,22 @@ def randombw(bw, center=1):
     """
     Create a random bpf
     
-    bw: a (time-varying) bandwidth
-    center  : the center of the random distribution
-    
+    Args:
+        bw: a (time-varying) bandwidth
+        center  : the center of the random distribution
+        
     if randombw is 0.1 and center is 1, the bpf will render values 
     between 0.95 and 1.05
 
-    NB: this bpf will always be different, since the random numbers
+    **NB**: this bpf will always be different, since the random numbers
     are calculated as needed. Sample it to freeze it to a known state.
 
     Example
     =======
 
-    >>> l = bpf.linear(0, 0, 1, 1)
-    >>> r = bpf.util.randombw(0.1)
-    >>> l2 = (l*r)[::0.01]
+        >>> l = bpf.linear(0, 0, 1, 1)
+        >>> r = bpf.util.randombw(0.1)
+        >>> l2 = (l*r)[::0.01]
     """
     bw = asbpf(bw)
     return (bw.rand() + (center - bw*0.5))[bw.x0:bw.x1]
@@ -876,19 +889,18 @@ def randombw(bw, center=1):
 
 def blendwithfloor(b, mix=0.5):
     return core.blend(b, asbpf(b(maximum(b))), mix)[b.x0:b.x1]
-    # return b.blendwith(asbpf(b(minimum(b))), mix)[b.x0:b.x1]
-
+    
     
 def blendwithceil(b, mix=0.5):
     return core.blend(b, asbpf(b(maximum(b))), mix)[b.x0:b.x1]
-    # return b.blendwith(asbpf(b(maximum(b))), mix)[b.x0:b.x1]
+    
 
-
-def smoothen2(bpf, window, numproj=7):
+def smoothen2(bpf: core.BpfInterface, window:int, numproj:int=7) -> core.BpfInterface:
     """
-    bpf: a bpf
-    window: length (in the x coord) of the smoothing window
-    numproj: (int) amount of projections to use. Should be an uneven value
+    Args:
+        bpf: a bpf
+        window: length (in the x coord) of the smoothing window
+        numproj: (int) amount of projections to use. Should be an uneven value
     """
     n = numproj
     alpha = window / float(n)
@@ -898,11 +910,17 @@ def smoothen2(bpf, window, numproj=7):
     return bsmooth[bpf.x0:bpf.x1]
 
 
-def smoothen(b, window, N=1000):
+def smoothen(b: core.BpfInterface, window:int, N=1000) -> core.Linear:
     """
-    b      : a bpf
-    window : the width (in x coords) of the smoothing window
-    N      : number of points to resample the bpf
+    Return a linear bpf representing a smooth version of b
+
+    Args:
+        b      : a bpf
+        window : the width (in x coords) of the smoothing window
+        N      : number of points to resample the bpf
+
+    Returns:
+        a Linear bpf representing a smoother version of b
     """
     dx = min((b.x1 - b.x0) / N, window/7)
     nwin = int(window / dx)
@@ -910,18 +928,19 @@ def smoothen(b, window, N=1000):
     Y = b[::dx].ys
     Y2 = np.convolve(Y, box, mode="same")
     X = np.linspace(b.x0, b.x1, len(Y2))
-    return core.Linear.fromxy(X, Y2)
+    return core.Linear(X, Y2)
 
 
-def arrayslice(x0, x1, X, *Ys):
+def arrayslice(x0:float, x1:float, X:np.ndarray, *Ys:np.ndarray) -> np.ndarray:
     """
     Slice a sorted array and linked arrays as if they where a bpf
 
-    x0, x1: where to perform the slices
-    x: the array used to perform the slice
-    ys: one or more secondary arrays which represent a linear bpf,
-        where y = f(x) 
-    
+    Args:
+        x0, x1: where to perform the slices
+        x: the array used to perform the slice
+        ys: one or more secondary arrays which represent a linear bpf,
+            where y = f(x) 
+        
     Example
     =======
 
@@ -999,10 +1018,61 @@ def linear_inverted(linearbpf):
     res = core._array_issorted(linearbpf.ys)
     if res == -1:  # not sorted
         raise ValueError(f"bpf can't be inverted, ys should be always increasing.\nys={linearbpf.ys}")
-    elif res == 1: # sorted, no dups
+    elif res == 1:  # sorted, no dups
         ys = linearbpf.ys 
         xs = linearbpf.xs
-    elif res == 0: # sorted, has dups
+    elif res == 0:  # sorted, has dups
         ys, unique_idx = np.unique(linearbpf.ys, return_index=True)
         xs = linearbpf.xs[unique_idx]
     return core.Linear(ys, xs)
+
+
+def interlace_arrays(*arrays: np.ndarray) -> np.ndarray:
+    """
+    Interweave multiple arrays into a flat array in the form
+
+    Example::
+
+        A = [a0, a1, a2, ...]
+        B = [b0, b1, b2, ...]
+        C = [c0, c1, c2, ...]
+        interlace(A, B, C)
+        -> [a0, b0, c0, a1, b1, c1, ...]
+
+    Args:
+        *arrays (): the arrays to interleave. They should be 1D arrays of the
+            same length
+
+    Returns:
+        a 1D array with the elements of the given arrays interleaved
+
+    """
+    assert all(a.size == arrays[0].size and a.dtype == arrays[0].dtype for a in arrays)
+    size = arrays[0].size * len(arrays)
+    out = np.empty((size,), dtype=arrays[0].dtype)
+    for i, a in enumerate(arrays):
+        out[i::len(arrays)] = a
+    return out
+
+
+def sampled_pairs(bpf:core.BpfInterface, dx=0., numpoints=0) -> Tuple[np.ndarray, np.ndarray]:
+    if isinstance(bpf, core.Linear):
+        return bpf.points()
+    elif isinstance(bpf, core.Samped):
+        return bpf.xs, bpf.ys
+    assert (dx > 0 and numpoints == 0) or (dx == 0 and numpoints > 0)
+    if numpoints > 0:
+        dx =bpf.ntodx(numpoints)
+    sampled = bpf[::dx]
+    return sampled.xs, sampled.ys
+
+
+def sampled_flat_pairs(bpf:core.BpfInterface, dx=0., numpoints=0) -> np.ndarray:
+    """
+    Given a bpf, return sampled points (x and y coords) at the given
+    resolution as a flat array
+    """
+    xs, ys = sampled_pairs(bpf, dx=dx, numpoints=numpoints)
+    return interlace_arrays(xs, ys)
+    
+

@@ -15,6 +15,7 @@ from .util import (
     parseargs,
     multi_parseargs
 )
+
 from .core import (
     blend,
     brentq,
@@ -224,12 +225,10 @@ def pchip(*args):
     pchip((0, 0), (1, 5), (2, 20))
     pchip({0:0, 1:5, 2:20})
 
-    pchip().fromseq(0, 0, 1, 5, 2, 20)
-    pchip().fromxy([0, 1, 5], [0, 5, 20])
     """
     from . import pyinterp
-    args = parseargs(*args)
-    return pyinterp.Pchip(args.xs, args.ys)
+    xs, ys, kws = parseargs(*args)
+    return pyinterp.Pchip(xs, ys, **kws)
 
 
 def const(value):
@@ -255,4 +254,4 @@ def blendshape(shape0, shape1, mix, *args):
     X, Y, kws = parseargs(*args)
     return core.BlendShape(X, Y, shape0, shape1, mix)
 
-BpfInterface = core._BpfInterface
+BpfInterface = core.BpfInterface

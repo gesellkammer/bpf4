@@ -1,17 +1,19 @@
-#!/usr/bin/env python
 # encoding: utf-8
 from .config import CONFIG
-import pylab as _pylab
+from matplotlib import pyplot as plt
 import numpy as np
 
 
-def plot_coords(xs, ys, show=None, **keys):
-    _pylab.plot(xs, ys, **keys)
+def plot_coords(xs, ys, show=None, kind='line', **keys):
+    if kind == 'line':
+        plt.plot(xs, ys, **keys)
+    elif kind == 'bar':
+        plt.bar(xs, ys, **keys)
     plot_always_show = CONFIG['plot.always_show']
     if plot_always_show and (show is None or show is True):
-        _pylab.show()
+        plt.show()
     elif not plot_always_show and show is True:
-        _pylab.show()
+        plt.show()
 
         
 def bpfplot(*bpfs, **keys):
@@ -30,9 +32,9 @@ def bpfplot(*bpfs, **keys):
     args = []
     for ys in yss:
         args.extend((xs, ys))
-    _pylab.plot(*args, **keys)
+    plt.plot(*args, **keys)
     if keys.pop('show'):
-        _pylab.show()
+        plt.show()
 
         
 def plot_stacked(*bpfs, **kws):
@@ -44,7 +46,6 @@ def plot_stacked(*bpfs, **kws):
     
     plot_stacked(a, (b, 'b'))
     """
-    from matplotlib import pyplot as pp
     min_x = float('inf')
     max_x = -float('inf')
     bpfs2, labels = [], []
@@ -65,7 +66,7 @@ def plot_stacked(*bpfs, **kws):
     yss = [bpf[min_x:max_x].map(N) for bpf in bpfs2]
     y_data = np.row_stack(yss)
     y_data_stacked = np.cumsum(y_data, axis=0)
-    fig = pp.figure()
+    fig = plt.figure()
     ax1 = fig.add_subplot(111)
     split_lines = [(0, y_data_stacked[0,:])]
     COLORTHEME = (
@@ -87,8 +88,8 @@ def plot_stacked(*bpfs, **kws):
         ax1.plot(xs, y1, lw=3, label=labels[i],color=color)
     ax1.legend(loc='upper left')
     if kws.get('show'):
-        pp.show()
+        plt.show()
 
         
 def show():
-    _pylab.show()
+    plt.show()

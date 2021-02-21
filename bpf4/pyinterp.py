@@ -1,6 +1,6 @@
-from __future__ import absolute_import
+from __future__ import annotations
 from . import core
-import numpy
+import numpy as np
 OUTBOUND_CACHE = 1
 
 
@@ -12,7 +12,7 @@ class _NumpyInterp(core._FunctionWrap_Object):
         self.xs, self.ys = xs, ys
 
     def mapn_between(self, n, x0, x1, out=None):
-        xs = numpy.linspace(x0, x1, n)
+        xs = np.linspace(x0, x1, n)
         out0 = self._interpolator(xs)
         if out is not None:
             out[...] = out0
@@ -38,8 +38,10 @@ class Pchip(_NumpyInterp):
     """
     Monotonic Piecewise Cubit Hermite interpolation, similar to matlab's pchip
     """
-    def __init__(self, xs, ys):
-        from . import wafointerpol
-        interpolator = wafointerpol.Pchip(xs, ys)
-        super(Pchip, self).__init__(interpolator, xs, ys)
+    def __init__(self, xs: np.ndarray, ys: np.ndarray):
+        # from . import wafointerpol
+        # interpolator = wafointerpol.Pchip(xs, ys)
+        from scipy.interpolate import PchipInterpolator
+        interpolator = PchipInterpolator(xs, ys)
+        super().__init__(interpolator, xs, ys)
 

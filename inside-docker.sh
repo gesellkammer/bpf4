@@ -16,13 +16,15 @@ PROJ=$1
 # $ ./configure && make && make install
 
 # Compile wheels. Customize the wildcard to match the desired python versions
-for PYBIN in /opt/python/cp3[7-8]*/bin; do
+for PYBIN in /opt/python/cp3[8-9]*/bin; do
     "${PYBIN}/pip" install --upgrade pip
     "${PYBIN}/pip" wheel /io/ -w wheelhouse/
 done
 
 # Bundle external shared libraries into the wheels
 # for whl in wheelhouse/*.whl; do
+echo PLAT=$PLAT
+
 for whl in wheelhouse/$PROJ*.whl; do
     auditwheel repair "$whl" --plat $PLAT -w /io/wheelhouse/
 done 
