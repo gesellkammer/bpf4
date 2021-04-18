@@ -5,7 +5,7 @@ import operator as _operator
 import os as _os
 import itertools as _itertools
 from functools import reduce
-from typing import Sequence as Seq, Tuple, List
+from typing import Sequence as Seq, Tuple, List, Union as U
 
 import numpy as np
 from scipy.integrate import quad as _quad
@@ -19,17 +19,14 @@ _CONSTRUCTORS = {
     'expon': core.Expon,
     'halfcos': core.Halfcos,
     'nointerpol': core.NoInterpol,
-    # 'halfcosexp': core.HalfcosExp,
     'spline': core.Spline,
     'uspline': core.USpline,
     'fib': core.Fib,
     'slope': core.Slope,
-    # 'halfcos2': core.Halfcos2,
     'nearest': core.Nearest,
-    # 'halfcos2m': core.Halfcos2m,
-    # 'halfcosexpm': core.HalfcosExpm,
     'halfcosm': core.Halfcosm,
-    'smooth': core.Smooth
+    'smooth': core.Smooth,
+    'smoother': core.Smoother
 }
 
 
@@ -336,7 +333,7 @@ def parseargs(*args, **kws) -> Tuple[List[float], List[float], dict]:
                              f"[(x0, y1), (x1, y1)] or (xs, ys) but got {args}")
         if len(args[0]) > 2:   # <--  (xs, ys)
             xs, ys = args
-        else:                  # <--  ((x0, y0), (x1, y1))
+        else:                  # <--  ((x0, y0), (x1, y1), ...)
             xs, ys = list(zip(*args))    
     elif not any(map(_isiterable, args)):
         # (x0, y0, x1, y1, ...)
@@ -357,6 +354,40 @@ def parseargs(*args, **kws) -> Tuple[List[float], List[float], dict]:
     return xs, ys, kws
         
 
+
+def parsedescr(descr:str, validate=True) -> Tuple[str, dict]:
+    """
+    Parse interpolation description
+
+    =======================  ==================================
+    descr                    output
+    =======================  ==================================
+    linear                   linear, {}
+    expon(0.4)               expon, {'exp': 0.4}
+    halfcos(2.5, numiter=1)  halfcos, {'exp':2.5, 'numiter': 1}
+    =======================  ==================================
+   
+    """
+    if "(" not in descr:
+        classname = descr
+        kws = {}
+    else:
+        classname, rest = descr.split("(")
+        assert rest[-1] == ")"
+        rest = rest[:-1]
+        parts = rest.split(",")
+        kws = {}
+        for part in parts:
+            if "=" in part:
+                key, value = part.split("=")
+                kws[key] = float(value)
+            else:
+                assert 'exp' not in kws
+                kws['exp'] = float(part)
+    if validate:
+        assert classname in _CONSTRUCTORS
+
+
 def makebpf(descr:str, X:Seq[float], Y:Seq[float]) -> core.BpfInterface:
     """
     Args:
@@ -367,246 +398,67 @@ def makebpf(descr:str, X:Seq[float], Y:Seq[float]) -> core.BpfInterface:
     Returns:
         the created bpf
     """
-    return _bpfconstr(descr).fromxy(X, Y)
+    interpolkind, kws = parsedescr(descr)
+    bpfclass = _CONSTRUCTORS.get(interpolkind)
+    if bpfclass is None:
+        raise ValueError(f"descr {descr} is not valid")
+    return bpfclass(X, Y, **kws)
+    
 
-
-def _bpfconstr(descr, *args, **kws):
+def multi_parseargs(args) -> Tuple[List[float], List[float], List[str]]:
     """
-    Given a descriptor of an interpolation function, return 
-    a constructor for a BPF with the given interpolation
+    Given a list of args of the form (x0, y0, interpol) or (x0, y0) (or a flat
+    version thereof), fills the possibly missing interpolation descriptions
+    and returns a tuple (xs, ys, interpolations)
 
-    Examples:
-
-    different ways of defining a bpf with points (0, 0), (1, 100), (2, 20)
-    
-    bpf('linear', (x0, x1, x2, x3), (y0, y1, y2, y3))
-
-    bpf('linear')
-    bpf('linear', 0, 0, 1, 100, 2, 20)
-    bpf('linear', {0:0, 1:100, 2:20})
-    bpf('linear', (0, 0), (1, 100), (2, 20))
-    bpf('linear')(0, 0, 1, 100, 2, 20)
-    bpf('linear').fromxy([0, 1, 2], [0, 100, 20])
-    bpf('expon', 2)(0, 0, 1, 100, 2, 20)
-    bpf('expon', 2, {0:0, 1:100, 2:20})
-    bpf('expon(2)', 0, 0, 1, 100, 2, 20)
-    bpf('expon:2', 0, 0, 1, 100, 2, 20)
-    bpf('expon', 2, 0, 0, 1, 100, 2, 20)
-    bpf('expon', 0,0, 1,100, 2,20, exp=2)
-    
-    Or using the methods defined for each interpolation type:
-    
-    bpf.linear(0, 0, 1, 100, 2, 20)
-    bpf.linear({0:0, 1:100, 2:20})
-    bpf.expon(0, 0, 1, 100, 2, 20, exp=2)
-    bpf.expon(2, 0, 0, 1, 100, 2, 20)
-    bpf.expon(2, (0, 0), (1, 100), (2, 20))
-    bpf.halfcos({0:0, 1:100, 2:20}, exp=2)  # if you want a halfcosexp with exp=2
-    bpf.halfcos(2, {0:0, 1:100, 2:20})      # if you want a halfcosexp with exp=2
-    bpf.halfcos(0, 0, 1, 100, 2, 20)        # a normal halfcos (ie. exp=1)
-    
-    etc.
-    
+    Returns:
+        a tuple (xs, ys, interpolations), where len(interpolations) == len(xs) - 1
     """
-    param = None
-    if '(' in descr:
-        descr, param = descr.split('(')
-        param = float(param[:-1])    
-    elif ':' in descr:
-        descr, param = descr.split(':')
-    else:
-        if kws:
-            exp = kws.get('exp')
-            if exp is not None:
-                param = exp
-            if isinstance(args[0], dict):
-                args = list(args[0].items())
-                args.sort()
-        else:
-            l = len(args)
-            if l == 1:
-                p = args[0]
-                if isinstance(p, dict):
-                    param = None
-                    args = list(p.items())
-                    args.sort()
-                elif descr == 'linear':
-                    return core.Slope(args[0])
-                else:
-                    param = p
-                    args = ()
-            elif l > 1:
-                if l == 2 and all(_isiterable(arg) for arg in args) and all(len(arg) > 2 for arg in args):
-                    # (x0, x1, x2, ..., xn), (y0, y1, y2, ..., yn)
-                    constructor = _CONSTRUCTORS.get(descr)
-                    return _BpfConstructor(constructor, param).fromxy(*args)
-                elif any(_isiterable(arg) for arg in args):
-                    if not _isiterable(args[0]):  # exp, (x0, y0), (x1, y1)
-                        param = args[0]
-                        args = args[1:]
-                    elif not _isiterable(args[-1]):  # (x0, y0), (x1, y1), exp
-                        param = args[-1]
-                        args = args[:-1]
-                    else:
-                        param = None
-                else:
-                    if l % 2:  # exp, x0, y0, x1, y1
-                        param = args[0]
-                        args = args[1:]
-                    else:
-                        param = None
-    constructor = _CONSTRUCTORS.get(descr)
-    if not constructor:
-        raise ValueError("no bpf of type %s" % descr)
-    if not args:
-        return _BpfConstructor(constructor, param)
-    else:
-        if isinstance(args[0], dict):
-            return _BpfConstructor(constructor, param).fromdict(args[0])
-        return _BpfConstructor(constructor, param).fromseq(*args)
-
-    
-get_bpf_constructor = _bpfconstr
-
-    
-class _BpfConstructor:
-    def __init__(self, constructor, exp=None):
-        # do minor error checking
-        t = constructor.__name__.lower()
-        if t in ('halfcos', 'halfcosm'):
-            if exp is not None:
-                constructor = core.HalfcosExp
+    xs = []
+    ys = []
+    interpolations = []
+    last_interpolation = 'linear'
+    if all(isinstance(arg, (int, float, str)) for arg in args):
+        # a flat list
+        accum = 0
+        for arg in args:
+            if accum == 0:
+                xs.append(arg)
+                accum += 1
+            elif accum == 1:
+                ys.append(arg)
+                accum += 1
             else:
-                assert exp is None
-        elif t in ('halfcos2', 'halfcos2m', 'halfcosexpm'):
-            if exp is None:
-                exp = 1
-        elif t in ('linear', 'nointerpol', 'nearest', 'spline', 'fib', 'slope', 'uspline'):
-            assert exp is None
-        else:
-            assert exp is not None
-        self.constructor = constructor
-        self.exp = exp
-
-    def __call__(self, *args, **kws):
-        X, Y, kws = parseargs(*args, **kws)
-        return self.constructor(X, Y, **kws)
-
-    def fromseq(self, *seq, **kws):
-        k = {'exp':self.exp} if self.exp is not None else {}
-        k.update(kws)
-        return self.constructor.fromseq(*seq, **k)
-
-    def fromxy(self, xs, ys, **kws):
-        k = {'exp':self.exp} if self.exp is not None else {}
-        k.update(kws)
-        return self.constructor(xs, ys, **k)
-
-
-def multi_parseargs(args):
-    flattened_args = list(_iflatten(args))
-    if len(flattened_args) == len(args):
-        # it is already a flat list
-        args = flattened_args
-        points = []
-        interpolations = []
-        point_open = False
-        last_interpolation = 'linear'
-        interpol_mode = None
-        xs = [args[0]]
-        ys = [args[1]]
-        lasty = ys[0]
-        for i, arg in enumerate(args[2:]):
-            if not point_open:
-                point_open = True
-                interpolation = None
-                point = []
-                if interpol_mode == 'first':
-                    if isinstance(arg, str):
-                        interpolation = arg
-                    else:
-                        point.append(float(arg))
-                        interpolation = last_interpolation
-                elif interpol_mode == 'last':
-                    point.append(float(arg))
+                if isinstance(arg, str):
+                    interpolations.append(arg)
+                    last_interpolation = arg
+                    accum = 0
                 else:
-                    if isinstance(arg, str):
-                        interpol_mode = 'first'
-                        interpolation = arg
-                    else:
-                        interpol_mode = 'last'
-                        point.append(float(arg))
-            else:
-                L = len(point)
-                if interpol_mode == 'first':
-                    assert interpolation is not None
-                    if L == 0:
-                        point.append(float(arg))
-                    elif L == 1:
-                        point.append(float(arg) if arg is not None else lasty)
-                        points.append((point, interpolation))  # <--- 
-                        point_open = False
-                        lasty = point[1]
-                        last_interpolation = interpolation
-                        
-                    else:
-                        raise ValueError
-                elif interpol_mode == 'last':
-                    if L == 0:
-                        raise ValueError
-                    elif L == 1:
-                        point.append(float(arg) if arg is not None else lasty)
-                    elif L == 2:
-                        if not isinstance(arg, str):
-                            interpolation = last_interpolation
-                            points.append((point, interpolation))  # <---
-                            lasty = point[1]
-                            last_interpolation = interpolation
-                            point_open = False
-                        else:
-                            assert interpolation is None
-                            interpolation = arg
-                            points.append((point, interpolation))  # <---
-                            lasty = point[1]
-                            last_interpolation = interpolation
-                            point_open = False
-        if point_open:
-            points.append((point, last_interpolation))
-        for point, interpolation in points:
-            x, y = point
+                    interpolations.append(last_interpolation)
+                    xs.append(arg)
+                    accum = 1
+    else:
+        # it is of the type (x0, y0, interpolation), (x1, y1), ...
+        assert all(isinstance(arg, tuple) and 2 <= len(arg) <= 3 for arg in args)
+        
+        for arg in args[:-1]:
+            if len(arg) == 2:
+                x, y = arg
+                interp = last_interpolation
+            elif len(arg) == 3:
+                x, y, interp = arg
             xs.append(x)
             ys.append(y)
-            interpolations.append(interpolation)
-        return xs, ys, interpolations
-    else:
-        # it is of the type (x0, y0), (x1, y1, interpolation), ...
-        last_interpolation = 'linear'
-        x0, y0 = args[0]
-        xs = [x0]
-        ys = [y0]
-        lasty = y0
-        interpolations = []
-        for point in args[1:]:  # we skip the first point
-            if len(point) == 2:
-                interpolation = last_interpolation
-                x, y = point
-            else:
-                x, y = (j for j in point if not isinstance(j, str))
-                interpolation = next((j for j in point if isinstance(j, str)))
-            xs.append(x)
-            y = y if y is not None else lasty
-            lasty = y
-            ys.append(y)
-            interpolations.append(interpolation)
-        return xs, ys, interpolations    
-        
-# Bpf = _Bpf()
-
-        
-def _bpf_from_pairs(interpolation, pairs):
-    xs, ys = list(zip(*pairs))
-    return get_bpf_constructor(interpolation)(xs, ys)
-
+            interpolations.append(interp)
+        x, y = args[-1]
+        xs.append(x)
+        ys.append(y)
+    assert all(isinstance(x, (int, float)) for x in xs)
+    assert all(isinstance(y, (int, float)) for x in ys) 
+    assert all(isinstance(i, str) for i in interpolations)
+    assert len(xs) == len(ys) == len(interpolations)+1
+    return xs, ys, interpolations    
+    
     
 def max_(*elements) -> core.Max:
     """
@@ -632,11 +484,15 @@ def sum_(*elements):
     return reduce(_operator.add, bpfs)
 
 
-def select(which, bpfs) -> core._BpfSelect:
+def select(which, bpfs, shape='linear') -> core._BpfSelect:
     """
+    Create a new bpf which interpolates between adjacent bpfs given
+    a `which` bpf
+
     Args:
         which: returns at any x, which bpf from bpfs should return the result
         bpfs: a list of bpfs
+        shape: interpolation shape between consecutive bpfs
 
     Returns:
         a BpfSelect
@@ -649,13 +505,21 @@ def select(which, bpfs) -> core._BpfSelect:
         >>> s(1)     # at time=1, the first bpf will be selected
         0
     """
-    return core._BpfSelect(asbpf(which), list(map(asbpf, bpfs)))
+    return core._BpfSelect(asbpf(which), list(map(asbpf, bpfs)), shape)
 
     
 def dumpbpf(bpf, fmt='yaml', outfile=None):
     """
     Dump the data of this bpf as human readable text to a file 
     or to a string (if no outfile is given)
+
+    Args:
+        bpf: the bpf to dump
+        fmt: the format, one of 'csv', 'yaml', 'json'
+        outfile: if given, the data will be dumped to the file, otherwise
+            it will be printed
+
+    Returns
     
     If outfile is given, its extension will be used to determine
     the format.
@@ -674,7 +538,7 @@ def dumpbpf(bpf, fmt='yaml', outfile=None):
         return bpf_to_yaml(bpf, outfile)
     else:
         # we interpret it as a filename, the format should be the extention
-        base, ext = _os.path.splitext(fmt)
+        base, ext = _os.path.splitext(outfile)
         if ext in ('.csv', '.json', '.yaml'):
             outfile = fmt
             fmt = ext[1:]
@@ -698,19 +562,6 @@ def concat_bpfs(bpfs, fadetime=0) -> core._BpfConcat:
         xs.append(bpf2._x0)
         x0, x1 = bpf2.bounds()
     return core._BpfConcat(xs, bpfs2)
-
-    
-def integrate(bpf, bounds=None):
-    """
-    integrate the given bpf between the given bounds (or use the bpf bounds if not given)
-    
-    It uses the quad algorithm in scipy.integrate
-    """
-    if bounds is None:
-        x0, x1 = bpf.bounds()
-    else:
-        x0, x1 = bounds
-    return _quad(bpf, x0, x1)[0]
 
 
 def warped(bpf: core.BpfInterface, dx:float=None, numpoints=1000) -> core.Sampled:
@@ -788,19 +639,18 @@ def rms(bpf: core.BpfInterface, rmstime=0.1) -> core.BpfInterface:
     return asbpf(func).set_bounds(bpf.x0, bpf.x1)
  
 
-def binarymask(mask, durs=None, offset=0, cycledurs=True):
+def binarymask(mask:U[str, List[int]], durs:Seq[float]=None, offset=0, cycledurs=True):
     """
     Creates a binary mask
 
     Args:
-        mask: a sequence of states. A state is either 0 or 1
-              and can be represented also by 'x'(1) or 'o', '-'(0)
+        mask: a mask string ('x'=1, '-'=0) or a sequence of states (a state is either 0 or 1)
         durs: a sequence of durations (default=[1])
 
     Example
     =======
 
-        >>> mask = create_mask("x--x-x---")
+        >>> mask = binarymask("x--x-x---")
 
     """
     if durs is None:
@@ -837,7 +687,7 @@ def _pairwise(iterable):
     
 def jagged_band(xs, upperbpf, lowerbpf=0, curve='linear'):
     """
-    create a jagged bpf between lowerbpf and upperbpf at the x
+    Create a jagged bpf between lowerbpf and upperbpf at the x
     values given by xs
     
     At each x in xs the, the value is equal to lowerbpf, sweeping
@@ -895,21 +745,6 @@ def blendwithceil(b, mix=0.5):
     return core.blend(b, asbpf(b(maximum(b))), mix)[b.x0:b.x1]
     
 
-def smoothen2(bpf: core.BpfInterface, window:int, numproj:int=7) -> core.BpfInterface:
-    """
-    Args:
-        bpf: a bpf
-        window: length (in the x coord) of the smoothing window
-        numproj: (int) amount of projections to use. Should be an uneven value
-    """
-    n = numproj
-    alpha = window / float(n)
-    projs_left = [bpf << (alpha*i) for i in range(int(n / 2))]
-    projs_right = [bpf >> (alpha*i) for i in range(int(n / 2))]
-    bsmooth = (sum(projs_left) + sum(projs_right) + bpf) / (len(projs_left) + len(projs_right) + 1)
-    return bsmooth[bpf.x0:bpf.x1]
-
-
 def smoothen(b: core.BpfInterface, window:int, N=1000) -> core.Linear:
     """
     Return a linear bpf representing a smooth version of b
@@ -929,150 +764,3 @@ def smoothen(b: core.BpfInterface, window:int, N=1000) -> core.Linear:
     Y2 = np.convolve(Y, box, mode="same")
     X = np.linspace(b.x0, b.x1, len(Y2))
     return core.Linear(X, Y2)
-
-
-def arrayslice(x0:float, x1:float, X:np.ndarray, *Ys:np.ndarray) -> np.ndarray:
-    """
-    Slice a sorted array and linked arrays as if they where a bpf
-
-    Args:
-        x0, x1: where to perform the slices
-        x: the array used to perform the slice
-        ys: one or more secondary arrays which represent a linear bpf,
-            where y = f(x) 
-        
-    Example
-    =======
-
-    X = np.linspace(0, 10, 11, dtype=float)
-    Y = X*2
-
-    x, y = arrayslice(3.5, 7, X, Y)
-   
-    """
-    if x0 >= x1:
-        raise ValueError("x0 should be less than x1")
-
-    if x0 > X[0]:
-        i0 = np.searchsorted(X, x0) - 1    
-    else:
-        i0 = 0
-        x0 = X[0]
-
-    if x1 < X[-1]:
-        i1 = np.searchsorted(X, x1) + 1
-    else:
-        i1 = len(X)
-        x1 = X[-1]
-
-    X2 = X[i0:i1].copy()
-    X2[0] = x0
-    X2[-1] = min(x1, X2[-1])
-    out = [X2]  
-    for Y in Ys:
-        Y2 = Y[i0:i1].copy()
-        y0, y1 = np.interp((x0, x1), X, Y)
-        Y2[0] = y0
-        Y2[-1] = y1
-        out.append(Y2)
-    return out 
-    
-
-def linearslice(linearbpf, x0, x1):
-    X, Y = linearbpf.points()
-    X, Y = arrayslice(x0, x1, X, Y)
-    return core.Linear(X, Y)
-
-
-def _linearslice(linearbpf, x0, x1):
-    """
-    Slice the given bpf, returning a new Linear bpf with endpoints
-    x0 and x1.
-    """
-    assert isinstance(linearbpf, core.Linear)
-    X, Y = linearbpf.points()
-    insert_head = x0 > X[0]
-    if insert_head:
-        i = np.searchsorted(X, x0)
-        X = X[i-1:]
-        Y = Y[i-1:]
-    insert_tail = x1 < X[-1]
-    if insert_tail:
-        i = np.searchsorted(X, x1)
-        X = X[:i+1]
-        Y = Y[:i+1]
-    if insert_head or insert_tail:
-        # we copy when we know exactly how much to copy
-        X = X.copy()
-        Y = Y.copy()
-    if insert_head:
-        X[0] = x0
-        Y[0] = linearbpf(x0)
-    if insert_tail:
-        X[i] = x1
-        Y[i] = linearbpf(x1)    
-    return core.Linear(X, Y)
-
-
-def linear_inverted(linearbpf):
-    res = core._array_issorted(linearbpf.ys)
-    if res == -1:  # not sorted
-        raise ValueError(f"bpf can't be inverted, ys should be always increasing.\nys={linearbpf.ys}")
-    elif res == 1:  # sorted, no dups
-        ys = linearbpf.ys 
-        xs = linearbpf.xs
-    elif res == 0:  # sorted, has dups
-        ys, unique_idx = np.unique(linearbpf.ys, return_index=True)
-        xs = linearbpf.xs[unique_idx]
-    return core.Linear(ys, xs)
-
-
-def interlace_arrays(*arrays: np.ndarray) -> np.ndarray:
-    """
-    Interweave multiple arrays into a flat array in the form
-
-    Example::
-
-        A = [a0, a1, a2, ...]
-        B = [b0, b1, b2, ...]
-        C = [c0, c1, c2, ...]
-        interlace(A, B, C)
-        -> [a0, b0, c0, a1, b1, c1, ...]
-
-    Args:
-        *arrays (): the arrays to interleave. They should be 1D arrays of the
-            same length
-
-    Returns:
-        a 1D array with the elements of the given arrays interleaved
-
-    """
-    assert all(a.size == arrays[0].size and a.dtype == arrays[0].dtype for a in arrays)
-    size = arrays[0].size * len(arrays)
-    out = np.empty((size,), dtype=arrays[0].dtype)
-    for i, a in enumerate(arrays):
-        out[i::len(arrays)] = a
-    return out
-
-
-def sampled_pairs(bpf:core.BpfInterface, dx=0., numpoints=0) -> Tuple[np.ndarray, np.ndarray]:
-    if isinstance(bpf, core.Linear):
-        return bpf.points()
-    elif isinstance(bpf, core.Samped):
-        return bpf.xs, bpf.ys
-    assert (dx > 0 and numpoints == 0) or (dx == 0 and numpoints > 0)
-    if numpoints > 0:
-        dx =bpf.ntodx(numpoints)
-    sampled = bpf[::dx]
-    return sampled.xs, sampled.ys
-
-
-def sampled_flat_pairs(bpf:core.BpfInterface, dx=0., numpoints=0) -> np.ndarray:
-    """
-    Given a bpf, return sampled points (x and y coords) at the given
-    resolution as a flat array
-    """
-    xs, ys = sampled_pairs(bpf, dx=dx, numpoints=numpoints)
-    return interlace_arrays(xs, ys)
-    
-

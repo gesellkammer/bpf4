@@ -3,6 +3,7 @@ BPF4
 
 [![Build Status](https://travis-ci.org/gesellkammer/bpf4.svg?branch=master)](https://travis-ci.org/gesellkammer/bpf4)
 
+
 About
 -----
 
@@ -48,6 +49,7 @@ Curves can be combined non-destructively. Following from the example above.
 
 c = (a + b).sin().abs()
 c[1.5:4].plot()  # plot only the range (1.5, 4)
+
 ```
 
 ![2](https://github.com/gesellkammer/bpf4/raw/master/pics/sinabs.png)
