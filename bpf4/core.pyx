@@ -875,7 +875,7 @@ cdef class BpfInterface:
             else:
                 raise ValueError("interpolation %s not implemented" % interpolation)
 
-    def plot(self, kind='line', int n=-1, show=True, **keys):
+    def plot(self, kind='line', int n=-1, show=True, axis=None, **keys):
         """
         Plot the bpf. any key is passed to plot.plot_coords
 
@@ -893,7 +893,7 @@ cdef class BpfInterface:
         """
         xs, ys = self._get_points_for_rendering(n)
         from . import plot
-        plot.plot_coords(xs, ys, kind=kind, show=show, **keys)
+        plot.plot_coords(xs, ys, kind=kind, show=show, axis=axis, **keys)
         return self
     
     cpdef BpfInterface sampled(self, double dx, interpolation='linear'):

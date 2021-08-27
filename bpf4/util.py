@@ -386,10 +386,13 @@ def parsedescr(descr:str, validate=True) -> Tuple[str, dict]:
                 kws['exp'] = float(part)
     if validate:
         assert classname in _CONSTRUCTORS
+    return classname, kws
 
 
 def makebpf(descr:str, X:Seq[float], Y:Seq[float]) -> core.BpfInterface:
     """
+    Create a bpf from the given descriptor and points
+
     Args:
         descr: a string descriptor of the interpolation ("linear", "expon(xx)", ...)
         X: the array of xs

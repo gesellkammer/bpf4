@@ -4,14 +4,23 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 
-def plot_coords(xs, ys, show=None, kind='line', **keys):
-    if kind == 'line':
-        plt.plot(xs, ys, **keys)
-    elif kind == 'bar':
-        plt.bar(xs, ys, **keys)
+def plot_coords(xs, ys, show=None, kind='line', axes=None, **keys):
+    if axes:
+        if kind == 'line':
+            axes.plot(xs, ys, **keys)
+        elif kind == 'bar':
+            axes.bar(xs, ys, **keys)    
+    else:
+        if kind == 'line':
+            plt.plot(xs, ys, **keys)
+        elif kind == 'bar':
+            plt.bar(xs, ys, **keys)
     plot_always_show = CONFIG['plot.always_show']
     if plot_always_show and (show is None or show is True):
-        plt.show()
+        if axes:
+            axes.show()
+        else:
+            plt.show()
     elif not plot_always_show and show is True:
         plt.show()
 
