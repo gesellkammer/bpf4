@@ -22,8 +22,8 @@ long_description = open('README.md').read()
 compiler_args = [] 
 versionstr = get_version()
 
-if sys.platform == 'windows':
-    compiler_args += ["-march=i686"]  # This is needed in windows to compile cleanly
+# if sys.platform == 'windows':
+#     compiler_args += ["-march=i686"]  # This is needed in windows to compile cleanly
 
 
 class get_numpy_include(str):

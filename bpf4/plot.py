@@ -1,10 +1,23 @@
-# encoding: utf-8
+from __future__ import annotations
 from .config import CONFIG
 from matplotlib import pyplot as plt
 import numpy as np
 
+#from typing import TYPE_CHECKING
+#if TYPE_CHECKING:
+#    from typing import *
 
-def plot_coords(xs, ys, show=None, kind='line', axes=None, **keys):
+
+def plot_coords(xs, ys, show:bool=None, kind='line', axes:plt.Axes=None, **keys):
+    """
+    Plot the points defined by xs and ys
+
+    Args:
+        xs: a seq. of x coords
+        ys: a seq. of y coords
+        kind: one of line or bar
+        axes: if given, this axes is used
+    """
     if axes:
         if kind == 'line':
             axes.plot(xs, ys, **keys)

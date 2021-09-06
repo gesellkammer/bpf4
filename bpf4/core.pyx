@@ -875,9 +875,9 @@ cdef class BpfInterface:
             else:
                 raise ValueError("interpolation %s not implemented" % interpolation)
 
-    def plot(self, kind='line', int n=-1, show=True, axis=None, **keys):
+    def plot(self, kind='line', int n=-1, show=True, axes=None, **keys):
         """
-        Plot the bpf. any key is passed to plot.plot_coords
+        Plot the bpf. Any key is passed to plot.plot_coords
 
         Args:
             kind: one of 'line', 'bar'
@@ -886,6 +886,8 @@ cdef class BpfInterface:
                 want to display multiple BPFs in one plot, for instance to compare them,
                 you can call plot on each of the bpfs with show=False, and then either
                 call the last one with plot=True or call bpf4.plot.show().
+            axes (matplotlib.pyplot.Axes): if given, will be used to plot onto it,
+                otherwise an ad-hoc axes is created
             kws: any keyword will be passed to plot.plot_coords
                 
         Returns:
@@ -893,7 +895,7 @@ cdef class BpfInterface:
         """
         xs, ys = self._get_points_for_rendering(n)
         from . import plot
-        plot.plot_coords(xs, ys, kind=kind, show=show, axis=axis, **keys)
+        plot.plot_coords(xs, ys, kind=kind, show=show, axes=axes, **keys)
         return self
     
     cpdef BpfInterface sampled(self, double dx, interpolation='linear'):
