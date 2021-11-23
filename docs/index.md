@@ -1,121 +1,82 @@
-# loristrck
+# bpf4
 
-Welcome to the **loristrck** documentation!
+Welcome to the **bpf4** documentation!
 
-**loristrck** is a wrapper for the C++ library [Loris](<https://sourceforge.net/projects/loris/files/Loris/>).
+**bpf4** is a library ofr curve fitting and break-point functions in python. It is mainly programmed
+in cython for efficiency.
 
-It is written in cython and targets python 3 (>= 3.8 at the moment). 
+-----------------
+
 
 ## Quick Introduction
 
+
+Find the intersection between two curves
+
 ```python
 
-import loristrck as lt
-
-# Read a soundfile as a numpy array
-samples, sr = lt.sndreadmono("voice.wav")
-
-# Analyze the soundfile with a frequency resolution of 30 Hz and 
-# a window size of 40 Hz. A hoptime of 1/120 will result in 4x overlap
-partials = lt.analyze(samples, sr, resolution=30, windowsize=40, 
-                      hoptime=1/120)
-
-# partials is a python list of numpy arrays
-# select a subset of most significant partials
-selected, noise = lt.select(partials, mindur=0.02, maxfreq=12000, 
-                            minamp=-60, minbp=2)
-
-
-# now resynthesize both parts separately 
-lt.partials_render(selected, outfile="selected.wav")
-lt.partials_render(noise, outfile="residual.wav")
-
-# Save the analysis as a .sdif file with RBEP format
-lt.write_sdif(partials, "analysis.sdif")
+from bpf4 import bpf  # this imports the api
+a = bpf.spline((0, 0), (1, 5), (2, 3), (5, 10))  # each point (x, y)
+b = bpf.expon((0, -10), (2,15), (5, 3), exp=3)
+a.plot() # uses matplotlib
+b.plot() 
+zeros = (a - b).zeros()
+import pylab
+pylab.plot(zeros, a.map(zeros), 'o')
 ```
 
-**selected.wav**
+![1](https://github.com/gesellkammer/bpf4/raw/master/pics/zeros.png)
 
-![](assets/sine.png)
+------------------
 
-<audio controls="controls">
-  <source type="audio/mp3" src="assets/sine.mp3"></source>
-  <source type="audio/ogg" src="assets/sine.ogg"></source>
-</audio>
 
-**residual.wav**
+## Features
 
-![](assets/noise.png)
 
-<audio controls="controls">
-  <source type="audio/mp3" src="assets/noise.mp3"></source>[I[O]]
-  <source type="audio/ogg" src="assets/noise.ogg"></source>
-</audio>
+Many interpolation types besides linear:
 
-Partials can be plotted:
+* spline
+* half-cosine
+* exponential
+* fibonacci
+* exponantial half-cosine
+* pchip
+* logarithmic
+* etc. 
 
-``` python
+Interpolation types can be mixed, so that each segment has a different interpolation (with the exception of spline interpolation)  
+Curves can be combined non-destructively. Following from the example above.  
 
-# plot selected partials
-lt.plot_partials(selected)
-lt.plot_partials(noise)
+
+```pyton
+
+c = (a + b).sin().abs()
+c[1.5:4].plot()  # plot only the range (1.5, 4)
 
 ```
 
-![](assets/plot-select.png)
-![](assets/plot-residual.png)
+![2](https://github.com/gesellkammer/bpf4/raw/master/pics/sinabs.png)
 
-Partials are 2D numpy arrays of shape (num. rows, 5), where each row represents a breakpoint and each breakpoint
-consists of five values: ``time, frequency, amplitude, phase, bandwidth``.
-Since partials are numpy arrays, they can be easily modified in python. For example, it is possible to stretch the timing:
+Syntax support for shifting, scaling and slicing a bpf
 
-``` python
+```python
 
-def stretch(partial, factor):
-    partial2 = partial.copy()
-    partial2[:,0] = partial[:,0]*factor
-    return partial2
-    
-stretched_partials = [stretch(partial, 20) for partial in selected]
-lt.partials_render(selected, outfile="stretched.wav")
+a >> 2        # a shifted to the right
+(a * 5) ^ 2   # scale the x coord by 2, scale the y coord by 5
+a[2:2.5]      # slice only a portion of the bpf
+a[::0.01]     # sample the bpf with an interval of 0.01
 
 ```
 
-![](assets/stretched.png)
-
-<audio controls="controls">
-  <source type="audio/mp3" src="assets/stretched.mp3"></source>
-  <source type="audio/ogg" src="assets/stretched.ogg"></source>
-</audio>
+* Derivation and Integration: `c.derivative().plot()` or `c.integrated().integrated().plot()`  
+* Numerical integration: `c.integrate_between(2, 4)`  
 
 
-----
+-------------------
 
 ## Installation
 
-### macOS
-
 ```bash
-brew install fftw
-pip install loristrck
-```
-
-----
-
-### Linux
-
-For debian/ubuntu, the dependencies can be installed via `apt`:
-
-```bash
-sudo apt install libfftw3-dev libsndfile1-dev
-pip install loristrck
-```
-
-----
-
-### Windows
-
-```
-pip install loristrck
+pip install bpf4
 ```
 
