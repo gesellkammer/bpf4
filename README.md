@@ -7,7 +7,7 @@ BPF4
 About
 -----
 
-bpf4 is a library for curve fitting and break point functions in python. It is mainly programmed in Cython for efficiency. It has been used in itself for functional and numerical analysis.
+bpf4 is a library for curve fitting and break-point functions in python. It is mainly programmed in Cython for efficiency. It has been used in itself for functional and numerical analysis.
 
 Example
 -------
