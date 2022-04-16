@@ -9,6 +9,9 @@
 ### BlendShape
 
 
+A bpf resulting of blending between two different bpfs
+
+
 ```python
 
 class BlendShape()
@@ -24,21 +27,29 @@ class BlendShape()
 #### \_\_init\_\_
 
 
-Initialize self.  See help(type(self)) for accurate signature.
-
-
 ```python
 
-def __init__(self, args, kwargs) -> None
+def __init__(xs: ndarray, ys: ndarray, shape0: str, shape1: str, mix: float
+             ) -> None
 
 ```
+
+
+
+**Args**
+
+* **xs** (`ndarray`): x-coord data
+* **ys** (`ndarray`): y-coord data
+* **shape0** (`str`): first shape
+* **shape1** (`str`): second shape
+* **mix** (`float`): a float between 0 and 1 blending shape0 and shape1
 
 ----------
 
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -52,7 +63,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -66,7 +77,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -75,12 +86,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -90,22 +111,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -133,7 +163,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -147,7 +177,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -156,29 +186,47 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### clone\_with\_new\_data
 
 
-Create a new bpf with the same interpolation shape and any
+Create a new bpf with the same attributes as self but with new data
 
 
 ```python
 
-def clone_with_new_data() -> None
+def clone_with_new_data(xs: ndarray, ys: ndarray) -> Any
 
 ```
 
 
-other attribute of this bpf but with new data
+
+**Args**
+
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The new bpf. It will be of the same class as self
 
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -206,7 +254,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -220,13 +268,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -261,11 +318,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -291,16 +351,55 @@ is the sampling period.
 
 ----------
 
+#### expon
+
+
+Returns a bpf representing the exp operation with this bpf
+
+
+```python
+
+def expon() -> None
+
+```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
+
+----------
+
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -322,27 +421,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -366,14 +489,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -398,41 +523,68 @@ def insertpoint() -> None
 
 ```
 
+
+**NB**: *self* is not modified
+
 ----------
 
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -453,7 +605,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -463,17 +615,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -498,7 +650,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -512,7 +664,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -526,13 +678,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -545,32 +710,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-Return an array with the results of evaluating this bpf at a grid
+Return an array of `n` elements resulting of evaluating this bpf regularly
 
 
 ```python
@@ -580,7 +757,7 @@ def mapn_between() -> None
 ```
 
 
-of the form `linspace(xstart, xend, n)`
+The x coordinates at which this bpf is evaluated are equivalent to `linspace(xstart, xend, n)`
 
 ----------
 
@@ -601,7 +778,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -611,9 +788,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -634,7 +815,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -644,6 +825,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -651,7 +833,7 @@ are divided into N parts: `dx = (x1-x0) / (N-1)`
 #### outbound
 
 
-Set the values (INPLACE) which are returned when this bpf is evaluated
+Set the values **inplace** returned when this bpf is evaluated outside its bounds.
 
 
 ```python
@@ -660,8 +842,6 @@ def outbound() -> None
 
 ```
 
-
-outside its bounds.
 
 The default behaviour is to interpret the values at the bounds to extend to infinity.
 
@@ -672,7 +852,7 @@ In order to not change this bpf inplace, use `b.copy().outbound(y0, y1)`
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -682,18 +862,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -705,8 +888,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -724,16 +921,12 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### points
 
 
-returns (xs, ys)
+Returns (xs, ys)
 
 
 ```python
@@ -745,38 +938,55 @@ def points() -> None
 
 ##### Example
 
-    >>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
-    >>> b.points()
-    ([0, 1, 2], [0, 100, 50])
+```python
+
+>>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
+>>> b.points()
+([0, 1, 2], [0, 100, 50])
+```
 
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -807,36 +1017,54 @@ def removepoint() -> None
 ```
 
 
-Raises ValueError if x is not in this bpf
+Raises `ValueError` if x is not in this bpf
 
-To remove elements by index, do::
+To remove elements by index, do:
 
-    xs, ys = mybpf.points()
-    xs = numpy.delete(xs, indices)
-    ys = numpy.delete(ys, indices)
-    mybpf = mybpf.clone_with_new_data(xs, ys)
+```python
+
+xs, ys = mybpf.points()
+xs = numpy.delete(xs, indices)
+ys = numpy.delete(ys, indices)
+mybpf = mybpf.clone_with_new_data(xs, ys)
+
+```
 
 ----------
 
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -861,96 +1089,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-Return an iterator where each item is
+Return an iterator over the segments of this bpf
 
 
 ```python
@@ -960,9 +1215,9 @@ def segments() -> None
 ```
 
 
-(float x, float y, str interpolation_type, float exponent)
+Each segment is a tuple `(x: float, y: float, interpoltype: str, exponent: float)`
 
-Exponent is only of value if the interpolation type makes use of it
+Exponent is only of value if the interpolation type makes use of it.
 
 ----------
 
@@ -974,19 +1229,25 @@ Shift the bpf along the x-coords, **INPLACE**
 
 ```python
 
-def shift() -> None
+def shift(dx: float) -> None
 
 ```
 
 
 Use `shifted` to create a new bpf
 
+
+
+**Args**
+
+* **dx** (`float`): the shift interval
+
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -996,20 +1257,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -1023,7 +1289,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -1037,7 +1303,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -1056,53 +1322,62 @@ Stretch or compress this bpf in the x-coordinate **INPLACE**
 
 ```python
 
-def stretch() -> None
+def stretch(rx: float) -> None
 
 ```
 
 
-NB: Use `stretched` to create a new bpf
+**NB**: use `stretched` to create a new bpf
+
+
+
+**Args**
+
+* **rx** (`float`): the stretch/compression factor
 
 ----------
 
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -1116,7 +1391,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -1130,12 +1405,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -1143,16 +1418,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -1164,15 +1444,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -1180,8 +1464,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -1235,7 +1519,7 @@ def __init__() -> None
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -1249,7 +1533,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -1263,7 +1547,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -1272,12 +1556,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -1287,22 +1581,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -1330,7 +1633,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -1344,7 +1647,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -1353,29 +1656,47 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### clone\_with\_new\_data
 
 
-Create a new bpf with the same interpolation shape and any
+Create a new bpf with the same attributes as self but with new data
 
 
 ```python
 
-def clone_with_new_data() -> None
+def clone_with_new_data(xs: ndarray, ys: ndarray) -> Any
 
 ```
 
 
-other attribute of this bpf but with new data
+
+**Args**
+
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The new bpf. It will be of the same class as self
 
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -1403,7 +1724,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -1417,13 +1738,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -1458,11 +1788,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -1488,16 +1821,55 @@ is the sampling period.
 
 ----------
 
+#### expon
+
+
+Returns a bpf representing the exp operation with this bpf
+
+
+```python
+
+def expon() -> None
+
+```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
+
+----------
+
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -1519,27 +1891,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -1563,14 +1959,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -1595,41 +1993,68 @@ def insertpoint() -> None
 
 ```
 
+
+**NB**: *self* is not modified
+
 ----------
 
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -1650,7 +2075,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -1660,17 +2085,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -1695,7 +2120,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -1709,7 +2134,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -1723,13 +2148,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -1742,32 +2180,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-Return an array with the results of evaluating this bpf at a grid
+Return an array of `n` elements resulting of evaluating this bpf regularly
 
 
 ```python
@@ -1777,7 +2227,7 @@ def mapn_between() -> None
 ```
 
 
-of the form `linspace(xstart, xend, n)`
+The x coordinates at which this bpf is evaluated are equivalent to `linspace(xstart, xend, n)`
 
 ----------
 
@@ -1798,7 +2248,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -1808,9 +2258,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -1831,7 +2285,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -1841,6 +2295,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -1848,7 +2303,7 @@ are divided into N parts: `dx = (x1-x0) / (N-1)`
 #### outbound
 
 
-Set the values (INPLACE) which are returned when this bpf is evaluated
+Set the values **inplace** returned when this bpf is evaluated outside its bounds.
 
 
 ```python
@@ -1857,8 +2312,6 @@ def outbound() -> None
 
 ```
 
-
-outside its bounds.
 
 The default behaviour is to interpret the values at the bounds to extend to infinity.
 
@@ -1869,7 +2322,7 @@ In order to not change this bpf inplace, use `b.copy().outbound(y0, y1)`
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -1879,18 +2332,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -1902,8 +2358,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -1921,16 +2391,12 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### points
 
 
-returns (xs, ys)
+Returns (xs, ys)
 
 
 ```python
@@ -1942,38 +2408,55 @@ def points() -> None
 
 ##### Example
 
-    >>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
-    >>> b.points()
-    ([0, 1, 2], [0, 100, 50])
+```python
+
+>>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
+>>> b.points()
+([0, 1, 2], [0, 100, 50])
+```
 
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -2004,36 +2487,54 @@ def removepoint() -> None
 ```
 
 
-Raises ValueError if x is not in this bpf
+Raises `ValueError` if x is not in this bpf
 
-To remove elements by index, do::
+To remove elements by index, do:
 
-    xs, ys = mybpf.points()
-    xs = numpy.delete(xs, indices)
-    ys = numpy.delete(ys, indices)
-    mybpf = mybpf.clone_with_new_data(xs, ys)
+```python
+
+xs, ys = mybpf.points()
+xs = numpy.delete(xs, indices)
+ys = numpy.delete(ys, indices)
+mybpf = mybpf.clone_with_new_data(xs, ys)
+
+```
 
 ----------
 
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -2058,96 +2559,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-Return an iterator where each item is
+Return an iterator over the segments of this bpf
 
 
 ```python
@@ -2157,9 +2685,9 @@ def segments() -> None
 ```
 
 
-(float x, float y, str interpolation_type, float exponent)
+Each segment is a tuple `(x: float, y: float, interpoltype: str, exponent: float)`
 
-Exponent is only of value if the interpolation type makes use of it
+Exponent is only of value if the interpolation type makes use of it.
 
 ----------
 
@@ -2171,19 +2699,25 @@ Shift the bpf along the x-coords, **INPLACE**
 
 ```python
 
-def shift() -> None
+def shift(dx: float) -> None
 
 ```
 
 
 Use `shifted` to create a new bpf
 
+
+
+**Args**
+
+* **dx** (`float`): the shift interval
+
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -2193,20 +2727,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -2220,7 +2759,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -2234,7 +2773,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -2253,53 +2792,62 @@ Stretch or compress this bpf in the x-coordinate **INPLACE**
 
 ```python
 
-def stretch() -> None
+def stretch(rx: float) -> None
 
 ```
 
 
-NB: Use `stretched` to create a new bpf
+**NB**: use `stretched` to create a new bpf
+
+
+
+**Args**
+
+* **rx** (`float`): the stretch/compression factor
 
 ----------
 
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -2313,7 +2861,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -2327,12 +2875,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -2340,16 +2888,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -2361,15 +2914,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -2377,8 +2934,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -2399,6 +2956,18 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 **x1**
 
 ## BpfInterface
+
+### BpfInterface
+
+
+Base class for all BreakPointFunctions
+
+
+```python
+
+class BpfInterface()
+
+```
 
 
 ---------
@@ -2423,7 +2992,7 @@ def __init__(self, args, kwargs) -> None
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -2437,7 +3006,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -2451,7 +3020,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -2460,12 +3029,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -2475,22 +3054,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -2518,7 +3106,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -2532,7 +3120,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -2541,12 +3129,22 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -2574,7 +3172,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -2588,13 +3186,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -2629,11 +3236,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -2659,30 +3269,55 @@ is the sampling period.
 
 ----------
 
-#### exp
+#### expon
 
 
-BpfInterface.exp(self) -> _BpfUnaryFunc
+Returns a bpf representing the exp operation with this bpf
 
 
 ```python
 
-def exp() -> None
+def expon() -> None
 
 ```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
 
 ----------
 
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -2704,27 +3339,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -2748,14 +3407,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -2771,36 +3432,60 @@ operations result in the same bpf:
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -2821,7 +3506,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -2831,17 +3516,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -2866,7 +3551,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -2880,7 +3565,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -2894,13 +3579,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -2913,32 +3611,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-return a numpy array representing n values of this bpf between x0 and x1
+Calculate an array of `n` values representing this bpf between `x0` and `x1`
 
 
 ```python
@@ -2955,8 +3665,12 @@ Nonetheless, you should NEVER trust that this actually happens. See example
 
 ##### Example
 
->>> out = numpy.empty((100,), dtype=float)
->>> out = thisbpf.mapn_between(100, 0, 10, out)   # <--- this is the right way to pass a result array
+```python
+
+out = numpy.empty((100,), dtype=float)
+out = thisbpf.mapn_between(100, 0, 10, out)
+
+```
 
 ----------
 
@@ -2977,7 +3691,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -2987,9 +3701,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -3010,7 +3728,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -3020,6 +3738,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -3039,25 +3758,29 @@ def outbound() -> None
 
 ##### Examples
 
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(-1, 0)
-    >>> a(-0.5)
-    -1
-    >>> a(1.1)
-    0
-    >>> a(0)
-    1
-    >>> a(1)
-    10
+```python
 
-    # fallback to another curve outside self
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(0, 0) + bpf.expon(-1, 2, 4, 10)
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 10).outbound(-1, 0)
+>>> a(-0.5)
+-1
+>>> a(1.1)
+0
+>>> a(0)
+1
+>>> a(1)
+10
+
+# fallback to another curve outside self
+>>> a = linear(0, 1, 1, 10).outbound(0, 0) + expon(-1, 2, 4, 10)
+```
 
 ----------
 
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -3067,18 +3790,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -3090,8 +3816,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -3109,38 +3849,48 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -3161,22 +3911,36 @@ def rand() -> None
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -3201,96 +3965,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -3300,20 +4091,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -3327,7 +4123,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -3341,7 +4137,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -3355,41 +4151,44 @@ def sqrt() -> None
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -3403,7 +4202,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -3417,12 +4216,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -3430,16 +4229,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -3451,15 +4255,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -3467,8 +4275,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -3602,7 +4410,7 @@ def __init__(self, args, kwargs) -> None
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -3616,7 +4424,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -3630,7 +4438,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -3639,12 +4447,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -3654,22 +4472,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -3697,7 +4524,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -3711,7 +4538,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -3720,12 +4547,22 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -3753,7 +4590,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -3767,13 +4604,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -3808,11 +4654,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -3838,30 +4687,55 @@ is the sampling period.
 
 ----------
 
-#### exp
+#### expon
 
 
-BpfInterface.exp(self) -> _BpfUnaryFunc
+Returns a bpf representing the exp operation with this bpf
 
 
 ```python
 
-def exp() -> None
+def expon() -> None
 
 ```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
 
 ----------
 
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -3883,27 +4757,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -3927,14 +4825,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -3950,36 +4850,60 @@ operations result in the same bpf:
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -4000,7 +4924,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -4010,17 +4934,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -4045,7 +4969,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -4059,7 +4983,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -4073,13 +4997,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -4092,25 +5029,37 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
@@ -4145,7 +5094,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -4155,9 +5104,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -4178,7 +5131,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -4188,6 +5141,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -4207,25 +5161,29 @@ def outbound() -> None
 
 ##### Examples
 
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(-1, 0)
-    >>> a(-0.5)
-    -1
-    >>> a(1.1)
-    0
-    >>> a(0)
-    1
-    >>> a(1)
-    10
+```python
 
-    # fallback to another curve outside self
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(0, 0) + bpf.expon(-1, 2, 4, 10)
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 10).outbound(-1, 0)
+>>> a(-0.5)
+-1
+>>> a(1.1)
+0
+>>> a(0)
+1
+>>> a(1)
+10
+
+# fallback to another curve outside self
+>>> a = linear(0, 1, 1, 10).outbound(0, 0) + expon(-1, 2, 4, 10)
+```
 
 ----------
 
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -4235,18 +5193,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -4258,8 +5219,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -4277,38 +5252,48 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -4329,22 +5314,36 @@ def rand() -> None
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -4369,96 +5368,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -4468,20 +5494,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -4495,7 +5526,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -4509,7 +5540,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -4523,41 +5554,44 @@ def sqrt() -> None
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -4571,7 +5605,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -4585,12 +5619,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -4598,16 +5632,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -4619,15 +5658,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -4635,8 +5678,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -4655,6 +5698,9 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 ## Expon
 
 ### Expon
+
+
+A bpf with exponential interpolation
 
 
 ```python
@@ -4686,7 +5732,7 @@ def __init__(self, args, kwargs) -> None
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -4700,7 +5746,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -4714,7 +5760,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -4723,12 +5769,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -4738,22 +5794,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -4781,7 +5846,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -4795,7 +5860,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -4804,29 +5869,47 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### clone\_with\_new\_data
 
 
-Create a new bpf with the same interpolation shape and any
+Create a new bpf with the same attributes as self but with new data
 
 
 ```python
 
-def clone_with_new_data() -> None
+def clone_with_new_data(xs: ndarray, ys: ndarray) -> Any
 
 ```
 
 
-other attribute of this bpf but with new data
+
+**Args**
+
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The new bpf. It will be of the same class as self
 
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -4854,7 +5937,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -4868,13 +5951,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -4909,11 +6001,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -4939,16 +6034,55 @@ is the sampling period.
 
 ----------
 
+#### expon
+
+
+Returns a bpf representing the exp operation with this bpf
+
+
+```python
+
+def expon() -> None
+
+```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
+
+----------
+
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -4970,27 +6104,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -5014,14 +6172,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -5046,41 +6206,68 @@ def insertpoint() -> None
 
 ```
 
+
+**NB**: *self* is not modified
+
 ----------
 
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -5101,7 +6288,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -5111,17 +6298,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -5146,7 +6333,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -5160,7 +6347,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -5174,13 +6361,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -5193,32 +6393,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-Return an array with the results of evaluating this bpf at a grid
+Return an array of `n` elements resulting of evaluating this bpf regularly
 
 
 ```python
@@ -5228,7 +6440,7 @@ def mapn_between() -> None
 ```
 
 
-of the form `linspace(xstart, xend, n)`
+The x coordinates at which this bpf is evaluated are equivalent to `linspace(xstart, xend, n)`
 
 ----------
 
@@ -5249,7 +6461,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -5259,9 +6471,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -5282,7 +6498,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -5292,6 +6508,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -5299,7 +6516,7 @@ are divided into N parts: `dx = (x1-x0) / (N-1)`
 #### outbound
 
 
-Set the values (INPLACE) which are returned when this bpf is evaluated
+Set the values **inplace** returned when this bpf is evaluated outside its bounds.
 
 
 ```python
@@ -5308,8 +6525,6 @@ def outbound() -> None
 
 ```
 
-
-outside its bounds.
 
 The default behaviour is to interpret the values at the bounds to extend to infinity.
 
@@ -5320,7 +6535,7 @@ In order to not change this bpf inplace, use `b.copy().outbound(y0, y1)`
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -5330,18 +6545,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -5353,8 +6571,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -5372,16 +6604,12 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### points
 
 
-returns (xs, ys)
+Returns (xs, ys)
 
 
 ```python
@@ -5393,38 +6621,55 @@ def points() -> None
 
 ##### Example
 
-    >>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
-    >>> b.points()
-    ([0, 1, 2], [0, 100, 50])
+```python
+
+>>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
+>>> b.points()
+([0, 1, 2], [0, 100, 50])
+```
 
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -5455,36 +6700,54 @@ def removepoint() -> None
 ```
 
 
-Raises ValueError if x is not in this bpf
+Raises `ValueError` if x is not in this bpf
 
-To remove elements by index, do::
+To remove elements by index, do:
 
-    xs, ys = mybpf.points()
-    xs = numpy.delete(xs, indices)
-    ys = numpy.delete(ys, indices)
-    mybpf = mybpf.clone_with_new_data(xs, ys)
+```python
+
+xs, ys = mybpf.points()
+xs = numpy.delete(xs, indices)
+ys = numpy.delete(ys, indices)
+mybpf = mybpf.clone_with_new_data(xs, ys)
+
+```
 
 ----------
 
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -5509,96 +6772,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-Return an iterator where each item is
+Return an iterator over the segments of this bpf
 
 
 ```python
@@ -5608,9 +6898,9 @@ def segments() -> None
 ```
 
 
-(float x, float y, str interpolation_type, float exponent)
+Each segment is a tuple `(x: float, y: float, interpoltype: str, exponent: float)`
 
-Exponent is only of value if the interpolation type makes use of it
+Exponent is only of value if the interpolation type makes use of it.
 
 ----------
 
@@ -5622,19 +6912,25 @@ Shift the bpf along the x-coords, **INPLACE**
 
 ```python
 
-def shift() -> None
+def shift(dx: float) -> None
 
 ```
 
 
 Use `shifted` to create a new bpf
 
+
+
+**Args**
+
+* **dx** (`float`): the shift interval
+
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -5644,20 +6940,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -5671,7 +6972,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -5685,7 +6986,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -5704,53 +7005,62 @@ Stretch or compress this bpf in the x-coordinate **INPLACE**
 
 ```python
 
-def stretch() -> None
+def stretch(rx: float) -> None
 
 ```
 
 
-NB: Use `stretched` to create a new bpf
+**NB**: use `stretched` to create a new bpf
+
+
+
+**Args**
+
+* **rx** (`float`): the stretch/compression factor
 
 ----------
 
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -5764,7 +7074,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -5778,12 +7088,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -5791,16 +7101,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -5812,15 +7127,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -5828,8 +7147,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -5852,6 +7171,9 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 ## Exponm
 
 ### Exponm
+
+
+A bpf with symmetrical exponential interpolation
 
 
 ```python
@@ -5883,7 +7205,7 @@ def __init__(self, args, kwargs) -> None
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -5897,7 +7219,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -5911,7 +7233,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -5920,12 +7242,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -5935,22 +7267,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -5978,7 +7319,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -5992,7 +7333,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -6001,29 +7342,47 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### clone\_with\_new\_data
 
 
-Create a new bpf with the same interpolation shape and any
+Create a new bpf with the same attributes as self but with new data
 
 
 ```python
 
-def clone_with_new_data() -> None
+def clone_with_new_data(xs: ndarray, ys: ndarray) -> Any
 
 ```
 
 
-other attribute of this bpf but with new data
+
+**Args**
+
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The new bpf. It will be of the same class as self
 
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -6051,7 +7410,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -6065,13 +7424,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -6106,11 +7474,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -6136,16 +7507,55 @@ is the sampling period.
 
 ----------
 
+#### expon
+
+
+Returns a bpf representing the exp operation with this bpf
+
+
+```python
+
+def expon() -> None
+
+```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
+
+----------
+
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -6167,27 +7577,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -6211,14 +7645,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -6243,41 +7679,68 @@ def insertpoint() -> None
 
 ```
 
+
+**NB**: *self* is not modified
+
 ----------
 
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -6298,7 +7761,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -6308,17 +7771,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -6343,7 +7806,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -6357,7 +7820,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -6371,13 +7834,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -6390,32 +7866,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-Return an array with the results of evaluating this bpf at a grid
+Return an array of `n` elements resulting of evaluating this bpf regularly
 
 
 ```python
@@ -6425,7 +7913,7 @@ def mapn_between() -> None
 ```
 
 
-of the form `linspace(xstart, xend, n)`
+The x coordinates at which this bpf is evaluated are equivalent to `linspace(xstart, xend, n)`
 
 ----------
 
@@ -6446,7 +7934,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -6456,9 +7944,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -6479,7 +7971,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -6489,6 +7981,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -6496,7 +7989,7 @@ are divided into N parts: `dx = (x1-x0) / (N-1)`
 #### outbound
 
 
-Set the values (INPLACE) which are returned when this bpf is evaluated
+Set the values **inplace** returned when this bpf is evaluated outside its bounds.
 
 
 ```python
@@ -6505,8 +7998,6 @@ def outbound() -> None
 
 ```
 
-
-outside its bounds.
 
 The default behaviour is to interpret the values at the bounds to extend to infinity.
 
@@ -6517,7 +8008,7 @@ In order to not change this bpf inplace, use `b.copy().outbound(y0, y1)`
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -6527,18 +8018,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -6550,8 +8044,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -6569,16 +8077,12 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### points
 
 
-returns (xs, ys)
+Returns (xs, ys)
 
 
 ```python
@@ -6590,38 +8094,55 @@ def points() -> None
 
 ##### Example
 
-    >>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
-    >>> b.points()
-    ([0, 1, 2], [0, 100, 50])
+```python
+
+>>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
+>>> b.points()
+([0, 1, 2], [0, 100, 50])
+```
 
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -6652,36 +8173,54 @@ def removepoint() -> None
 ```
 
 
-Raises ValueError if x is not in this bpf
+Raises `ValueError` if x is not in this bpf
 
-To remove elements by index, do::
+To remove elements by index, do:
 
-    xs, ys = mybpf.points()
-    xs = numpy.delete(xs, indices)
-    ys = numpy.delete(ys, indices)
-    mybpf = mybpf.clone_with_new_data(xs, ys)
+```python
+
+xs, ys = mybpf.points()
+xs = numpy.delete(xs, indices)
+ys = numpy.delete(ys, indices)
+mybpf = mybpf.clone_with_new_data(xs, ys)
+
+```
 
 ----------
 
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -6706,96 +8245,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-Return an iterator where each item is
+Return an iterator over the segments of this bpf
 
 
 ```python
@@ -6805,9 +8371,9 @@ def segments() -> None
 ```
 
 
-(float x, float y, str interpolation_type, float exponent)
+Each segment is a tuple `(x: float, y: float, interpoltype: str, exponent: float)`
 
-Exponent is only of value if the interpolation type makes use of it
+Exponent is only of value if the interpolation type makes use of it.
 
 ----------
 
@@ -6819,19 +8385,25 @@ Shift the bpf along the x-coords, **INPLACE**
 
 ```python
 
-def shift() -> None
+def shift(dx: float) -> None
 
 ```
 
 
 Use `shifted` to create a new bpf
 
+
+
+**Args**
+
+* **dx** (`float`): the shift interval
+
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -6841,20 +8413,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -6868,7 +8445,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -6882,7 +8459,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -6901,53 +8478,62 @@ Stretch or compress this bpf in the x-coordinate **INPLACE**
 
 ```python
 
-def stretch() -> None
+def stretch(rx: float) -> None
 
 ```
 
 
-NB: Use `stretched` to create a new bpf
+**NB**: use `stretched` to create a new bpf
+
+
+
+**Args**
+
+* **rx** (`float`): the stretch/compression factor
 
 ----------
 
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -6961,7 +8547,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -6975,12 +8561,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -6988,16 +8574,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -7009,15 +8600,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -7025,8 +8620,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -7049,6 +8644,9 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 ## Fib
 
 ### Fib
+
+
+A bpf with fibonacci interpolation
 
 
 ```python
@@ -7080,7 +8678,7 @@ def __init__(self, args, kwargs) -> None
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -7094,7 +8692,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -7108,7 +8706,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -7117,12 +8715,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -7132,22 +8740,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -7175,7 +8792,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -7189,7 +8806,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -7198,29 +8815,47 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### clone\_with\_new\_data
 
 
-Create a new bpf with the same interpolation shape and any
+Create a new bpf with the same attributes as self but with new data
 
 
 ```python
 
-def clone_with_new_data() -> None
+def clone_with_new_data(xs: ndarray, ys: ndarray) -> Any
 
 ```
 
 
-other attribute of this bpf but with new data
+
+**Args**
+
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The new bpf. It will be of the same class as self
 
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -7248,7 +8883,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -7262,13 +8897,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -7303,11 +8947,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -7333,16 +8980,55 @@ is the sampling period.
 
 ----------
 
+#### expon
+
+
+Returns a bpf representing the exp operation with this bpf
+
+
+```python
+
+def expon() -> None
+
+```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
+
+----------
+
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -7364,27 +9050,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -7408,14 +9118,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -7440,41 +9152,68 @@ def insertpoint() -> None
 
 ```
 
+
+**NB**: *self* is not modified
+
 ----------
 
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -7495,7 +9234,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -7505,17 +9244,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -7540,7 +9279,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -7554,7 +9293,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -7568,13 +9307,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -7587,32 +9339,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-Return an array with the results of evaluating this bpf at a grid
+Return an array of `n` elements resulting of evaluating this bpf regularly
 
 
 ```python
@@ -7622,7 +9386,7 @@ def mapn_between() -> None
 ```
 
 
-of the form `linspace(xstart, xend, n)`
+The x coordinates at which this bpf is evaluated are equivalent to `linspace(xstart, xend, n)`
 
 ----------
 
@@ -7643,7 +9407,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -7653,9 +9417,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -7676,7 +9444,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -7686,6 +9454,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -7693,7 +9462,7 @@ are divided into N parts: `dx = (x1-x0) / (N-1)`
 #### outbound
 
 
-Set the values (INPLACE) which are returned when this bpf is evaluated
+Set the values **inplace** returned when this bpf is evaluated outside its bounds.
 
 
 ```python
@@ -7702,8 +9471,6 @@ def outbound() -> None
 
 ```
 
-
-outside its bounds.
 
 The default behaviour is to interpret the values at the bounds to extend to infinity.
 
@@ -7714,7 +9481,7 @@ In order to not change this bpf inplace, use `b.copy().outbound(y0, y1)`
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -7724,18 +9491,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -7747,8 +9517,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -7766,16 +9550,12 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### points
 
 
-returns (xs, ys)
+Returns (xs, ys)
 
 
 ```python
@@ -7787,38 +9567,55 @@ def points() -> None
 
 ##### Example
 
-    >>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
-    >>> b.points()
-    ([0, 1, 2], [0, 100, 50])
+```python
+
+>>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
+>>> b.points()
+([0, 1, 2], [0, 100, 50])
+```
 
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -7849,36 +9646,54 @@ def removepoint() -> None
 ```
 
 
-Raises ValueError if x is not in this bpf
+Raises `ValueError` if x is not in this bpf
 
-To remove elements by index, do::
+To remove elements by index, do:
 
-    xs, ys = mybpf.points()
-    xs = numpy.delete(xs, indices)
-    ys = numpy.delete(ys, indices)
-    mybpf = mybpf.clone_with_new_data(xs, ys)
+```python
+
+xs, ys = mybpf.points()
+xs = numpy.delete(xs, indices)
+ys = numpy.delete(ys, indices)
+mybpf = mybpf.clone_with_new_data(xs, ys)
+
+```
 
 ----------
 
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -7903,96 +9718,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-Return an iterator where each item is
+Return an iterator over the segments of this bpf
 
 
 ```python
@@ -8002,9 +9844,9 @@ def segments() -> None
 ```
 
 
-(float x, float y, str interpolation_type, float exponent)
+Each segment is a tuple `(x: float, y: float, interpoltype: str, exponent: float)`
 
-Exponent is only of value if the interpolation type makes use of it
+Exponent is only of value if the interpolation type makes use of it.
 
 ----------
 
@@ -8016,19 +9858,25 @@ Shift the bpf along the x-coords, **INPLACE**
 
 ```python
 
-def shift() -> None
+def shift(dx: float) -> None
 
 ```
 
 
 Use `shifted` to create a new bpf
 
+
+
+**Args**
+
+* **dx** (`float`): the shift interval
+
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -8038,20 +9886,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -8065,7 +9918,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -8079,7 +9932,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -8098,53 +9951,62 @@ Stretch or compress this bpf in the x-coordinate **INPLACE**
 
 ```python
 
-def stretch() -> None
+def stretch(rx: float) -> None
 
 ```
 
 
-NB: Use `stretched` to create a new bpf
+**NB**: use `stretched` to create a new bpf
+
+
+
+**Args**
+
+* **rx** (`float`): the stretch/compression factor
 
 ----------
 
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -8158,7 +10020,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -8172,12 +10034,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -8185,16 +10047,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -8206,15 +10073,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -8222,8 +10093,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -8248,6 +10119,9 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 ### Halfcos
 
 
+A bpf with half-cosine interpolation
+
+
 ```python
 
 class Halfcos()
@@ -8263,21 +10137,27 @@ class Halfcos()
 #### \_\_init\_\_
 
 
-Initialize self.  See help(type(self)) for accurate signature.
-
-
 ```python
 
-def __init__(self, args, kwargs) -> None
+def __init__(xs: array, ys: array, exp: float, numiter) -> None
 
 ```
+
+
+
+**Args**
+
+* **xs** (`array`): the x-coord data
+* **ys** (`array`): the y-coord data
+* **exp** (`float`): an exponent applied to the halfcosine interpolation
+* **numiter**: how many times to apply the interpolation
 
 ----------
 
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -8291,7 +10171,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -8305,7 +10185,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -8314,12 +10194,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -8329,22 +10219,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -8372,7 +10271,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -8386,7 +10285,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -8395,29 +10294,47 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### clone\_with\_new\_data
 
 
-Create a new bpf with the same interpolation shape and any
+Create a new bpf with the same attributes as self but with new data
 
 
 ```python
 
-def clone_with_new_data() -> None
+def clone_with_new_data(xs: ndarray, ys: ndarray) -> Any
 
 ```
 
 
-other attribute of this bpf but with new data
+
+**Args**
+
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The new bpf. It will be of the same class as self
 
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -8445,7 +10362,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -8459,13 +10376,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -8500,11 +10426,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -8530,16 +10459,55 @@ is the sampling period.
 
 ----------
 
+#### expon
+
+
+Returns a bpf representing the exp operation with this bpf
+
+
+```python
+
+def expon() -> None
+
+```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
+
+----------
+
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -8561,27 +10529,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -8605,14 +10597,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -8637,41 +10631,68 @@ def insertpoint() -> None
 
 ```
 
+
+**NB**: *self* is not modified
+
 ----------
 
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -8692,7 +10713,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -8702,17 +10723,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -8737,7 +10758,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -8751,7 +10772,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -8765,13 +10786,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -8784,32 +10818,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-Return an array with the results of evaluating this bpf at a grid
+Return an array of `n` elements resulting of evaluating this bpf regularly
 
 
 ```python
@@ -8819,7 +10865,7 @@ def mapn_between() -> None
 ```
 
 
-of the form `linspace(xstart, xend, n)`
+The x coordinates at which this bpf is evaluated are equivalent to `linspace(xstart, xend, n)`
 
 ----------
 
@@ -8840,7 +10886,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -8850,9 +10896,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -8873,7 +10923,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -8883,6 +10933,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -8890,7 +10941,7 @@ are divided into N parts: `dx = (x1-x0) / (N-1)`
 #### outbound
 
 
-Set the values (INPLACE) which are returned when this bpf is evaluated
+Set the values **inplace** returned when this bpf is evaluated outside its bounds.
 
 
 ```python
@@ -8899,8 +10950,6 @@ def outbound() -> None
 
 ```
 
-
-outside its bounds.
 
 The default behaviour is to interpret the values at the bounds to extend to infinity.
 
@@ -8911,7 +10960,7 @@ In order to not change this bpf inplace, use `b.copy().outbound(y0, y1)`
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -8921,18 +10970,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -8944,8 +10996,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -8963,16 +11029,12 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### points
 
 
-returns (xs, ys)
+Returns (xs, ys)
 
 
 ```python
@@ -8984,38 +11046,55 @@ def points() -> None
 
 ##### Example
 
-    >>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
-    >>> b.points()
-    ([0, 1, 2], [0, 100, 50])
+```python
+
+>>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
+>>> b.points()
+([0, 1, 2], [0, 100, 50])
+```
 
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -9046,36 +11125,54 @@ def removepoint() -> None
 ```
 
 
-Raises ValueError if x is not in this bpf
+Raises `ValueError` if x is not in this bpf
 
-To remove elements by index, do::
+To remove elements by index, do:
 
-    xs, ys = mybpf.points()
-    xs = numpy.delete(xs, indices)
-    ys = numpy.delete(ys, indices)
-    mybpf = mybpf.clone_with_new_data(xs, ys)
+```python
+
+xs, ys = mybpf.points()
+xs = numpy.delete(xs, indices)
+ys = numpy.delete(ys, indices)
+mybpf = mybpf.clone_with_new_data(xs, ys)
+
+```
 
 ----------
 
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -9100,96 +11197,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-Return an iterator where each item is
+Return an iterator over the segments of this bpf
 
 
 ```python
@@ -9199,9 +11323,9 @@ def segments() -> None
 ```
 
 
-(float x, float y, str interpolation_type, float exponent)
+Each segment is a tuple `(x: float, y: float, interpoltype: str, exponent: float)`
 
-Exponent is only of value if the interpolation type makes use of it
+Exponent is only of value if the interpolation type makes use of it.
 
 ----------
 
@@ -9213,19 +11337,25 @@ Shift the bpf along the x-coords, **INPLACE**
 
 ```python
 
-def shift() -> None
+def shift(dx: float) -> None
 
 ```
 
 
 Use `shifted` to create a new bpf
 
+
+
+**Args**
+
+* **dx** (`float`): the shift interval
+
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -9235,20 +11365,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -9262,7 +11397,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -9276,7 +11411,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -9295,53 +11430,62 @@ Stretch or compress this bpf in the x-coordinate **INPLACE**
 
 ```python
 
-def stretch() -> None
+def stretch(rx: float) -> None
 
 ```
 
 
-NB: Use `stretched` to create a new bpf
+**NB**: use `stretched` to create a new bpf
+
+
+
+**Args**
+
+* **rx** (`float`): the stretch/compression factor
 
 ----------
 
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -9355,7 +11499,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -9369,12 +11513,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -9382,16 +11526,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -9403,15 +11552,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -9419,8 +11572,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -9445,6 +11598,9 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 ### Halfcos
 
 
+A bpf with half-cosine interpolation
+
+
 ```python
 
 class Halfcos()
@@ -9460,21 +11616,27 @@ class Halfcos()
 #### \_\_init\_\_
 
 
-Initialize self.  See help(type(self)) for accurate signature.
-
-
 ```python
 
-def __init__(self, args, kwargs) -> None
+def __init__(xs: array, ys: array, exp: float, numiter) -> None
 
 ```
+
+
+
+**Args**
+
+* **xs** (`array`): the x-coord data
+* **ys** (`array`): the y-coord data
+* **exp** (`float`): an exponent applied to the halfcosine interpolation
+* **numiter**: how many times to apply the interpolation
 
 ----------
 
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -9488,7 +11650,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -9502,7 +11664,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -9511,12 +11673,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -9526,22 +11698,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -9569,7 +11750,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -9583,7 +11764,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -9592,29 +11773,47 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### clone\_with\_new\_data
 
 
-Create a new bpf with the same interpolation shape and any
+Create a new bpf with the same attributes as self but with new data
 
 
 ```python
 
-def clone_with_new_data() -> None
+def clone_with_new_data(xs: ndarray, ys: ndarray) -> Any
 
 ```
 
 
-other attribute of this bpf but with new data
+
+**Args**
+
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The new bpf. It will be of the same class as self
 
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -9642,7 +11841,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -9656,13 +11855,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -9697,11 +11905,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -9727,16 +11938,55 @@ is the sampling period.
 
 ----------
 
+#### expon
+
+
+Returns a bpf representing the exp operation with this bpf
+
+
+```python
+
+def expon() -> None
+
+```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
+
+----------
+
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -9758,27 +12008,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -9802,14 +12076,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -9834,41 +12110,68 @@ def insertpoint() -> None
 
 ```
 
+
+**NB**: *self* is not modified
+
 ----------
 
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -9889,7 +12192,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -9899,17 +12202,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -9934,7 +12237,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -9948,7 +12251,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -9962,13 +12265,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -9981,32 +12297,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-Return an array with the results of evaluating this bpf at a grid
+Return an array of `n` elements resulting of evaluating this bpf regularly
 
 
 ```python
@@ -10016,7 +12344,7 @@ def mapn_between() -> None
 ```
 
 
-of the form `linspace(xstart, xend, n)`
+The x coordinates at which this bpf is evaluated are equivalent to `linspace(xstart, xend, n)`
 
 ----------
 
@@ -10037,7 +12365,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -10047,9 +12375,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -10070,7 +12402,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -10080,6 +12412,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -10087,7 +12420,7 @@ are divided into N parts: `dx = (x1-x0) / (N-1)`
 #### outbound
 
 
-Set the values (INPLACE) which are returned when this bpf is evaluated
+Set the values **inplace** returned when this bpf is evaluated outside its bounds.
 
 
 ```python
@@ -10096,8 +12429,6 @@ def outbound() -> None
 
 ```
 
-
-outside its bounds.
 
 The default behaviour is to interpret the values at the bounds to extend to infinity.
 
@@ -10108,7 +12439,7 @@ In order to not change this bpf inplace, use `b.copy().outbound(y0, y1)`
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -10118,18 +12449,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -10141,8 +12475,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -10160,16 +12508,12 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### points
 
 
-returns (xs, ys)
+Returns (xs, ys)
 
 
 ```python
@@ -10181,38 +12525,55 @@ def points() -> None
 
 ##### Example
 
-    >>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
-    >>> b.points()
-    ([0, 1, 2], [0, 100, 50])
+```python
+
+>>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
+>>> b.points()
+([0, 1, 2], [0, 100, 50])
+```
 
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -10243,36 +12604,54 @@ def removepoint() -> None
 ```
 
 
-Raises ValueError if x is not in this bpf
+Raises `ValueError` if x is not in this bpf
 
-To remove elements by index, do::
+To remove elements by index, do:
 
-    xs, ys = mybpf.points()
-    xs = numpy.delete(xs, indices)
-    ys = numpy.delete(ys, indices)
-    mybpf = mybpf.clone_with_new_data(xs, ys)
+```python
+
+xs, ys = mybpf.points()
+xs = numpy.delete(xs, indices)
+ys = numpy.delete(ys, indices)
+mybpf = mybpf.clone_with_new_data(xs, ys)
+
+```
 
 ----------
 
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -10297,96 +12676,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-Return an iterator where each item is
+Return an iterator over the segments of this bpf
 
 
 ```python
@@ -10396,9 +12802,9 @@ def segments() -> None
 ```
 
 
-(float x, float y, str interpolation_type, float exponent)
+Each segment is a tuple `(x: float, y: float, interpoltype: str, exponent: float)`
 
-Exponent is only of value if the interpolation type makes use of it
+Exponent is only of value if the interpolation type makes use of it.
 
 ----------
 
@@ -10410,19 +12816,25 @@ Shift the bpf along the x-coords, **INPLACE**
 
 ```python
 
-def shift() -> None
+def shift(dx: float) -> None
 
 ```
 
 
 Use `shifted` to create a new bpf
 
+
+
+**Args**
+
+* **dx** (`float`): the shift interval
+
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -10432,20 +12844,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -10459,7 +12876,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -10473,7 +12890,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -10492,53 +12909,62 @@ Stretch or compress this bpf in the x-coordinate **INPLACE**
 
 ```python
 
-def stretch() -> None
+def stretch(rx: float) -> None
 
 ```
 
 
-NB: Use `stretched` to create a new bpf
+**NB**: use `stretched` to create a new bpf
+
+
+
+**Args**
+
+* **rx** (`float`): the stretch/compression factor
 
 ----------
 
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -10552,7 +12978,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -10566,12 +12992,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -10579,16 +13005,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -10600,15 +13031,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -10616,8 +13051,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -10642,11 +13077,18 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 ### Halfcosm
 
 
+A bpf with half-cosine and exponent depending on the orientation of the interpolation
+
+
 ```python
 
 class Halfcosm()
 
 ```
+
+
+When interpolating between two y values, y0 and y1, if  y1 < y0 the exponent
+is inverted, resulting in a symmetrical interpolation shape
 
 
 ---------
@@ -10671,7 +13113,7 @@ def __init__(self, args, kwargs) -> None
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -10685,7 +13127,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -10699,7 +13141,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -10708,12 +13150,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -10723,22 +13175,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -10766,7 +13227,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -10780,7 +13241,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -10789,29 +13250,47 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### clone\_with\_new\_data
 
 
-Create a new bpf with the same interpolation shape and any
+Create a new bpf with the same attributes as self but with new data
 
 
 ```python
 
-def clone_with_new_data() -> None
+def clone_with_new_data(xs: ndarray, ys: ndarray) -> Any
 
 ```
 
 
-other attribute of this bpf but with new data
+
+**Args**
+
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The new bpf. It will be of the same class as self
 
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -10839,7 +13318,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -10853,13 +13332,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -10894,11 +13382,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -10924,16 +13415,55 @@ is the sampling period.
 
 ----------
 
+#### expon
+
+
+Returns a bpf representing the exp operation with this bpf
+
+
+```python
+
+def expon() -> None
+
+```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
+
+----------
+
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -10955,27 +13485,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -10999,14 +13553,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -11031,41 +13587,68 @@ def insertpoint() -> None
 
 ```
 
+
+**NB**: *self* is not modified
+
 ----------
 
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -11086,7 +13669,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -11096,17 +13679,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -11131,7 +13714,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -11145,7 +13728,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -11159,13 +13742,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -11178,32 +13774,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-Return an array with the results of evaluating this bpf at a grid
+Return an array of `n` elements resulting of evaluating this bpf regularly
 
 
 ```python
@@ -11213,7 +13821,7 @@ def mapn_between() -> None
 ```
 
 
-of the form `linspace(xstart, xend, n)`
+The x coordinates at which this bpf is evaluated are equivalent to `linspace(xstart, xend, n)`
 
 ----------
 
@@ -11234,7 +13842,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -11244,9 +13852,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -11267,7 +13879,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -11277,6 +13889,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -11284,7 +13897,7 @@ are divided into N parts: `dx = (x1-x0) / (N-1)`
 #### outbound
 
 
-Set the values (INPLACE) which are returned when this bpf is evaluated
+Set the values **inplace** returned when this bpf is evaluated outside its bounds.
 
 
 ```python
@@ -11293,8 +13906,6 @@ def outbound() -> None
 
 ```
 
-
-outside its bounds.
 
 The default behaviour is to interpret the values at the bounds to extend to infinity.
 
@@ -11305,7 +13916,7 @@ In order to not change this bpf inplace, use `b.copy().outbound(y0, y1)`
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -11315,18 +13926,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -11338,8 +13952,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -11357,16 +13985,12 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### points
 
 
-returns (xs, ys)
+Returns (xs, ys)
 
 
 ```python
@@ -11378,38 +14002,55 @@ def points() -> None
 
 ##### Example
 
-    >>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
-    >>> b.points()
-    ([0, 1, 2], [0, 100, 50])
+```python
+
+>>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
+>>> b.points()
+([0, 1, 2], [0, 100, 50])
+```
 
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -11440,36 +14081,54 @@ def removepoint() -> None
 ```
 
 
-Raises ValueError if x is not in this bpf
+Raises `ValueError` if x is not in this bpf
 
-To remove elements by index, do::
+To remove elements by index, do:
 
-    xs, ys = mybpf.points()
-    xs = numpy.delete(xs, indices)
-    ys = numpy.delete(ys, indices)
-    mybpf = mybpf.clone_with_new_data(xs, ys)
+```python
+
+xs, ys = mybpf.points()
+xs = numpy.delete(xs, indices)
+ys = numpy.delete(ys, indices)
+mybpf = mybpf.clone_with_new_data(xs, ys)
+
+```
 
 ----------
 
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -11494,96 +14153,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-Return an iterator where each item is
+Return an iterator over the segments of this bpf
 
 
 ```python
@@ -11593,9 +14279,9 @@ def segments() -> None
 ```
 
 
-(float x, float y, str interpolation_type, float exponent)
+Each segment is a tuple `(x: float, y: float, interpoltype: str, exponent: float)`
 
-Exponent is only of value if the interpolation type makes use of it
+Exponent is only of value if the interpolation type makes use of it.
 
 ----------
 
@@ -11607,19 +14293,25 @@ Shift the bpf along the x-coords, **INPLACE**
 
 ```python
 
-def shift() -> None
+def shift(dx: float) -> None
 
 ```
 
 
 Use `shifted` to create a new bpf
 
+
+
+**Args**
+
+* **dx** (`float`): the shift interval
+
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -11629,20 +14321,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -11656,7 +14353,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -11670,7 +14367,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -11689,53 +14386,62 @@ Stretch or compress this bpf in the x-coordinate **INPLACE**
 
 ```python
 
-def stretch() -> None
+def stretch(rx: float) -> None
 
 ```
 
 
-NB: Use `stretched` to create a new bpf
+**NB**: use `stretched` to create a new bpf
+
+
+
+**Args**
+
+* **rx** (`float`): the stretch/compression factor
 
 ----------
 
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -11749,7 +14455,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -11763,12 +14469,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -11776,16 +14482,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -11797,15 +14508,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -11813,8 +14528,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -11837,6 +14552,9 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 ## Linear
 
 ### Linear
+
+
+A bpf with linear interpolation
 
 
 ```python
@@ -11868,7 +14586,7 @@ def __init__(self, args, kwargs) -> None
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -11882,7 +14600,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -11896,7 +14614,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -11905,12 +14623,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -11920,22 +14648,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -11963,7 +14700,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -11977,7 +14714,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -11986,29 +14723,47 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### clone\_with\_new\_data
 
 
-Create a new bpf with the same interpolation shape and any
+Create a new bpf with the same attributes as self but with new data
 
 
 ```python
 
-def clone_with_new_data() -> None
+def clone_with_new_data(xs: ndarray, ys: ndarray) -> Any
 
 ```
 
 
-other attribute of this bpf but with new data
+
+**Args**
+
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The new bpf. It will be of the same class as self
 
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -12036,7 +14791,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -12050,13 +14805,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -12091,11 +14855,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -12121,16 +14888,55 @@ is the sampling period.
 
 ----------
 
+#### expon
+
+
+Returns a bpf representing the exp operation with this bpf
+
+
+```python
+
+def expon() -> None
+
+```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
+
+----------
+
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -12152,20 +14958,44 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
@@ -12182,16 +15012,20 @@ def flat_pairs() -> None
 ```
 
 
-a = linear(0, 0, 1, 10, 2, 20)
-a.flat_pairs()
--> array([0, 0, 1, 10, 2, 20])
+```python
+
+>>> a = linear(0, 0, 1, 10, 2, 20)
+>>> a.flat_pairs()
+array([0, 0, 1, 10, 2, 20])
+
+```
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -12215,14 +15049,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -12247,27 +15083,42 @@ def insertpoint() -> None
 
 ```
 
+
+**NB**: *self* is not modified
+
 ----------
 
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -12302,7 +15153,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new Linear bpf where x and y coordinates are inverted. This
+Return a new Linear bpf where x and y coordinates are inverted.
 
 
 ```python
@@ -12312,7 +15163,7 @@ def inverted() -> None
 ```
 
 
-is only possible if y never decreases in value
+This is only possible if y never decreases in value
 
 ----------
 
@@ -12337,7 +15188,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -12351,7 +15202,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -12365,13 +15216,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -12384,32 +15248,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-Return an array with the results of evaluating this bpf at a grid
+Return an array of `n` elements resulting of evaluating this bpf regularly
 
 
 ```python
@@ -12419,7 +15295,7 @@ def mapn_between() -> None
 ```
 
 
-of the form `linspace(xstart, xend, n)`
+The x coordinates at which this bpf is evaluated are equivalent to `linspace(xstart, xend, n)`
 
 ----------
 
@@ -12440,7 +15316,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -12450,9 +15326,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -12473,7 +15353,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -12483,6 +15363,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -12490,7 +15371,7 @@ are divided into N parts: `dx = (x1-x0) / (N-1)`
 #### outbound
 
 
-Set the values (INPLACE) which are returned when this bpf is evaluated
+Set the values **inplace** returned when this bpf is evaluated outside its bounds.
 
 
 ```python
@@ -12499,8 +15380,6 @@ def outbound() -> None
 
 ```
 
-
-outside its bounds.
 
 The default behaviour is to interpret the values at the bounds to extend to infinity.
 
@@ -12511,7 +15390,7 @@ In order to not change this bpf inplace, use `b.copy().outbound(y0, y1)`
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -12521,18 +15400,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -12544,8 +15426,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -12563,16 +15459,12 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### points
 
 
-returns (xs, ys)
+Returns (xs, ys)
 
 
 ```python
@@ -12584,38 +15476,55 @@ def points() -> None
 
 ##### Example
 
-    >>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
-    >>> b.points()
-    ([0, 1, 2], [0, 100, 50])
+```python
+
+>>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
+>>> b.points()
+([0, 1, 2], [0, 100, 50])
+```
 
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -12646,36 +15555,54 @@ def removepoint() -> None
 ```
 
 
-Raises ValueError if x is not in this bpf
+Raises `ValueError` if x is not in this bpf
 
-To remove elements by index, do::
+To remove elements by index, do:
 
-    xs, ys = mybpf.points()
-    xs = numpy.delete(xs, indices)
-    ys = numpy.delete(ys, indices)
-    mybpf = mybpf.clone_with_new_data(xs, ys)
+```python
+
+xs, ys = mybpf.points()
+xs = numpy.delete(xs, indices)
+ys = numpy.delete(ys, indices)
+mybpf = mybpf.clone_with_new_data(xs, ys)
+
+```
 
 ----------
 
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -12700,96 +15627,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-Return an iterator where each item is
+Return an iterator over the segments of this bpf
 
 
 ```python
@@ -12799,9 +15753,9 @@ def segments() -> None
 ```
 
 
-(float x, float y, str interpolation_type, float exponent)
+Each segment is a tuple `(x: float, y: float, interpoltype: str, exponent: float)`
 
-Exponent is only of value if the interpolation type makes use of it
+Exponent is only of value if the interpolation type makes use of it.
 
 ----------
 
@@ -12813,19 +15767,25 @@ Shift the bpf along the x-coords, **INPLACE**
 
 ```python
 
-def shift() -> None
+def shift(dx: float) -> None
 
 ```
 
 
 Use `shifted` to create a new bpf
 
+
+
+**Args**
+
+* **dx** (`float`): the shift interval
+
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -12835,20 +15795,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -12862,7 +15827,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -12876,7 +15841,7 @@ def sinh() -> None
 #### sliced
 
 
-cut this bpf at the given points, inserting points at
+Cut this bpf at the given points
 
 
 ```python
@@ -12886,18 +15851,18 @@ def sliced() -> None
 ```
 
 
-those coordinates, to limit this bpf to the range
-x0:x1.
+If needed it inserts points at the given coordinates to limit this bpf to 
+the range `x0:x1`.
 
 **NB**: this is different from crop, which is just a "view" into the underlying
-bpf. In this case a real Linear bpf is returned. 
+bpf. In this case a real `Linear` bpf is returned. 
 
 ----------
 
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -12916,53 +15881,62 @@ Stretch or compress this bpf in the x-coordinate **INPLACE**
 
 ```python
 
-def stretch() -> None
+def stretch(rx: float) -> None
 
 ```
 
 
-NB: Use `stretched` to create a new bpf
+**NB**: use `stretched` to create a new bpf
+
+
+
+**Args**
+
+* **rx** (`float`): the stretch/compression factor
 
 ----------
 
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -12976,7 +15950,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -12990,12 +15964,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -13003,16 +15977,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -13024,15 +16003,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -13040,8 +16023,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -13095,7 +16078,7 @@ def __init__(self, args, kwargs) -> None
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -13109,7 +16092,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -13123,7 +16106,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -13132,12 +16115,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -13147,22 +16140,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -13190,7 +16192,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -13204,7 +16206,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -13213,12 +16215,22 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -13246,7 +16258,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -13260,13 +16272,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -13301,11 +16322,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -13331,30 +16355,55 @@ is the sampling period.
 
 ----------
 
-#### exp
+#### expon
 
 
-BpfInterface.exp(self) -> _BpfUnaryFunc
+Returns a bpf representing the exp operation with this bpf
 
 
 ```python
 
-def exp() -> None
+def expon() -> None
 
 ```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
 
 ----------
 
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -13376,27 +16425,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -13420,14 +16493,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -13443,36 +16518,60 @@ operations result in the same bpf:
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -13493,7 +16592,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -13503,17 +16602,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -13538,7 +16637,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -13552,7 +16651,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -13566,13 +16665,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -13585,32 +16697,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-return a numpy array representing n values of this bpf between x0 and x1
+Calculate an array of `n` values representing this bpf between `x0` and `x1`
 
 
 ```python
@@ -13627,8 +16751,12 @@ Nonetheless, you should NEVER trust that this actually happens. See example
 
 ##### Example
 
->>> out = numpy.empty((100,), dtype=float)
->>> out = thisbpf.mapn_between(100, 0, 10, out)   # <--- this is the right way to pass a result array
+```python
+
+out = numpy.empty((100,), dtype=float)
+out = thisbpf.mapn_between(100, 0, 10, out)
+
+```
 
 ----------
 
@@ -13649,7 +16777,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -13659,9 +16787,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -13682,7 +16814,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -13692,6 +16824,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -13711,25 +16844,29 @@ def outbound() -> None
 
 ##### Examples
 
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(-1, 0)
-    >>> a(-0.5)
-    -1
-    >>> a(1.1)
-    0
-    >>> a(0)
-    1
-    >>> a(1)
-    10
+```python
 
-    # fallback to another curve outside self
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(0, 0) + bpf.expon(-1, 2, 4, 10)
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 10).outbound(-1, 0)
+>>> a(-0.5)
+-1
+>>> a(1.1)
+0
+>>> a(0)
+1
+>>> a(1)
+10
+
+# fallback to another curve outside self
+>>> a = linear(0, 1, 1, 10).outbound(0, 0) + expon(-1, 2, 4, 10)
+```
 
 ----------
 
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -13739,18 +16876,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -13762,8 +16902,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -13781,38 +16935,48 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -13833,22 +16997,36 @@ def rand() -> None
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -13873,96 +17051,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -13972,20 +17177,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -13999,7 +17209,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -14013,7 +17223,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -14027,41 +17237,44 @@ def sqrt() -> None
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -14075,7 +17288,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -14089,12 +17302,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -14102,16 +17315,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -14123,15 +17341,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -14139,8 +17361,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -14190,7 +17412,7 @@ def __init__(self, args, kwargs) -> None
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -14204,7 +17426,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -14218,7 +17440,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -14227,12 +17449,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -14242,22 +17474,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -14285,7 +17526,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -14299,7 +17540,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -14308,12 +17549,22 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -14341,7 +17592,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -14355,13 +17606,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -14396,11 +17656,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -14426,30 +17689,55 @@ is the sampling period.
 
 ----------
 
-#### exp
+#### expon
 
 
-BpfInterface.exp(self) -> _BpfUnaryFunc
+Returns a bpf representing the exp operation with this bpf
 
 
 ```python
 
-def exp() -> None
+def expon() -> None
 
 ```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
 
 ----------
 
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -14471,27 +17759,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -14515,14 +17827,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -14538,36 +17852,60 @@ operations result in the same bpf:
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -14588,7 +17926,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -14598,17 +17936,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -14633,7 +17971,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -14647,7 +17985,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -14661,13 +17999,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -14680,32 +18031,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-return a numpy array representing n values of this bpf between x0 and x1
+Calculate an array of `n` values representing this bpf between `x0` and `x1`
 
 
 ```python
@@ -14722,8 +18085,12 @@ Nonetheless, you should NEVER trust that this actually happens. See example
 
 ##### Example
 
->>> out = numpy.empty((100,), dtype=float)
->>> out = thisbpf.mapn_between(100, 0, 10, out)   # <--- this is the right way to pass a result array
+```python
+
+out = numpy.empty((100,), dtype=float)
+out = thisbpf.mapn_between(100, 0, 10, out)
+
+```
 
 ----------
 
@@ -14744,7 +18111,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -14754,9 +18121,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -14777,7 +18148,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -14787,6 +18158,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -14806,25 +18178,29 @@ def outbound() -> None
 
 ##### Examples
 
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(-1, 0)
-    >>> a(-0.5)
-    -1
-    >>> a(1.1)
-    0
-    >>> a(0)
-    1
-    >>> a(1)
-    10
+```python
 
-    # fallback to another curve outside self
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(0, 0) + bpf.expon(-1, 2, 4, 10)
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 10).outbound(-1, 0)
+>>> a(-0.5)
+-1
+>>> a(1.1)
+0
+>>> a(0)
+1
+>>> a(1)
+10
+
+# fallback to another curve outside self
+>>> a = linear(0, 1, 1, 10).outbound(0, 0) + expon(-1, 2, 4, 10)
+```
 
 ----------
 
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -14834,18 +18210,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -14857,8 +18236,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -14876,38 +18269,48 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -14928,22 +18331,36 @@ def rand() -> None
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -14968,96 +18385,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -15067,20 +18511,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -15094,7 +18543,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -15108,7 +18557,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -15122,41 +18571,44 @@ def sqrt() -> None
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -15170,7 +18622,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -15184,12 +18636,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -15197,16 +18649,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -15218,15 +18675,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -15234,8 +18695,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -15256,6 +18717,9 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 ### Multi
 
 
+A bpf where each segment can have its own interpolation kind
+
+
 ```python
 
 class Multi()
@@ -15271,35 +18735,38 @@ class Multi()
 #### \_\_init\_\_
 
 
-xs: the sequence of x points
-
-
 ```python
 
-def __init__() -> None
+def __init__(xs: ndarray, ys: ndarray, interpolations: list[str]) -> None
 
 ```
 
 
-ys: the sequence of y points
-interpolations: the interpolation used between these points
-
-NB: len(interpolations) = len(xs) - 1
+**NB**: `len(interpolations) == len(xs) - 1`
 
 The interpelation is indicated via a string of the type:
 
-'linear'      -> linear
-'expon(2)'    -> exponential interpolation, exp=2
-'halfcos'
-'halfcos(0.5) -> half-cos exponential interpolation with exp=0.5
-'nointerpol'  -> no interpolation (rect)
+
+* 'linear': linear
+* 'expon(2)': exponential interpolation, exp=2
+* 'halfcos'
+* 'halfcos(0.5): half-cos exponential interpolation with exp=0.5
+* 'nointerpol': no interpolation (rect)
+
+
+
+**Args**
+
+* **xs** (`ndarray`): the sequence of x points
+* **ys** (`ndarray`): the sequence of y points
+* **interpolations** (`list[str]`): the interpolation used between these points
 
 ----------
 
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -15313,7 +18780,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -15327,7 +18794,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -15336,12 +18803,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -15351,22 +18828,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -15394,7 +18880,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -15408,7 +18894,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -15417,12 +18903,22 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -15450,7 +18946,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -15464,13 +18960,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -15505,11 +19010,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -15535,30 +19043,55 @@ is the sampling period.
 
 ----------
 
-#### exp
+#### expon
 
 
-BpfInterface.exp(self) -> _BpfUnaryFunc
+Returns a bpf representing the exp operation with this bpf
 
 
 ```python
 
-def exp() -> None
+def expon() -> None
 
 ```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
 
 ----------
 
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -15580,27 +19113,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -15624,14 +19181,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -15647,36 +19206,60 @@ operations result in the same bpf:
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -15697,7 +19280,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -15707,17 +19290,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -15742,7 +19325,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -15756,7 +19339,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -15770,13 +19353,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -15789,32 +19385,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-return a numpy array representing n values of this bpf between x0 and x1
+Calculate an array of `n` values representing this bpf between `x0` and `x1`
 
 
 ```python
@@ -15831,8 +19439,12 @@ Nonetheless, you should NEVER trust that this actually happens. See example
 
 ##### Example
 
->>> out = numpy.empty((100,), dtype=float)
->>> out = thisbpf.mapn_between(100, 0, 10, out)   # <--- this is the right way to pass a result array
+```python
+
+out = numpy.empty((100,), dtype=float)
+out = thisbpf.mapn_between(100, 0, 10, out)
+
+```
 
 ----------
 
@@ -15853,7 +19465,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -15863,9 +19475,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -15886,7 +19502,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -15896,6 +19512,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -15915,25 +19532,29 @@ def outbound() -> None
 
 ##### Examples
 
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(-1, 0)
-    >>> a(-0.5)
-    -1
-    >>> a(1.1)
-    0
-    >>> a(0)
-    1
-    >>> a(1)
-    10
+```python
 
-    # fallback to another curve outside self
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(0, 0) + bpf.expon(-1, 2, 4, 10)
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 10).outbound(-1, 0)
+>>> a(-0.5)
+-1
+>>> a(1.1)
+0
+>>> a(0)
+1
+>>> a(1)
+10
+
+# fallback to another curve outside self
+>>> a = linear(0, 1, 1, 10).outbound(0, 0) + expon(-1, 2, 4, 10)
+```
 
 ----------
 
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -15943,18 +19564,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -15966,8 +19590,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -15985,38 +19623,48 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -16037,22 +19685,36 @@ def rand() -> None
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -16077,96 +19739,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-returns an iterator where each item is
+Multi.segments(self)
 
 
 ```python
@@ -16175,17 +19864,12 @@ def segments() -> None
 
 ```
 
-
-(float x, float y, str interpolation_type, float exponent)
-
-exponent is only of value if the interpolation type makes use of it
-
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -16195,20 +19879,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -16222,7 +19911,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -16236,7 +19925,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -16250,41 +19939,44 @@ def sqrt() -> None
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -16298,7 +19990,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -16312,12 +20004,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -16325,16 +20017,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -16346,15 +20043,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -16362,8 +20063,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -16382,6 +20083,9 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 ## Nearest
 
 ### Nearest
+
+
+A bpf with nearest interpolation
 
 
 ```python
@@ -16413,7 +20117,7 @@ def __init__(self, args, kwargs) -> None
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -16427,7 +20131,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -16441,7 +20145,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -16450,12 +20154,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -16465,22 +20179,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -16508,7 +20231,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -16522,7 +20245,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -16531,29 +20254,47 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### clone\_with\_new\_data
 
 
-Create a new bpf with the same interpolation shape and any
+Create a new bpf with the same attributes as self but with new data
 
 
 ```python
 
-def clone_with_new_data() -> None
+def clone_with_new_data(xs: ndarray, ys: ndarray) -> Any
 
 ```
 
 
-other attribute of this bpf but with new data
+
+**Args**
+
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The new bpf. It will be of the same class as self
 
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -16581,7 +20322,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -16595,13 +20336,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -16636,11 +20386,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -16666,16 +20419,55 @@ is the sampling period.
 
 ----------
 
+#### expon
+
+
+Returns a bpf representing the exp operation with this bpf
+
+
+```python
+
+def expon() -> None
+
+```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
+
+----------
+
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -16697,27 +20489,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -16741,14 +20557,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -16773,41 +20591,68 @@ def insertpoint() -> None
 
 ```
 
+
+**NB**: *self* is not modified
+
 ----------
 
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -16828,7 +20673,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -16838,17 +20683,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -16873,7 +20718,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -16887,7 +20732,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -16901,13 +20746,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -16920,32 +20778,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-Return an array with the results of evaluating this bpf at a grid
+Return an array of `n` elements resulting of evaluating this bpf regularly
 
 
 ```python
@@ -16955,7 +20825,7 @@ def mapn_between() -> None
 ```
 
 
-of the form `linspace(xstart, xend, n)`
+The x coordinates at which this bpf is evaluated are equivalent to `linspace(xstart, xend, n)`
 
 ----------
 
@@ -16976,7 +20846,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -16986,9 +20856,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -17009,7 +20883,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -17019,6 +20893,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -17026,7 +20901,7 @@ are divided into N parts: `dx = (x1-x0) / (N-1)`
 #### outbound
 
 
-Set the values (INPLACE) which are returned when this bpf is evaluated
+Set the values **inplace** returned when this bpf is evaluated outside its bounds.
 
 
 ```python
@@ -17035,8 +20910,6 @@ def outbound() -> None
 
 ```
 
-
-outside its bounds.
 
 The default behaviour is to interpret the values at the bounds to extend to infinity.
 
@@ -17047,7 +20920,7 @@ In order to not change this bpf inplace, use `b.copy().outbound(y0, y1)`
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -17057,18 +20930,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -17080,8 +20956,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -17099,16 +20989,12 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### points
 
 
-returns (xs, ys)
+Returns (xs, ys)
 
 
 ```python
@@ -17120,38 +21006,55 @@ def points() -> None
 
 ##### Example
 
-    >>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
-    >>> b.points()
-    ([0, 1, 2], [0, 100, 50])
+```python
+
+>>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
+>>> b.points()
+([0, 1, 2], [0, 100, 50])
+```
 
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -17182,36 +21085,54 @@ def removepoint() -> None
 ```
 
 
-Raises ValueError if x is not in this bpf
+Raises `ValueError` if x is not in this bpf
 
-To remove elements by index, do::
+To remove elements by index, do:
 
-    xs, ys = mybpf.points()
-    xs = numpy.delete(xs, indices)
-    ys = numpy.delete(ys, indices)
-    mybpf = mybpf.clone_with_new_data(xs, ys)
+```python
+
+xs, ys = mybpf.points()
+xs = numpy.delete(xs, indices)
+ys = numpy.delete(ys, indices)
+mybpf = mybpf.clone_with_new_data(xs, ys)
+
+```
 
 ----------
 
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -17236,96 +21157,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-Return an iterator where each item is
+Return an iterator over the segments of this bpf
 
 
 ```python
@@ -17335,9 +21283,9 @@ def segments() -> None
 ```
 
 
-(float x, float y, str interpolation_type, float exponent)
+Each segment is a tuple `(x: float, y: float, interpoltype: str, exponent: float)`
 
-Exponent is only of value if the interpolation type makes use of it
+Exponent is only of value if the interpolation type makes use of it.
 
 ----------
 
@@ -17349,19 +21297,25 @@ Shift the bpf along the x-coords, **INPLACE**
 
 ```python
 
-def shift() -> None
+def shift(dx: float) -> None
 
 ```
 
 
 Use `shifted` to create a new bpf
 
+
+
+**Args**
+
+* **dx** (`float`): the shift interval
+
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -17371,20 +21325,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -17398,7 +21357,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -17412,7 +21371,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -17431,53 +21390,62 @@ Stretch or compress this bpf in the x-coordinate **INPLACE**
 
 ```python
 
-def stretch() -> None
+def stretch(rx: float) -> None
 
 ```
 
 
-NB: Use `stretched` to create a new bpf
+**NB**: use `stretched` to create a new bpf
+
+
+
+**Args**
+
+* **rx** (`float`): the stretch/compression factor
 
 ----------
 
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -17491,7 +21459,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -17505,12 +21473,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -17518,16 +21486,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -17539,15 +21512,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -17555,8 +21532,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -17579,6 +21556,9 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 ## NoInterpol
 
 ### NoInterpol
+
+
+A bpf without interpolation
 
 
 ```python
@@ -17610,7 +21590,7 @@ def __init__(self, args, kwargs) -> None
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -17624,7 +21604,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -17638,7 +21618,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -17647,12 +21627,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -17662,22 +21652,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -17705,7 +21704,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -17719,7 +21718,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -17728,29 +21727,47 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### clone\_with\_new\_data
 
 
-Create a new bpf with the same interpolation shape and any
+Create a new bpf with the same attributes as self but with new data
 
 
 ```python
 
-def clone_with_new_data() -> None
+def clone_with_new_data(xs: ndarray, ys: ndarray) -> Any
 
 ```
 
 
-other attribute of this bpf but with new data
+
+**Args**
+
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The new bpf. It will be of the same class as self
 
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -17778,7 +21795,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -17792,13 +21809,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -17833,11 +21859,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -17863,16 +21892,55 @@ is the sampling period.
 
 ----------
 
+#### expon
+
+
+Returns a bpf representing the exp operation with this bpf
+
+
+```python
+
+def expon() -> None
+
+```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
+
+----------
+
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -17894,27 +21962,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -17938,14 +22030,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -17970,41 +22064,68 @@ def insertpoint() -> None
 
 ```
 
+
+**NB**: *self* is not modified
+
 ----------
 
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -18025,7 +22146,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -18035,17 +22156,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -18070,7 +22191,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -18084,7 +22205,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -18098,13 +22219,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -18117,32 +22251,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-Return an array with the results of evaluating this bpf at a grid
+Return an array of `n` elements resulting of evaluating this bpf regularly
 
 
 ```python
@@ -18152,7 +22298,7 @@ def mapn_between() -> None
 ```
 
 
-of the form `linspace(xstart, xend, n)`
+The x coordinates at which this bpf is evaluated are equivalent to `linspace(xstart, xend, n)`
 
 ----------
 
@@ -18173,7 +22319,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -18183,9 +22329,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -18206,7 +22356,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -18216,6 +22366,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -18223,7 +22374,7 @@ are divided into N parts: `dx = (x1-x0) / (N-1)`
 #### outbound
 
 
-Set the values (INPLACE) which are returned when this bpf is evaluated
+Set the values **inplace** returned when this bpf is evaluated outside its bounds.
 
 
 ```python
@@ -18232,8 +22383,6 @@ def outbound() -> None
 
 ```
 
-
-outside its bounds.
 
 The default behaviour is to interpret the values at the bounds to extend to infinity.
 
@@ -18244,7 +22393,7 @@ In order to not change this bpf inplace, use `b.copy().outbound(y0, y1)`
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -18254,18 +22403,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -18277,8 +22429,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -18296,16 +22462,12 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### points
 
 
-returns (xs, ys)
+Returns (xs, ys)
 
 
 ```python
@@ -18317,38 +22479,55 @@ def points() -> None
 
 ##### Example
 
-    >>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
-    >>> b.points()
-    ([0, 1, 2], [0, 100, 50])
+```python
+
+>>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
+>>> b.points()
+([0, 1, 2], [0, 100, 50])
+```
 
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -18379,36 +22558,54 @@ def removepoint() -> None
 ```
 
 
-Raises ValueError if x is not in this bpf
+Raises `ValueError` if x is not in this bpf
 
-To remove elements by index, do::
+To remove elements by index, do:
 
-    xs, ys = mybpf.points()
-    xs = numpy.delete(xs, indices)
-    ys = numpy.delete(ys, indices)
-    mybpf = mybpf.clone_with_new_data(xs, ys)
+```python
+
+xs, ys = mybpf.points()
+xs = numpy.delete(xs, indices)
+ys = numpy.delete(ys, indices)
+mybpf = mybpf.clone_with_new_data(xs, ys)
+
+```
 
 ----------
 
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -18433,96 +22630,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-Return an iterator where each item is
+Return an iterator over the segments of this bpf
 
 
 ```python
@@ -18532,9 +22756,9 @@ def segments() -> None
 ```
 
 
-(float x, float y, str interpolation_type, float exponent)
+Each segment is a tuple `(x: float, y: float, interpoltype: str, exponent: float)`
 
-Exponent is only of value if the interpolation type makes use of it
+Exponent is only of value if the interpolation type makes use of it.
 
 ----------
 
@@ -18546,19 +22770,25 @@ Shift the bpf along the x-coords, **INPLACE**
 
 ```python
 
-def shift() -> None
+def shift(dx: float) -> None
 
 ```
 
 
 Use `shifted` to create a new bpf
 
+
+
+**Args**
+
+* **dx** (`float`): the shift interval
+
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -18568,20 +22798,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -18595,7 +22830,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -18609,7 +22844,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -18628,53 +22863,62 @@ Stretch or compress this bpf in the x-coordinate **INPLACE**
 
 ```python
 
-def stretch() -> None
+def stretch(rx: float) -> None
 
 ```
 
 
-NB: Use `stretched` to create a new bpf
+**NB**: use `stretched` to create a new bpf
+
+
+
+**Args**
+
+* **rx** (`float`): the stretch/compression factor
 
 ----------
 
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -18688,7 +22932,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -18702,12 +22946,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -18715,16 +22959,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -18736,15 +22985,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -18752,8 +23005,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -18778,11 +23031,18 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 ### Sampled
 
 
+A bpf with regularly sampled data
+
+
 ```python
 
 class Sampled()
 
 ```
+
+
+When evaluated, values between the samples are interpolated with
+a given function: linear, expon(x), halfcos, halfcos(x), etc.
 
 
 ---------
@@ -18793,30 +23053,29 @@ class Sampled()
 #### \_\_init\_\_
 
 
-This class wraps a seq of values defined across a regular grid
-
-
 ```python
 
-def __init__() -> None
+def __init__(samples: ndarray, dx: float, x0: float, interpolation: str) -> None
 
 ```
 
 
-(starting at x0, defined by x0 + i * dx)
 
-When evaluated, values between the samples are interpolated with
-the given interpolation
+**Args**
 
-If 'samples' follow the ISampled interface, then it is not needed
-to pass dx and
+* **samples** (`ndarray`): the y-coord sampled data
+* **dx** (`float`): the sampling **period**
+* **x0** (`float`): the first x-value
+* **interpolation** (`str`): the interpolation function used. One of 'linear',
+    'nointerpol', 'expon(X)', 'halfcos', 'halfcos(X)', 'smooth',
+    'halfcosm', etc.
 
 ----------
 
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -18830,7 +23089,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -18844,7 +23103,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -18853,12 +23112,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -18868,22 +23137,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -18911,7 +23189,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -18925,7 +23203,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -18934,12 +23212,22 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -18967,7 +23255,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -18981,13 +23269,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -19022,11 +23319,12 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
-                          h
+
+    derivative(x) = bpf(x + h) - bpf(x)
+                    -------------------
+                              h
 
 ----------
 
@@ -19052,30 +23350,55 @@ is the sampling period.
 
 ----------
 
-#### exp
+#### expon
 
 
-BpfInterface.exp(self) -> _BpfUnaryFunc
+Returns a bpf representing the exp operation with this bpf
 
 
 ```python
 
-def exp() -> None
+def expon() -> None
 
 ```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
 
 ----------
 
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -19097,20 +23420,44 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
@@ -19127,16 +23474,18 @@ def flat_pairs() -> None
 ```
 
 
-a = linear(0, 0, 1, 10, 2, 20)
-a.flat_pairs()
--> array([0, 0, 1, 10, 2, 20])
+```python
+>>> a = linear(0, 0, 1, 10, 2, 20)
+>>> a.flat_pairs()
+array([0, 0, 1, 10, 2, 20])
+```
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -19178,7 +23527,7 @@ def fromxy() -> None
 #### integrate
 
 
-return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
@@ -19188,12 +23537,17 @@ def integrate() -> None
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to determine the limits of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+Integrate this bpf from its lower bound to 10 (inclusive)
+
+```python
+b[:10].integrate()  
+```
 
 ----------
 
@@ -19210,9 +23564,9 @@ def integrate_between() -> None
 ```
 
 
-It is effectively the same as bpf[x0:x1].integrate(), but more efficient
+It is effectively the same as `bpf[x0:x1].integrate()`, but more efficient
 
-NB : N has no effect. It is put here to comply with the signature of the function. 
+**NB**: N has no effect. It is put here to comply with the signature of the function. 
 
 ----------
 
@@ -19265,7 +23619,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -19279,7 +23633,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -19293,13 +23647,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -19312,25 +23679,37 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
@@ -19365,7 +23744,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -19375,9 +23754,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -19398,7 +23781,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -19408,6 +23791,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -19427,25 +23811,29 @@ def outbound() -> None
 
 ##### Examples
 
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(-1, 0)
-    >>> a(-0.5)
-    -1
-    >>> a(1.1)
-    0
-    >>> a(0)
-    1
-    >>> a(1)
-    10
+```python
 
-    # fallback to another curve outside self
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(0, 0) + bpf.expon(-1, 2, 4, 10)
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 10).outbound(-1, 0)
+>>> a(-0.5)
+-1
+>>> a(1.1)
+0
+>>> a(0)
+1
+>>> a(1)
+10
+
+# fallback to another curve outside self
+>>> a = linear(0, 1, 1, 10).outbound(0, 0) + expon(-1, 2, 4, 10)
+```
 
 ----------
 
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -19455,18 +23843,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -19478,8 +23869,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -19496,10 +23901,6 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
 * **axes** (`matplotlib.pyplot.Axes`): if given, will be used to plot onto it,
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
 
 ----------
 
@@ -19520,29 +23921,43 @@ def points() -> None
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -19563,22 +23978,36 @@ def rand() -> None
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -19603,96 +24032,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-returns an iterator where each item is
+Returns an iterator over the segments of this bpf
 
 
 ```python
@@ -19702,9 +24158,9 @@ def segments() -> None
 ```
 
 
-(float x, float y, str interpolation_type, float exponent)
+Each item is a tuple `(float x, float y, str interpolation_type, float exponent)`
 
-exponent is only of value if the interpolation type makes use of it
+**NB**: exponent is only relevant if the interpolation type makes use of it
 
 ----------
 
@@ -19721,7 +24177,8 @@ def set_interpolation() -> None
 ```
 
 
-NB: returns self, so you can do 
+Returns *self*, so you can do:
+
     sampled = bpf[x0:x1:dx].set_interpolation('expon(2)')
 
 ----------
@@ -19729,7 +24186,7 @@ NB: returns self, so you can do
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -19739,20 +24196,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -19766,7 +24228,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -19780,7 +24242,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -19794,41 +24256,44 @@ def sqrt() -> None
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -19842,7 +24307,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -19856,12 +24321,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -19869,16 +24334,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -19890,15 +24360,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -19906,8 +24380,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -19967,7 +24441,7 @@ def __init__(self, args, kwargs) -> None
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -19981,7 +24455,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -19995,7 +24469,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -20004,12 +24478,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -20019,22 +24503,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -20062,7 +24555,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -20076,7 +24569,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -20085,12 +24578,22 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -20118,7 +24621,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -20132,13 +24635,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -20173,11 +24685,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -20203,30 +24718,55 @@ is the sampling period.
 
 ----------
 
-#### exp
+#### expon
 
 
-BpfInterface.exp(self) -> _BpfUnaryFunc
+Returns a bpf representing the exp operation with this bpf
 
 
 ```python
 
-def exp() -> None
+def expon() -> None
 
 ```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
 
 ----------
 
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -20248,27 +24788,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -20292,14 +24856,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -20315,36 +24881,60 @@ operations result in the same bpf:
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -20365,7 +24955,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -20375,17 +24965,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -20410,7 +25000,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -20424,7 +25014,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -20438,13 +25028,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -20457,32 +25060,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-return a numpy array representing n values of this bpf between x0 and x1
+Calculate an array of `n` values representing this bpf between `x0` and `x1`
 
 
 ```python
@@ -20499,8 +25114,12 @@ Nonetheless, you should NEVER trust that this actually happens. See example
 
 ##### Example
 
->>> out = numpy.empty((100,), dtype=float)
->>> out = thisbpf.mapn_between(100, 0, 10, out)   # <--- this is the right way to pass a result array
+```python
+
+out = numpy.empty((100,), dtype=float)
+out = thisbpf.mapn_between(100, 0, 10, out)
+
+```
 
 ----------
 
@@ -20521,7 +25140,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -20531,9 +25150,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -20554,7 +25177,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -20564,6 +25187,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -20583,25 +25207,29 @@ def outbound() -> None
 
 ##### Examples
 
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(-1, 0)
-    >>> a(-0.5)
-    -1
-    >>> a(1.1)
-    0
-    >>> a(0)
-    1
-    >>> a(1)
-    10
+```python
 
-    # fallback to another curve outside self
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(0, 0) + bpf.expon(-1, 2, 4, 10)
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 10).outbound(-1, 0)
+>>> a(-0.5)
+-1
+>>> a(1.1)
+0
+>>> a(0)
+1
+>>> a(1)
+10
+
+# fallback to another curve outside self
+>>> a = linear(0, 1, 1, 10).outbound(0, 0) + expon(-1, 2, 4, 10)
+```
 
 ----------
 
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -20611,18 +25239,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -20634,8 +25265,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -20653,38 +25298,48 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -20705,22 +25360,36 @@ def rand() -> None
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -20745,96 +25414,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -20844,20 +25540,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -20871,7 +25572,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -20885,7 +25586,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -20899,41 +25600,44 @@ def sqrt() -> None
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -20947,7 +25651,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -20961,12 +25665,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -20974,16 +25678,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -20995,15 +25704,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -21011,8 +25724,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -21037,6 +25750,9 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 ### Smooth
 
 
+A bpf with smoothstep interpolation.
+
+
 ```python
 
 class Smooth()
@@ -21052,12 +25768,9 @@ class Smooth()
 #### \_\_init\_\_
 
 
-A bpf with smoothstep interpolation.
-
-
 ```python
 
-def __init__(numiter) -> None
+def __init__(xs: ndarray, ys: ndarray, numiter: int) -> None
 
 ```
 
@@ -21065,14 +25778,16 @@ def __init__(numiter) -> None
 
 **Args**
 
-* **numiter**: the number of smoothstep steps
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+* **numiter** (`int`): the number of smoothstep steps
 
 ----------
 
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -21086,7 +25801,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -21100,7 +25815,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -21109,12 +25824,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -21124,22 +25849,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -21167,7 +25901,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -21181,7 +25915,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -21190,29 +25924,47 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### clone\_with\_new\_data
 
 
-Create a new bpf with the same interpolation shape and any
+Create a new bpf with the same attributes as self but with new data
 
 
 ```python
 
-def clone_with_new_data() -> None
+def clone_with_new_data(xs: ndarray, ys: ndarray) -> Any
 
 ```
 
 
-other attribute of this bpf but with new data
+
+**Args**
+
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The new bpf. It will be of the same class as self
 
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -21240,7 +25992,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -21254,13 +26006,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -21295,11 +26056,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -21325,16 +26089,55 @@ is the sampling period.
 
 ----------
 
+#### expon
+
+
+Returns a bpf representing the exp operation with this bpf
+
+
+```python
+
+def expon() -> None
+
+```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
+
+----------
+
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -21356,27 +26159,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -21400,14 +26227,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -21432,41 +26261,68 @@ def insertpoint() -> None
 
 ```
 
+
+**NB**: *self* is not modified
+
 ----------
 
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -21487,7 +26343,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -21497,17 +26353,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -21532,7 +26388,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -21546,7 +26402,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -21560,13 +26416,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -21579,32 +26448,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-Return an array with the results of evaluating this bpf at a grid
+Return an array of `n` elements resulting of evaluating this bpf regularly
 
 
 ```python
@@ -21614,7 +26495,7 @@ def mapn_between() -> None
 ```
 
 
-of the form `linspace(xstart, xend, n)`
+The x coordinates at which this bpf is evaluated are equivalent to `linspace(xstart, xend, n)`
 
 ----------
 
@@ -21635,7 +26516,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -21645,9 +26526,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -21668,7 +26553,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -21678,6 +26563,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -21685,7 +26571,7 @@ are divided into N parts: `dx = (x1-x0) / (N-1)`
 #### outbound
 
 
-Set the values (INPLACE) which are returned when this bpf is evaluated
+Set the values **inplace** returned when this bpf is evaluated outside its bounds.
 
 
 ```python
@@ -21694,8 +26580,6 @@ def outbound() -> None
 
 ```
 
-
-outside its bounds.
 
 The default behaviour is to interpret the values at the bounds to extend to infinity.
 
@@ -21706,7 +26590,7 @@ In order to not change this bpf inplace, use `b.copy().outbound(y0, y1)`
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -21716,18 +26600,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -21739,8 +26626,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -21758,16 +26659,12 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### points
 
 
-returns (xs, ys)
+Returns (xs, ys)
 
 
 ```python
@@ -21779,38 +26676,55 @@ def points() -> None
 
 ##### Example
 
-    >>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
-    >>> b.points()
-    ([0, 1, 2], [0, 100, 50])
+```python
+
+>>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
+>>> b.points()
+([0, 1, 2], [0, 100, 50])
+```
 
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -21841,36 +26755,54 @@ def removepoint() -> None
 ```
 
 
-Raises ValueError if x is not in this bpf
+Raises `ValueError` if x is not in this bpf
 
-To remove elements by index, do::
+To remove elements by index, do:
 
-    xs, ys = mybpf.points()
-    xs = numpy.delete(xs, indices)
-    ys = numpy.delete(ys, indices)
-    mybpf = mybpf.clone_with_new_data(xs, ys)
+```python
+
+xs, ys = mybpf.points()
+xs = numpy.delete(xs, indices)
+ys = numpy.delete(ys, indices)
+mybpf = mybpf.clone_with_new_data(xs, ys)
+
+```
 
 ----------
 
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -21895,96 +26827,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-Return an iterator where each item is
+Return an iterator over the segments of this bpf
 
 
 ```python
@@ -21994,9 +26953,9 @@ def segments() -> None
 ```
 
 
-(float x, float y, str interpolation_type, float exponent)
+Each segment is a tuple `(x: float, y: float, interpoltype: str, exponent: float)`
 
-Exponent is only of value if the interpolation type makes use of it
+Exponent is only of value if the interpolation type makes use of it.
 
 ----------
 
@@ -22008,19 +26967,25 @@ Shift the bpf along the x-coords, **INPLACE**
 
 ```python
 
-def shift() -> None
+def shift(dx: float) -> None
 
 ```
 
 
 Use `shifted` to create a new bpf
 
+
+
+**Args**
+
+* **dx** (`float`): the shift interval
+
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -22030,20 +26995,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -22057,7 +27027,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -22071,7 +27041,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -22090,53 +27060,62 @@ Stretch or compress this bpf in the x-coordinate **INPLACE**
 
 ```python
 
-def stretch() -> None
+def stretch(rx: float) -> None
 
 ```
 
 
-NB: Use `stretched` to create a new bpf
+**NB**: use `stretched` to create a new bpf
+
+
+
+**Args**
+
+* **rx** (`float`): the stretch/compression factor
 
 ----------
 
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -22150,7 +27129,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -22164,12 +27143,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -22177,16 +27156,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -22198,15 +27182,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -22214,8 +27202,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -22240,6 +27228,9 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 ### Smoother
 
 
+A bpf with smootherstep interpolation (perlin's variation of smoothstep)
+
+
 ```python
 
 class Smoother()
@@ -22255,12 +27246,12 @@ class Smoother()
 #### \_\_init\_\_
 
 
-A bpf with smootherstep interpolation (perlin's variation of smoothstep)
+Initialize self.  See help(type(self)) for accurate signature.
 
 
 ```python
 
-def __init__() -> None
+def __init__(self, args, kwargs) -> None
 
 ```
 
@@ -22269,7 +27260,7 @@ def __init__() -> None
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -22283,7 +27274,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -22297,7 +27288,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -22306,12 +27297,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -22321,22 +27322,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -22364,7 +27374,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -22378,7 +27388,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -22387,29 +27397,47 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### clone\_with\_new\_data
 
 
-Create a new bpf with the same interpolation shape and any
+Create a new bpf with the same attributes as self but with new data
 
 
 ```python
 
-def clone_with_new_data() -> None
+def clone_with_new_data(xs: ndarray, ys: ndarray) -> Any
 
 ```
 
 
-other attribute of this bpf but with new data
+
+**Args**
+
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The new bpf. It will be of the same class as self
 
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -22437,7 +27465,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -22451,13 +27479,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -22492,11 +27529,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -22522,16 +27562,55 @@ is the sampling period.
 
 ----------
 
+#### expon
+
+
+Returns a bpf representing the exp operation with this bpf
+
+
+```python
+
+def expon() -> None
+
+```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
+
+----------
+
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -22553,27 +27632,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -22597,14 +27700,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -22629,41 +27734,68 @@ def insertpoint() -> None
 
 ```
 
+
+**NB**: *self* is not modified
+
 ----------
 
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -22684,7 +27816,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -22694,17 +27826,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -22729,7 +27861,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -22743,7 +27875,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -22757,13 +27889,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -22776,32 +27921,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-Return an array with the results of evaluating this bpf at a grid
+Return an array of `n` elements resulting of evaluating this bpf regularly
 
 
 ```python
@@ -22811,7 +27968,7 @@ def mapn_between() -> None
 ```
 
 
-of the form `linspace(xstart, xend, n)`
+The x coordinates at which this bpf is evaluated are equivalent to `linspace(xstart, xend, n)`
 
 ----------
 
@@ -22832,7 +27989,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -22842,9 +27999,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -22865,7 +28026,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -22875,6 +28036,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -22882,7 +28044,7 @@ are divided into N parts: `dx = (x1-x0) / (N-1)`
 #### outbound
 
 
-Set the values (INPLACE) which are returned when this bpf is evaluated
+Set the values **inplace** returned when this bpf is evaluated outside its bounds.
 
 
 ```python
@@ -22891,8 +28053,6 @@ def outbound() -> None
 
 ```
 
-
-outside its bounds.
 
 The default behaviour is to interpret the values at the bounds to extend to infinity.
 
@@ -22903,7 +28063,7 @@ In order to not change this bpf inplace, use `b.copy().outbound(y0, y1)`
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -22913,18 +28073,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -22936,8 +28099,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -22955,16 +28132,12 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### points
 
 
-returns (xs, ys)
+Returns (xs, ys)
 
 
 ```python
@@ -22976,38 +28149,55 @@ def points() -> None
 
 ##### Example
 
-    >>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
-    >>> b.points()
-    ([0, 1, 2], [0, 100, 50])
+```python
+
+>>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
+>>> b.points()
+([0, 1, 2], [0, 100, 50])
+```
 
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -23038,36 +28228,54 @@ def removepoint() -> None
 ```
 
 
-Raises ValueError if x is not in this bpf
+Raises `ValueError` if x is not in this bpf
 
-To remove elements by index, do::
+To remove elements by index, do:
 
-    xs, ys = mybpf.points()
-    xs = numpy.delete(xs, indices)
-    ys = numpy.delete(ys, indices)
-    mybpf = mybpf.clone_with_new_data(xs, ys)
+```python
+
+xs, ys = mybpf.points()
+xs = numpy.delete(xs, indices)
+ys = numpy.delete(ys, indices)
+mybpf = mybpf.clone_with_new_data(xs, ys)
+
+```
 
 ----------
 
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -23092,96 +28300,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-Return an iterator where each item is
+Return an iterator over the segments of this bpf
 
 
 ```python
@@ -23191,9 +28426,9 @@ def segments() -> None
 ```
 
 
-(float x, float y, str interpolation_type, float exponent)
+Each segment is a tuple `(x: float, y: float, interpoltype: str, exponent: float)`
 
-Exponent is only of value if the interpolation type makes use of it
+Exponent is only of value if the interpolation type makes use of it.
 
 ----------
 
@@ -23205,19 +28440,25 @@ Shift the bpf along the x-coords, **INPLACE**
 
 ```python
 
-def shift() -> None
+def shift(dx: float) -> None
 
 ```
 
 
 Use `shifted` to create a new bpf
 
+
+
+**Args**
+
+* **dx** (`float`): the shift interval
+
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -23227,20 +28468,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -23254,7 +28500,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -23268,7 +28514,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -23287,53 +28533,62 @@ Stretch or compress this bpf in the x-coordinate **INPLACE**
 
 ```python
 
-def stretch() -> None
+def stretch(rx: float) -> None
 
 ```
 
 
-NB: Use `stretched` to create a new bpf
+**NB**: use `stretched` to create a new bpf
+
+
+
+**Args**
+
+* **rx** (`float`): the stretch/compression factor
 
 ----------
 
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -23347,7 +28602,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -23361,12 +28616,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -23374,16 +28629,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -23395,15 +28655,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -23411,8 +28675,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -23466,7 +28730,7 @@ def __init__(self, args, kwargs) -> None
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -23480,7 +28744,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -23494,7 +28758,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -23503,12 +28767,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -23518,22 +28792,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -23561,7 +28844,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -23575,7 +28858,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -23584,12 +28867,22 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -23617,7 +28910,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -23631,13 +28924,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -23672,11 +28974,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -23702,30 +29007,55 @@ is the sampling period.
 
 ----------
 
-#### exp
+#### expon
 
 
-BpfInterface.exp(self) -> _BpfUnaryFunc
+Returns a bpf representing the exp operation with this bpf
 
 
 ```python
 
-def exp() -> None
+def expon() -> None
 
 ```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
 
 ----------
 
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -23747,27 +29077,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -23791,14 +29145,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -23814,36 +29170,60 @@ operations result in the same bpf:
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -23864,7 +29244,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -23874,17 +29254,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -23909,7 +29289,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -23923,7 +29303,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -23937,13 +29317,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -23956,32 +29349,44 @@ The same as map(self, xs) but faster
 
 ```python
 
-def map() -> None
+def map(xs: ndarray | int, out: ndarray) -> None
 
 ```
 
 
-xs can also be a number, in which case it is interpreted as
-the number of elements to calculate in an evenly spaced
-grid between the bounds of this bpf.
+```python
 
 bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
-
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
+```
 
 ##### Example
 
+```python
+
 >>> out = numpy.empty((100,), dtype=float)
 >>> xs = numpy.linspace(0, 10, 100)
->>> out = thisbpf.map(xs, out)   # <--- this is the right way to pass a result array
+# This is the right way to pass an output array
+>>> out = thisbpf.map(xs, out)   
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
 
 ----------
 
 #### mapn\_between
 
 
-return a numpy array representing n values of this bpf between x0 and x1
+Calculate an array of `n` values representing this bpf between `x0` and `x1`
 
 
 ```python
@@ -23998,8 +29403,12 @@ Nonetheless, you should NEVER trust that this actually happens. See example
 
 ##### Example
 
->>> out = numpy.empty((100,), dtype=float)
->>> out = thisbpf.mapn_between(100, 0, 10, out)   # <--- this is the right way to pass a result array
+```python
+
+out = numpy.empty((100,), dtype=float)
+out = thisbpf.mapn_between(100, 0, 10, out)
+
+```
 
 ----------
 
@@ -24020,7 +29429,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -24030,9 +29439,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -24053,7 +29466,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -24063,6 +29476,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -24082,25 +29496,29 @@ def outbound() -> None
 
 ##### Examples
 
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(-1, 0)
-    >>> a(-0.5)
-    -1
-    >>> a(1.1)
-    0
-    >>> a(0)
-    1
-    >>> a(1)
-    10
+```python
 
-    # fallback to another curve outside self
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(0, 0) + bpf.expon(-1, 2, 4, 10)
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 10).outbound(-1, 0)
+>>> a(-0.5)
+-1
+>>> a(1.1)
+0
+>>> a(0)
+1
+>>> a(1)
+10
+
+# fallback to another curve outside self
+>>> a = linear(0, 1, 1, 10).outbound(0, 0) + expon(-1, 2, 4, 10)
+```
 
 ----------
 
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -24110,18 +29528,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -24133,8 +29554,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -24151,10 +29586,6 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
 * **axes** (`matplotlib.pyplot.Axes`): if given, will be used to plot onto it,
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
 
 ----------
 
@@ -24175,29 +29606,43 @@ def points() -> None
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -24218,22 +29663,36 @@ def rand() -> None
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -24258,96 +29717,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-returns an iterator where each item is
+Returns an iterator over the segments of this bpf
 
 
 ```python
@@ -24357,16 +29843,16 @@ def segments() -> None
 ```
 
 
-(float x, float y, str interpolation_type, float exponent)
+Each segment is a tuple `(float x, float y, str interpolation_type, float exponent)`
 
-exponent is only of value if the interpolation type makes use of it
+**NB**: exponent is only relevant if the interpolation type makes use of it
 
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -24376,20 +29862,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -24403,7 +29894,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -24417,7 +29908,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -24431,41 +29922,44 @@ def sqrt() -> None
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -24479,7 +29973,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -24493,12 +29987,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -24506,16 +30000,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -24527,15 +30026,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -24543,8 +30046,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -24565,7 +30068,7 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 ### USpline
 
 
-BPF with univariate spline interpolation. This is implemented by
+bpf with univariate spline interpolation.
 
 
 ```python
@@ -24575,7 +30078,7 @@ class USpline()
 ```
 
 
-wrapping a UnivariateSpline from scipy.
+This is implemented by wrapping a UnivariateSpline from scipy.
 
 
 ---------
@@ -24600,7 +30103,7 @@ def __init__(self, args, kwargs) -> None
 #### abs
 
 
-BpfInterface.abs(self) -> _BpfUnaryFunc
+Returns a bpf representing the absolute value of this bpf
 
 
 ```python
@@ -24614,7 +30117,7 @@ def abs() -> None
 #### acos
 
 
-BpfInterface.acos(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc cosine of this bpf
 
 
 ```python
@@ -24628,7 +30131,7 @@ def acos() -> None
 #### amp2db
 
 
-BpfInterface.amp2db(self) -> _Bpf_amp2db
+Returns a bpf converting linear amplitudes to decibels
 
 
 ```python
@@ -24637,12 +30140,22 @@ def amp2db() -> None
 
 ```
 
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, 1).amp2db().map(10)
+array([-280.        ,  -19.08485019,  -13.06425028,   -9.54242509,
+       -7.04365036,   -5.1054501 ,   -3.52182518,   -2.18288939,
+       -1.02305045,    0.        ])
+```
+
 ----------
 
 #### apply
 
 
-return a new bpf where func is applied to the result of it
+Create a bpf where `func` is applied to the result of this pdf
 
 
 ```python
@@ -24652,22 +30165,31 @@ def apply() -> None
 ```
 
 
-func(self(x))   -- see 'function composition'
+**NB**: `a.apply(b)` is the same as `a | b`
 
 ##### Example
 
-    >>> from math import sin
-    >>> new_bpf = this_bpf.apply(sin)
-    >>> assert new_bpf(x) == sin(this_bpf(x))
+```python
 
-NB: A_bpf.apply(B_bpf) is the same as A_bpf | B_bpf
+>>> from bpf4 import *
+>>> from math import *
+>>> a = linear(0, 0, 1, 10)
+>>> def func(x):
+...     return sin(x) + 1
+>>> b = a.apply(func)
+>>> b(1)
+0.4559788891106302
+>>> sin(a(1)) + 1
+0.4559788891106302
+
+```
 
 ----------
 
 #### asin
 
 
-BpfInterface.asin(self) -> _BpfUnaryFunc
+Returns a bpf representing the arc sine of this bpf
 
 
 ```python
@@ -24695,7 +30217,7 @@ def bounds() -> None
 #### ceil
 
 
-BpfInterface.ceil(self) -> _BpfUnaryFunc
+Returns a bpf representing the ceil of this bpf
 
 
 ```python
@@ -24709,7 +30231,7 @@ def ceil() -> None
 #### clip
 
 
-BpfInterface.clip(self, double y0=-inf, double y1=inf) -> _BpfLambdaClip
+Return a bpf clipping the result between y0 and y1
 
 
 ```python
@@ -24718,12 +30240,22 @@ def clip() -> None
 
 ```
 
+
+```python
+
+>>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+array([0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.        , 0.        , 0.        , 0.        , 0.        ,
+       0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+       0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+```
+
 ----------
 
 #### concat
 
 
-Concatenate this bpf to other, so that the beginning of other is the end of this one
+Concatenate this bpf to other
 
 
 ```python
@@ -24751,7 +30283,7 @@ def copy() -> None
 #### cos
 
 
-BpfInterface.cos(self) -> _BpfUnaryFunc
+Returns a bpf representing the cosine of this bpf
 
 
 ```python
@@ -24765,13 +30297,22 @@ def cos() -> None
 #### db2amp
 
 
-BpfInterface.db2amp(self) -> _Bpf_db2amp
+Returns a bpf converting decibels to linear amplitudes
 
 
 ```python
 
 def db2amp() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> linear(0, 0, 1, -60).db2amp().map(10)
+array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
+       0.02154435, 0.01      , 0.00464159, 0.00215443, 0.001     ])
 ```
 
 ----------
@@ -24806,11 +30347,14 @@ def derivative() -> None
 ```
 
 
-It implements Newtons difference quotiont, so that
+It implements Newtons difference quotiont, so that:
 
-derivative(x) = bpf(x + h) - bpf(x)
-                -------------------
+```
+
+                bpf(x + h) - bpf(x)
+derivative(x) = -------------------
                           h
+```
 
 ----------
 
@@ -24836,30 +30380,55 @@ is the sampling period.
 
 ----------
 
-#### exp
+#### expon
 
 
-BpfInterface.exp(self) -> _BpfUnaryFunc
+Returns a bpf representing the exp operation with this bpf
 
 
 ```python
 
-def exp() -> None
+def expon() -> None
 
 ```
+
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1, 10)
+>>> a(0.1)
+1.0
+>>> exp(1.0)
+2.718281828459045
+>>> a.expon()(0.1)
+2.718281828459045
 
 ----------
 
 #### f2m
 
 
-BpfInterface.f2m(self) -> _BpfF2M
+Returns a bpf converting frequencies to midinotes
 
 
 ```python
 
 def f2m() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> freqs = linear(0, 442, 1, 882)
+>>> freqs.f2m().map(10)
+array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
+       76.64915905, 77.84358713, 78.96089998, 80.01045408, 81.        ])
 ```
 
 ----------
@@ -24881,27 +30450,51 @@ def fib() -> None
 #### fit\_between
 
 
-returns a new BPF which is the projection of this BPF
+Returns a view of this bpf fitted within the interval x0:x1
 
 
 ```python
 
-def fit_between() -> None
+def fit_between(x0, x1) -> Any
 
 ```
 
 
-to the interval x0:x1
-
-This operation only makes sense if the current BPF is bounded
+This operation only makes sense if the bpf is bounded
 (none of its bounds is inf)
+
+##### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(1, 1, 2, 5)
+>>> a.bounds()
+(1, 5)
+>>> b = a.fit_between(0, 10)
+>>> b.bounds()
+0, 10
+>>> b(10)
+5
+```
+
+
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the projected bpf
 
 ----------
 
 #### floor
 
 
-BpfInterface.floor(self) -> _BpfUnaryFunc
+Returns a bpf representing the floor of this bpf
 
 
 ```python
@@ -24925,14 +30518,16 @@ def fromseq(points, kws) -> None
 ```
 
 
-A helper constructor. In this variant points can be given as tuples
-or as a flat sequence. For example, to create a Linear bpf, these
-operations result in the same bpf:
+A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+
+For example, to create a Linear bpf, these operations result in the same bpf:
 
 
-    Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-    Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-    Linear((x0, x1, ...), (y0, y1, ...))
+```python
+Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
+Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
+Linear((x0, x1, ...), (y0, y1, ...))
+```
 
 
 
@@ -24948,36 +30543,60 @@ operations result in the same bpf:
 #### integrate
 
 
-Return the result of the integration of this bpf. If any of the bounds is inf,
+Return the result of the integration of this bpf.
 
 
 ```python
 
-def integrate() -> None
+def integrate() -> Any
 
 ```
 
 
-the result is also inf.
+If any of the bounds is inf, the result is also inf.
 
-Tip: to determine the limits of the integration, first crop the bpf via a slice
-Example:
+**NB**: to set the bounds of the integration, first crop the bpf via a slice
 
-b[:10].integrate()  -> integrate this bpf from its lower bound to 10 (inclusive)
+##### Example
+
+```python
+
+>>> linear(0, 0, 10, 10).sin()[0:2*pi].integrate()
+-1.7099295055304798e-17
+
+```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### integrate\_between
 
 
-BpfInterface.integrate_between(self, double x0, double x1, size_t N=0) -> double
+Integrate this bpf between x0 and x1
 
 
 ```python
 
-def integrate_between() -> None
+def integrate_between(x0, x1, N) -> Any
 
 ```
+
+
+
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
@@ -24998,7 +30617,7 @@ def integrated() -> None
 #### inverted
 
 
-Return a new BPF which is the inversion of this BPF, or None if the function is
+Return a view on this bpf with the coords inverted
 
 
 ```python
@@ -25008,17 +30627,17 @@ def inverted() -> None
 ```
 
 
-not invertible.
-
 In an inverted function the coordinates are swaped: the inverted version of a 
-BPF indicates which x corresponds to a given y
+bpf indicates which *x* corresponds to a given *y*
 
-`f.inverted()(f(x)) = x`
+Returns None if the function is not invertible. For a function to be invertible, 
+it must be strictly increasing or decreasing, with no local maxima or minima.
 
-For a function to be invertible, it must be strictly increasing or decreasing,
-with no local maxima or minima.
 
-so if `y(1) = 2`, then `y.inverted()(2) = 1`
+    f.inverted()(f(x)) = x
+
+
+So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
 ----------
 
@@ -25043,7 +30662,7 @@ with a slope equal to the slope of this bpf at its extremes
 #### log
 
 
-BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
+Returns a bpf representing the log of this bpf
 
 
 ```python
@@ -25057,7 +30676,7 @@ def log() -> None
 #### log10
 
 
-BpfInterface.log10(self) -> _BpfUnaryFunc
+Returns a bpf representing the log10 of this bpf
 
 
 ```python
@@ -25071,13 +30690,26 @@ def log10() -> None
 #### m2f
 
 
-BpfInterface.m2f(self) -> _BpfM2F
+Returns a bpf converting from midinotes to frequency
 
 
 ```python
 
 def m2f() -> None
 
+```
+
+
+##### Example
+
+```python
+>>> from bpf4 import *
+>>> midinotes = linear(0, 60, 1, 65)
+>>> freqs = midinotes.m2f()
+>>> freqs.map(10)
+array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
+       298.81064715, 308.55503809, 318.61719934, 329.0074936 ,
+       339.73662146, 350.81563248])
 ```
 
 ----------
@@ -25127,7 +30759,7 @@ def max() -> None
 #### mean
 
 
-Calculate the mean value of this bpf. To constrain the calculation
+Calculate the mean value of this bpf.
 
 
 ```python
@@ -25137,9 +30769,13 @@ def mean() -> None
 ```
 
 
-to a given portion, use::
+To constrain the calculation to a given portion, use:
 
-    bpf.integrate_between(start, end) / (end-start)
+```python
+
+bpf.integrate_between(start, end) / (end-start)
+
+```
 
 ----------
 
@@ -25160,7 +30796,7 @@ def min() -> None
 #### ntodx
 
 
-Calculate the sampling period `dx` so that the bounds of this bpf
+Calculate the sampling period `dx`
 
 
 ```python
@@ -25170,6 +30806,7 @@ def ntodx() -> None
 ```
 
 
+Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 ----------
@@ -25189,25 +30826,29 @@ def outbound() -> None
 
 ##### Examples
 
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(-1, 0)
-    >>> a(-0.5)
-    -1
-    >>> a(1.1)
-    0
-    >>> a(0)
-    1
-    >>> a(1)
-    10
+```python
 
-    # fallback to another curve outside self
-    >>> a = bpf.linear(0, 1, 1, 10).outbound(0, 0) + bpf.expon(-1, 2, 4, 10)
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 10).outbound(-1, 0)
+>>> a(-0.5)
+-1
+>>> a(1.1)
+0
+>>> a(0)
+1
+>>> a(1)
+10
+
+# fallback to another curve outside self
+>>> a = linear(0, 1, 1, 10).outbound(0, 0) + expon(-1, 2, 4, 10)
+```
 
 ----------
 
 #### periodic
 
 
-return a new bpf which is is a copy of this bpf when inside
+Returns a new bpf which replicates this in a periodic way
 
 
 ```python
@@ -25217,18 +30858,21 @@ def periodic() -> None
 ```
 
 
-bounds() and outside it replicates it in a periodic way.
-It has no bounds.
+The new bpf is a copy of this bpf when inside its bounds 
+and outside it, it replicates it in a periodic way, with no bounds.
 
 ##### Example
 
-    >>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
-    >>> b(0.5)
-    0
-    >>> b(1.5)
-    0
-    >>> b(-10)
-    -1
+```python
+
+>>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
+>>> b(0.5)
+0
+>>> b(1.5)
+0
+>>> b(-10)
+-1
+```
 
 ----------
 
@@ -25240,8 +30884,22 @@ Plot the bpf. Any key is passed to plot.plot_coords
 
 ```python
 
-def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
+def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> None
 
+```
+
+
+##### Example
+
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 10, 2, 0.5)
+a.plot()
+
+# Plot to a preexistent axes
+ax = plt.subplot()
+a.plot(axes=ax)
 ```
 
 
@@ -25259,38 +30917,48 @@ def plot(kind, n, show, axes: matplotlib.pyplot.Axes, kws) -> Any
     otherwise an ad-hoc axes is created
 * **kws**: any keyword will be passed to plot.plot_coords
 
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;self
-
 ----------
 
 #### preapply
 
 
-return a new bpf where func is applied to the argument
+Returns a bpf where `func` is applied to the argument before it is passed to this bpf
 
 
 ```python
 
-def preapply() -> None
+def preapply(func: callable) -> Any
 
 ```
 
 
-before it is passed to the bpf: `bpf(func(x))`
+This is equivalent to `func(x) | self`
 
 ##### Example
 
-    >>> bpf = Linear((0, 1, 2), (0, 10, 20))
-    >>> bpf(0.5)
-    5
+```python
 
-    >>> shifted_bpf = bpf.preapply(lambda x: x + 1)
-    >>> shifted_bpf(0.5)
-    15
+>>> bpf = Linear((0, 1, 2), (0, 10, 20))
+>>> bpf(0.5)
+5
 
-**NB**: `A_bpf.preapply(B_bpf)` is the same as `B_bpf | A_bpf`
+>>> shifted_bpf = bpf.preapply(lambda x: x + 1)
+>>> shifted_bpf(0.5)
+15
+```
+
+**NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
+
+
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;A bpf following the pattern `lambda x: bpf(func(x))`
 
 ----------
 
@@ -25311,22 +30979,36 @@ def rand() -> None
 #### render
 
 
-return a NEW bpf representing this bpf
+Create a new bpf representing this bpf rendered at the given points
 
 
 ```python
 
-def render(xs, interpolation) -> Any
+def render(xs: int | list | np.ndarray, interpolation: str) -> Any
 
 ```
+
+
+The difference between `.render` and `.sampled` is that this method
+creates a Linear/NoInterpol bpf whereas `.sampled` returns a 
+`Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
+a Linear or NoInterpol bpfs accept any data as its x coordinate)
+
+##### See Also
+
+* `BpfInterface.sampled`
 
 
 
 **Args**
 
-* **xs**: a seq of points at which this bpf is sampled or a number,         in
-    which case an even grid is calculated with that number of points
-* **interpolation**: the same interpolation types supported by `.sampled`
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -25351,96 +31033,123 @@ def round() -> None
 #### sample\_between
 
 
-Returns an array representing this bpf sampled at an interval of dx
+Sample this bpf at an interval of dx between x0 and x1
 
 
 ```python
 
-def sample_between(x0, x1, dx, out: ndarray) -> Any
+def sample_between(x0: float, x1: float, dx: float, out: ndarray) -> Any
 
 ```
 
 
-between x0 and x1
-
-**NB**: x0 and x1 are included
+**NB**: the interface is similar to numpy's `linspace`
 
 ##### Example
 
->>> thisbpf = bpf.linear(0, 0, 10, 10)
->>> thisbpf.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
+```python
 
-This is the same as thisbpf.mapn_between(11, 0, 10)
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
+
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
 **Args**
 
-* **x0**: point to start sampling
-* **x1**: point to stop sampling (included)
-* **dx**: the sampling period
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
     will         be allocated
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;an array with the values of this bpf at a regular grid of dx from x0 to x1 If out was given, the returned array is out
+&nbsp;&nbsp;&nbsp;&nbsp;An array with the values of this bpf sampled at at a regular grid of period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
 ----------
 
 #### sampled
 
 
-Sample this bpf at an interval of dx (samplerate = 1 / dx)
+Sample this bpf at a regular interval, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled() -> None
+def sampled(dx: float, interpolation: str) -> None
 
 ```
 
 
+Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-interpolation can be any kind of interpolation, for example
-'linear', 'nointerpol', 'expon(2.4)', 'halfcos(0.5)', etc.
+**NB**: If you need to sample a portion of the bpf, use sampled_between
 
-if you need to sample a portion of the bpf, use sampled_between
-
-The same results can be achieved by the shorthand:
+The same results can be achieved via indexing, in which case the resuling
+bpf will be linearly interpolated:
 
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-See also: ntodx, dxton
+##### See also
+
+* `ntodx`
+* `dxton`
+
+
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 ----------
 
 #### sampled\_between
 
 
-sample a portion of this bpf at an interval of dx
+Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 ```python
 
-def sampled_between() -> None
+def sampled_between(x0: float, x1: float, dx: float, interpolation: str, 
+                    example) -> Any
 
 ```
 
 
-returns a Sampled bpf with bounds=(x0, x1)
+**NB**: This is the same as `thisbpf[x0:x1:dx]`
 
-This is the same as thisbpf[x0:x1:dx]
+
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+* **example**: 'expon(2.0)' or 'halfcos(0.5)'
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
 
 ----------
 
 #### segments
 
 
-returns an iterator where each item is
+USpline.segments(self)
 
 
 ```python
@@ -25449,17 +31158,12 @@ def segments() -> None
 
 ```
 
-
-(float x, float y, str interpolation_type, float exponent)
-
-exponent is only of value if the interpolation type makes use of it
-
 ----------
 
 #### shifted
 
 
-the same as shift, but a NEW bpf is returned, which is a shifted
+Returns a view of this bpf shifted by `dx` over the x-axes
 
 
 ```python
@@ -25469,20 +31173,25 @@ def shifted() -> None
 ```
 
 
-view on this bpf.
+This is the same as `shift`, but a new bpf is returned
 
 ##### Example
 
-    >>> a = bpf.linear(0, 1, 1, 5)
-    >>> b = a.shifted(2)
-    >>> b(3) == a(1)
+
+```python
+
+>>> from bpf4 import *
+>>> a = linear(0, 1, 1, 5)
+>>> b = a.shifted(2)
+>>> b(3) == a(1)
+```
 
 ----------
 
 #### sin
 
 
-BpfInterface.sin(self) -> _BpfUnaryFunc
+Returns a bpf representing the sine of this bpf
 
 
 ```python
@@ -25496,7 +31205,7 @@ def sin() -> None
 #### sinh
 
 
-BpfInterface.sinh(self) -> _BpfUnaryFunc
+Returns a bpf representing the sinh of this bpf
 
 
 ```python
@@ -25510,7 +31219,7 @@ def sinh() -> None
 #### sqrt
 
 
-BpfInterface.sqrt(self) -> _BpfUnaryFunc
+Returns a bpf representing the sqrt of this bpf
 
 
 ```python
@@ -25524,41 +31233,44 @@ def sqrt() -> None
 #### stretched
 
 
-returns new bpf which is a projection of this bpf stretched
+Returns a view of this bpf stretched over the x axis.
 
 
 ```python
 
-def stretched(rx, fixpoint) -> None
+def stretched(rx: float, fixpoint: float) -> None
 
 ```
 
 
-over the x axis. 
+**NB**: to stretch over the y-axis, just multiply this bpf
 
-NB: to stretch over the y-axis, just multiply this bpf
-See also: fit_between
+**See also**: `fit_between`
 
 ##### Example
 
-    # stretch the shape of the bpf, but preserve the position
-    >>> a = linear(1, 1, 2, 2)
-    >>> a.stretched(4, fixpoint=a.x0).bounds()
-    (1, 9)
+Stretch the shape of the bpf, but preserve the start position
+
+```python
+
+>>> a = linear(1, 1, 2, 2)
+>>> a.stretched(4, fixpoint=a.x0).bounds()
+(1, 9)
+```
 
 
 
 **Args**
 
-* **rx**: the stretch factor
-* **fixpoint**: the point to use as reference
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 ----------
 
 #### tan
 
 
-BpfInterface.tan(self) -> _BpfUnaryFunc
+Returns a bpf representing the tan of this bpf
 
 
 ```python
@@ -25572,7 +31284,7 @@ def tan() -> None
 #### tanh
 
 
-BpfInterface.tanh(self) -> _BpfUnaryFunc
+Returns a bpf representing the tanh of this bpf
 
 
 ```python
@@ -25586,12 +31298,12 @@ def tanh() -> None
 #### trapz\_integrate\_between
 
 
-the same as integrate() but within the bounds [x0, x1]
+Integrate this bpf between [x0, x1] using the trapt method
 
 
 ```python
 
-def trapz_integrate_between(N) -> None
+def trapz_integrate_between(x0, x1, N) -> Any
 
 ```
 
@@ -25599,16 +31311,21 @@ def trapz_integrate_between(N) -> None
 
 **Args**
 
-* **N**: optional. a hint to the number of subdivisions used to calculate
-    the integral. If not given, a default is used. This default is defined in
-    CONFIG['integrate.trapz_intervals']
+* **x0**: start of integration period
+* **x1**: end of the integration period
+* **N**: number of subdivisions used to calculate the integral. If not given,
+    a default is used (default defined in `CONFIG['integrate.trapz_intervals']`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;The result of the integration
 
 ----------
 
 #### zeros
 
 
-Calculate the zeros of this bpf
+Find the zeros of this bpf
 
 
 ```python
@@ -25620,15 +31337,19 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
 
 ##### Example
 
+```python
+
 >>> a = bpf.linear(0, -1, 1, 1)
 >>> a.zeros()
 [0.5]
+
+```
 
 
 
 **Args**
 
-* **h**: the accuracy to scan for zeros-crossings. If two zeros are within
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
     this distance, they will be resolved as one.
 * **N**: alternatively, you can give the number of intervals to scan.         h
     will be derived from this
@@ -25636,8 +31357,8 @@ def zeros(h, N, x0, x1, maxzeros) -> Any
     bpf         will be used
 * **x1**: the point to stop searching. If not given, the end point of this bpf
     is used
-* **maxzeros**: if possitive, stop the search when this number of zeros have
-    been found
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
 
 **Returns**
 
@@ -25666,7 +31387,7 @@ def blend() -> None
 ```
 
 
-blend these BPFs
+Blend these BPFs
 
 if mix == 0: the result is *a*
 if mix == 1: the result is *b*
@@ -25675,13 +31396,17 @@ mix can also be a bpf or any function
 
 ### Example
 
-    # create a curve which is in between a halfcos and a linear interpolation
-    a = bpf.halfcos(0, 0, 1, 1)
-    b = bpf.linear(0, 0, 1, 1)
-    a.blendwith(b, 0.5)
 
-    # nearer to halfcos
-    a.blendwith(b, 0.1)
+```python
+# create a curve which is in between a halfcos and a linear interpolation
+>>> from bpf4 import *
+a = halfcos(0, 0, 1, 1)
+b = linear(0, 0, 1, 1)
+a.blendwith(b, 0.5)
+
+# nearer to halfcos
+a.blendwith(b, 0.1)
+```
 
 
 ---------
@@ -25695,7 +31420,7 @@ bpf_zero_crossings(BpfInterface b, double h=0.01, int N=0, double x0=NAN, double
 
 ```python
 
-def bpf_zero_crossings(b, h, N) -> Any
+def bpf_zero_crossings(b, h: float, N: int, maxzeros) -> Any
 
 ```
 
@@ -25707,11 +31432,12 @@ Return the zeros if b in the interval defined
 **Args**
 
 * **b**: a bpf
-* **h**: the interval to scan for zeros. for each interval only one zero will be
-    found
-* **N**: alternatively you can give the number of intervals to scan. h will be
-    calculated from that            N overrides h         x0, x1: the bounds to
-    use. these, if given, override the bounds b
+* **h** (`float`): the interval to scan for zeros. for each interval only one
+    zero will be found
+* **N** (`int`): alternatively you can give the number of intervals to scan. h
+    will be calculated from that            N overrides h         x0, x1: the
+    bounds to use. these, if given, override the bounds b
+* **maxzeros**: if given, search will stop if this number of zeros is found
 
 **Returns**
 
@@ -25739,13 +31465,17 @@ calculate the zero of (bpf + x0) in the interval (xa, xb) using brentq algorithm
 **NB**: to calculate all the zeros of a bpf, use the .zeros method
 
 
-Example::
+### Example
 
-    # calculate the x where a == 0.5
-    >>> a = bpf.linear(0, 0, 10, 1)
-    >>> x_at_zero, numcalls = bpf_brentq(a, -0.5, 0, 1)
-    >>> print x_at_zero
-    5
+```python
+
+# calculate the x where a == 0.5
+>>> from bpf4 import *
+>>> a = linear(0, 0, 10, 1)
+>>> xzero, numcalls = brentq(a, -0.5, 0, 1)
+>>> xzero
+5
+```
 
 
 
@@ -25780,3 +31510,6 @@ setA4(double freq)
 def setA4() -> None
 
 ```
+
+
+Set the reference freq used
