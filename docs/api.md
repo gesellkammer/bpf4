@@ -92,35 +92,6 @@ Keywords:
 ---------
 
 
-## fib
-
-
-```python
-
-def fib(args) -> None
-
-```
-
-
-A bpf with fibonacci interpolation
-
-
-A bpf can be constructed in multiple ways:
-
-    fib(x0, y0, x1, y1, ...)
-    fib((x0, y0), (x1, y1), ...)
-    fib({x0:y0, x1:y1, ...})
-
-
-
-**Args**
-
-* **args**:
-
-
----------
-
-
 ## halfcos
 
 

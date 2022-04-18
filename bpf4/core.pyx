@@ -680,9 +680,8 @@ cdef class BpfInterface:
         result will depend on the concrete subclass being evaluated. For most cases
         the out-of-bound result is the same as the result at the bounds
 
-        Example
-        -------
-
+        ## Example
+        
         ```python
 
         >>> from bpf4 import *
@@ -871,9 +870,7 @@ cdef class BpfInterface:
             (BpfInterface) a new bpf representing this bpf. Depending on the interpolation
             this new bpf will be a Sampled, a Linear or a NoInterpol bpf
 
-        ## See Also
-
-        * [BpfInterface.sampled](#sampled)
+        **See Also**: [BpfInterface.sampled](#sampled)
 
         """
         if isinstance(xs, (int, long)):
@@ -944,10 +941,7 @@ cdef class BpfInterface:
             bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
             bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-        ## See also
-
-        * [ntodx](#ntodx)
-        * [dxton](#dxton)
+        **See also**: [ntodx](#ntodx), [dxton](#dxton)
         """
         # we need to account for the edge (x1 IS INCLUDED)
         cdef int n = int((self._x1 - self._x0) / dx + 0.5) + 1
@@ -971,9 +965,8 @@ cdef class BpfInterface:
             (ndarray) An array with the values of this bpf sampled at at a regular grid of 
             period `dx` from `x0` to `x1`. If out is given the result is placed in it
 
-        Example
-        =======
-
+        ## Example
+        
         ```python
         
         >>> a = linear(0, 0, 10, 10)
@@ -1051,9 +1044,8 @@ cdef class BpfInterface:
         bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
         ```
 
-        Example
-        =======
-
+        ## Example
+        
         ```python
 
         >>> out = numpy.empty((100,), dtype=float)
@@ -1092,9 +1084,8 @@ cdef class BpfInterface:
 
         `other` is shifted to start at the end of `self`
 
-        Example
-        -------
-
+        ## Example
+        
         ```python
 
         >>> a = linear(0, 0, 1, 10)
@@ -1449,8 +1440,7 @@ cdef class BpfInterface:
             (List[float]) A list with the zeros of this bpf
 
 
-        Example
-        -------
+        ## Example
         
         ```python
         
@@ -1474,9 +1464,8 @@ cdef class BpfInterface:
             (Max) A Max bpf representing `max(self, b)`, which can be
             evaluated at any x coord
         
-        Example
-        -------
-
+        ## Example
+        
         ```python
         >>> from bpf4 import *
         >>> a = linear(0, 0, 1, 10)
@@ -1501,9 +1490,8 @@ cdef class BpfInterface:
             (Min) A Min bpf representing `min(self, b)`, which can be
             evaluated at any x coord
         
-        Example
-        -------
-
+        ## Example
+        
         ```python
         >>> from bpf4 import *
         >>> a = linear(0, 0, 1, 10)
@@ -1557,9 +1545,8 @@ cdef class BpfInterface:
         """
         Return a new Bpf with the given values outside the bounds
 
-        Examples
-        ========
-
+        ## Examples
+        
         ```python
 
         >>> from bpf4 import *
@@ -1591,9 +1578,8 @@ cdef class BpfInterface:
 
         **NB**: `a.apply(b)` is the same as `a | b`
         
-        Example
-        =======
-
+        ## Example
+        
         ```python
 
         >>> from bpf4 import *
@@ -1625,8 +1611,7 @@ cdef class BpfInterface:
         Returns:
             (BpfInterface) A bpf following the pattern `lambda x: bpf(func(x))`
 
-        Example
-        =======
+        ## Example
         
         ```python
 
@@ -1653,8 +1638,7 @@ cdef class BpfInterface:
         The new bpf is a copy of this bpf when inside its bounds 
         and outside it, it replicates it in a periodic way, with no bounds.
 
-        Example
-        =======
+        ## Example
             
         ```python
 
@@ -1675,7 +1659,7 @@ cdef class BpfInterface:
 
         **NB**: to stretch over the y-axis, just multiply this bpf
         
-        **See also**: `fit_between`
+        **See also**: [fit_between](#fit_between)
 
         Args:
             rx (float): the stretch factor
@@ -1685,8 +1669,7 @@ cdef class BpfInterface:
             (BpfInterface) A projection of this bpf stretched/compressed by
             by the given factor
 
-        Example
-        =======
+        ## Example
 
         Stretch the shape of the bpf, but preserve the start position
         
@@ -1715,9 +1698,8 @@ cdef class BpfInterface:
         Returns:
             (BpfInterface) The projected bpf
 
-        Example
-        -------
-
+        ## Example
+        
         ```python
 
         >>> from bpf4 import *
@@ -1748,10 +1730,8 @@ cdef class BpfInterface:
 
         This is the same as `shift`, but a new bpf is returned
 
-        Example
-        =======
-
-
+        ## Example
+        
         ```python
 
         >>> from bpf4 import *
@@ -1775,9 +1755,9 @@ cdef class BpfInterface:
         Returns None if the function is not invertible. For a function to be invertible, 
         it must be strictly increasing or decreasing, with no local maxima or minima.
         
-
-            f.inverted()(f(x)) = x
-        
+        ```
+        f.inverted()(f(x)) = x
+        ```
         
         So if `y(1) == 2`, then `y.inverted()(2) == 1`
         """
@@ -1810,8 +1790,10 @@ cdef class BpfInterface:
         """
         A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-        For example, to create a Linear bpf, these operations result in the same bpf:
+        
+        ## Example
 
+        These operations result in the same bpf:
 
         ```python
         Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -2080,9 +2062,8 @@ cdef class BpfBase(BpfInterface):
             holding the values for the *x* coordinate, and `ys` holds the values for
             the *y* coordinate
 
-        Example
-        =======
-
+        ## Example
+        
         ```python
 
         >>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
@@ -2603,9 +2584,8 @@ cdef class Sampled(BpfInterface):
             holding the values for the *x* coordinate, and `ys` holds the values for
             the *y* coordinate
 
-        Example
-        =======
-
+        ## Example
+        
         ```python
 
         >>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
@@ -2784,9 +2764,8 @@ cdef class Sampled(BpfInterface):
 
         **NB**: to determine the limits of the integration, first crop the bpf via a slice
         
-        Example
-        =======
-
+        ## Example
+        
         Integrate this bpf from its lower bound to 10 (inclusive)
         
         ```python
@@ -2893,9 +2872,8 @@ cdef class Spline(BpfInterface):
             holding the values for the *x* coordinate, and `ys` holds the values for
             the *y* coordinate
 
-        Example
-        =======
-
+        ## Example
+        
         ```python
 
         >>> b = Linear.fromseq(0, 0, 1, 100, 2, 50)
@@ -4592,9 +4570,8 @@ def brentq(bpf, double x0, double xa, double xb, double xtol=9.9999999999999998e
         (tuple[float, int]) A tuple (zero of the bpf, number of function calls)
 
 
-    Example
-    =======
-
+    ## Example
+    
     ```python
 
     # calculate the x where a == 0.5
@@ -4622,8 +4599,7 @@ cpdef BpfInterface blend(a, b, mix=0.5):
     
     mix can also be a bpf or any function
     
-    Example
-    -------
+    ## Example
     
 
     ```python

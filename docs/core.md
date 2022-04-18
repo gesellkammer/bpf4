@@ -519,8 +519,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -636,9 +638,9 @@ bpf indicates which *x* corresponds to a given *y*
 Returns None if the function is not invertible. For a function to be invertible, 
 it must be strictly increasing or decreasing, with no local maxima or minima.
 
-
-    f.inverted()(f(x)) = x
-
+```
+f.inverted()(f(x)) = x
+```
 
 So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
@@ -1086,9 +1088,7 @@ creates a Linear/NoInterpol bpf whereas `.sampled` returns a
 `Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
 a Linear or NoInterpol bpfs accept any data as its x coordinate)
 
-#### See Also
-
-* [BpfInterface.sampled](#sampled)
+**See Also**: [BpfInterface.sampled](#sampled)
 
 
 
@@ -1176,10 +1176,7 @@ bpf will be linearly interpolated:
     bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
     bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 
-#### See also
-
-* [ntodx](#ntodx)
-* [dxton](#dxton)
+**See also**: [ntodx](#ntodx), [dxton](#dxton)
 
 
 
@@ -1228,7 +1225,6 @@ Returns a view of this bpf shifted by `dx` over the x-axes
 This is the same as `shift`, but a new bpf is returned
 
 #### Example
-
 
 ```python
 
@@ -1297,7 +1293,7 @@ Returns a view of this bpf stretched over the x axis.
 
 **NB**: to stretch over the y-axis, just multiply this bpf
 
-**See also**: `fit_between`
+**See also**: [fit_between](#fit_between)
 
 #### Example
 
@@ -1477,8 +1473,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -1749,8 +1747,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -1836,8 +1836,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -1933,8 +1935,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -2024,8 +2028,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -2144,8 +2150,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -2301,8 +2309,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -2395,8 +2405,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -2487,8 +2499,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -2574,8 +2588,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -2654,8 +2670,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -2763,8 +2781,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -3194,8 +3214,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -3274,8 +3296,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -3415,8 +3439,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -3552,8 +3578,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -3632,8 +3660,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
@@ -3712,8 +3742,10 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
 
-For example, to create a Linear bpf, these operations result in the same bpf:
 
+#### Example
+
+These operations result in the same bpf:
 
 ```python
 Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)

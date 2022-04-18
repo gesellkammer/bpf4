@@ -48,7 +48,7 @@ def binarymask(mask: Union[str, list[int]], durs: Sequence[float] = None,
 Creates a binary mask
 
 
-### Example
+**Example**
 
 ```python
 
@@ -150,17 +150,19 @@ def bpf_to_dict(bpf: core.BpfInterface) -> dict
 convert a bpf to a dict with the following format
 
 
-b = bpf.expon(3.0, 0, 0, 1, 10, 2, 20)
-bpf_to_dict(b)
+```python
+
+>>> b = bpf.expon(3.0, 0, 0, 1, 10, 2, 20)
+>>> bpf_to_dict(b)
 {
     'interpolation': 'expon(3.0)',
     'points': [0, 0, 1, 10, 20, 20]  # [x0, y0, x1, y1, ...]
 }
 
-b = bpf.multi(0, 0, 'linear',
-              1, 10, 'expon(2)',
-              3, 25)
-bpf_to_dict(b)
+>>> b = bpf.multi(0, 0, 'linear',
+                  1, 10, 'expon(2)',
+                  3, 25)
+>>> bpf_to_dict(b)
 {
     'interpolation': 'multi',
     'segments': [
@@ -168,6 +170,7 @@ bpf_to_dict(b)
         [1, 10, 'expon(2)',
         [3, 25, '']]
 }
+```
 
 
 
@@ -240,19 +243,18 @@ Convert this bpf to json format.
 
 ```python
 
-def concat_bpfs(bpfs, fadetime: int = 0) -> core._BpfConcat
+def concat_bpfs(bpfs: list[core.BpfInterface]) -> core._BpfConcat
 
 ```
 
 
-glue these bpfs together, one after the other
+Concatenate these bpfs together, one after the other
 
 
 
 **Args**
 
-* **bpfs**:
-* **fadetime** (`int`):  (default: 0)
+* **bpfs** (`List[core.BpfInterface]`):
 
 
 ---------
@@ -293,7 +295,7 @@ def dict_to_bpf(d: dict) -> bpf.BpfInterface
 Convert a dict to a bpf
 
 
-### Format 1: 
+**Format 1** 
 
 ```python
 
@@ -305,7 +307,7 @@ bpf = {
 }
 ```
 
-### Format 2:
+**Format 2**
 
 ```python
 bpf = {
@@ -314,7 +316,7 @@ bpf = {
 }
 ```
 
-### Format 2b
+**Format 2b**
 
 ```python
 bpf = {
@@ -323,7 +325,7 @@ bpf = {
 }
 ```
 
-### Format 3 (multi)
+**Format 3 (multi)**
 
 ```python
 
@@ -353,8 +355,7 @@ bpf = {
 
 ```python
 
-def dumpbpf(bpf: core.BpfInterface, fmt: str = yaml, outfile: str = None
-            ) -> Optional[str]
+def dumpbpf(bpf: core.BpfInterface, fmt: str = yaml) -> str
 
 ```
 
@@ -362,17 +363,7 @@ def dumpbpf(bpf: core.BpfInterface, fmt: str = yaml, outfile: str = None
 Dump the data of this bpf as human readable text
 
 
-The output is written to a file if given or returned
-as a string otherwise 
-
-Returns
-
-If outfile is given, its extension will be used to determine
-the format.
-
 The bpf can then be reconstructed via `loadbpf`
-
-Formats supported: csv, yaml, json
 
 
 
@@ -380,8 +371,10 @@ Formats supported: csv, yaml, json
 
 * **bpf** (`core.BpfInterface`): the bpf to dump
 * **fmt** (`str`): the format, one of 'csv', 'yaml', 'json' (default: yaml)
-* **outfile** (`str`): if given, the data will be dumped to the file, otherwise
-    it will be printed (default: None)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`str`) the text representation according to the format
 
 
 ---------
@@ -693,7 +686,7 @@ between 0.95 and 1.05
 **NB**: this bpf will always be different, since the random numbers
 are calculated as needed. Sample it to freeze it to a known state.
 
-### Example
+**Example**
 
 ```python
 
@@ -759,7 +752,7 @@ def select(which: core.BpfInterface, bpfs: Sequence[core.BpfInterface],
 Create a new bpf which interpolates between adjacent bpfs given
 
 
-Example:
+**Example**
 
 ```python   
 
@@ -861,16 +854,22 @@ bpf represents the curvature of a linear space. the result is a
 
 warped bpf so that:
 
+```
 position_bpf | warped_bpf = corresponding position after warping
+```
 
 
-Example:
-find the theoretical position of a given point according to a probability distribution
+**Example**
 
-distribution = bpf.halfcos(0,0, 0.5,1, 1, 0)
-w = warped(distribution)
-original_points = (0, 0.25, 0.33, 0.5)
-warped_points = w.map(original_points)
+Find the theoretical position of a given point according to a probability distribution
+
+```python
+>>> from bpf4 import *
+>>> distribution = bpf.halfcos(0,0, 0.5,1, 1, 0)
+>>> w = warped(distribution)
+>>> original_points = (0, 0.25, 0.33, 0.5)
+>>> warped_points = w.map(original_points)
+```
 
 
 
