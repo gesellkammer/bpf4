@@ -134,21 +134,6 @@ def uspline(*args) -> core.USpline:
     return core.USpline(X, Y)
 
 
-def fib(*args):
-    """
-    A bpf with fibonacci interpolation
-
-    A bpf can be constructed in multiple ways:
-
-        fib(x0, y0, x1, y1, ...)
-        fib((x0, y0), (x1, y1), ...)
-        fib({x0:y0, x1:y1, ...})
-    
-    """
-    X, Y, kws = parseargs(*args)
-    return core.Fib(X, Y, **kws)    
-    
-
 def nointerpol(*args) -> core.NoInterpol:
     """
     A bpf with floor interpolation

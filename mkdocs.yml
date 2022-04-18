@@ -22,4 +22,6 @@ repo_url: https://github.com/gesellkammer/bpf4
 nav:
     - index.md 
     - core.md
+    - util.md
+    - api.md
     
