@@ -7,7 +7,16 @@ BPF4
 About
 -----
 
-bpf4 is a library for curve fitting and break-point functions in python. It is mainly programmed in Cython for efficiency. It has been used in itself for functional and numerical analysis.
+bpf4 is a library for curve fitting and break-point functions in python. It is mainly programmed in Cython for efficiency. 
+
+
+Documentation
+-------------
+
+The documentation is hosted at https://bpf4.readthedocs.io
+
+
+-----------------
 
 Example
 -------
@@ -69,23 +78,22 @@ a[::0.01]     # sample the bpf with an interval of 0.01
 * Numerical integration: `c.integrate_between(2, 4)`  
 
 
-Dependencies
-------------
-
-* cython 
-* numpy
-
 Installation
 ------------
 
 
-    $> pip install bpf4
+```bash
+pip install --upgrade bpf4
+
+```
 
 
-To install the latest version:
+To install from source:
 
 
-    $> git clone https://github.com/gesellkammer/bpf4.git
-    $> cd bpf4
-    $> python setup.py install
+```bash
 
+git clone https://github.com/gesellkammer/bpf4.git
+cd bpf4
+pip install .
+```
