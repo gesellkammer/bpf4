@@ -3,12 +3,19 @@ from .config import CONFIG
 from matplotlib import pyplot as plt
 import numpy as np
 
-#from typing import TYPE_CHECKING
-#if TYPE_CHECKING:
-#    from typing import *
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from typing import List, Sequence, Union
+    from bpf4 import core
 
 
-def plot_coords(xs, ys, show:bool=None, kind='line', axes:plt.Axes=None, **keys):
+def plot_coords(xs: Union[List[float], np.ndarray], 
+                ys: Union[List[float], np.ndarray], 
+                show:bool=None, 
+                kind='line', 
+                axes:plt.Axes=None, 
+                **keys
+                ) -> None:
     """
     Plot the points defined by xs and ys
 
@@ -17,6 +24,9 @@ def plot_coords(xs, ys, show:bool=None, kind='line', axes:plt.Axes=None, **keys)
         ys: a seq. of y coords
         kind: one of line or bar
         axes: if given, this axes is used
+        kws: any keywords will be bassed to `axes.plot` or `axes.bar` depending
+            on `kind`
+
     """
     if axes:
         if kind == 'line':
@@ -38,35 +48,41 @@ def plot_coords(xs, ys, show:bool=None, kind='line', axes:plt.Axes=None, **keys)
         plt.show()
 
         
-def bpfplot(*bpfs, **keys):
+def bpfplot(*bpfs: core.BpfInterface, npoints=400, show=True, **kws) -> None:
     """
-    bpfs: one or more bpfs to be plotted
-    
-    accepted keyword arguments:
-        npoints:    number of points to be used for the plot
-        show:       should the plot be plot immediately. else you can call show yourself
+    Plot one/multiple bpfs
+
+    Args:
+        bpfs: one or more bpfs to be plotted
+        npoints: number of points to be used for the plot
+        show: should the plot be plot immediately. else you can call show yourself
+        kws: any keywords are passed to `plt.plot`
     """
     x0 = min(bpf.bounds()[0] for bpf in bpfs)
     x1 = max(bpf.bounds()[1] for bpf in bpfs)
-    n = keys.pop('npoints', 400)
-    xs = np.linspace(x0, x1, n)
+    xs = np.linspace(x0, x1, npoints)
     yss = [bpf.map(xs) for bpf in bpfs]
     args = []
     for ys in yss:
         args.extend((xs, ys))
-    plt.plot(*args, **keys)
-    if keys.pop('show'):
+    plt.plot(*args, **kws)
+    if show:
         plt.show()
 
         
-def plot_stacked(*bpfs, **kws):
+def plot_stacked(*bpfs: core.BpfInterface, **kws) -> None:
     """
-    Example:
+    Example
+    -------
+
+    ```python
     
     a = bpf.linear(0,0, 1,1)
     b = bpf.halfcos(0, 0, 0.5, 1, 1, 0)
     
     plot_stacked(a, (b, 'b'))
+    ```
+
     """
     min_x = float('inf')
     max_x = -float('inf')
@@ -113,5 +129,6 @@ def plot_stacked(*bpfs, **kws):
         plt.show()
 
         
-def show():
+def show() -> None:
+    """Show the plotted bpfs"""
     plt.show()

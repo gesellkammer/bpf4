@@ -12,18 +12,37 @@ API for bpf4
 
 ```python
 
-def blendshape(shape0: str, shape1: str, mix: float, args) -> core.BlendShape
+def blendshape(shape0: str, shape1: str, mix: float | core.BpfInterface, args
+               ) -> core.BpfInterface
 
+```
+
+
+Create a bpf blending two interpolation forms
+
+
+### Example
+
+```python
+
+example here
 ```
 
 
 
 **Args**
 
-* **shape0** (`str`):
-* **shape1** (`str`):
-* **mix** (`float`):
+* **shape0** (`str`): a description of the first interpolation
+* **shape1** (`str`): a description of the second interpolation
+* **mix** (`float | core.BpfInterface`): blend factor.         A value between 0
+    (use only `shape0`)         and 1 (use only `shape1`). A value of `0.5` will
+    result in         an average between the first and second interpolation
+    kind.         Can be a bpf itself, returning the mix value at any x value
 * **args**:
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`core.BpfInterface`) A bpf blending two different interpolation kinds
 
 
 ---------
@@ -44,9 +63,12 @@ A bpf which always returns a constant value
 
 ### Example
 
+```python
+
 >>> c5 = const(5)
 >>> c5(10) 
 5
+```
 
 
 
@@ -73,19 +95,20 @@ Construct an Expon bpf (a bpf with exponential interpolation)
 
 A bpf can be constructed in multiple ways:
 
-    expon(x0, y0, x1, y1, ..., exp=exponent)
-    expon(exponent, x0, y0, x1, y1, ...)
-    expon((x0, y0), (x1, y1), ..., exp=exponent)
-    expon({x0:y0, x1:y1, ...}, exp=exponent)
-
-Keywords:
-    numiter: Number of iterations. A higher number accentuates the effect
+```python
+expon(x0, y0, x1, y1, ..., exp=exponent)
+expon(exponent, x0, y0, x1, y1, ...)
+expon((x0, y0), (x1, y1), ..., exp=exponent)
+expon({x0:y0, x1:y1, ...}, exp=exponent)
+```
 
 
 
 **Args**
 
-* **args**:
+* **args**: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
+    a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
+    or two arrays `xs` and `ys`
 * **kws**:
 
 
@@ -107,22 +130,23 @@ Construct a half-cosine bpf (a bpf with half-cosine interpolation)
 
 A bpf can be constructed in multiple ways:
 
-    halfcos(x0, y0, x1, y1, ...)
-    halfcos((x0, y0), (x1, y1), ...)
-    halfcos({x0:y0, x1:y1, ...})
+```python
 
-Keywords:
-    exp: exponent to apply prior to cosine interpolation. The higher the exponent, the
-        more skewed to the right the shape will be
-    numiter: Number of iterations. A higher number accentuates the effect
+halfcos(x0, y0, x1, y1, ...)
+halfcos((x0, y0), (x1, y1), ...)
+halfcos({x0:y0, x1:y1, ...})
+```
 
 
 
 **Args**
 
-* **args**:
-* **exp** (`int`):  (default: 1)
-* **numiter** (`int`):  (default: 1)
+* **args**: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
+    a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
+    or two arrays `xs` and `ys`
+* **exp** (`int`): the exponent to use (default: 1)
+* **numiter** (`int`): Number of iterations. A higher number accentuates the
+    effect (default: 1)
 * **kws**:
 
 
@@ -144,22 +168,23 @@ Construct a half-cosine bpf (a bpf with half-cosine interpolation)
 
 A bpf can be constructed in multiple ways:
 
-    halfcos(x0, y0, x1, y1, ...)
-    halfcos((x0, y0), (x1, y1), ...)
-    halfcos({x0:y0, x1:y1, ...})
+```python
 
-Keywords:
-    exp: exponent to apply prior to cosine interpolation. The higher the exponent, the
-        more skewed to the right the shape will be
-    numiter: Number of iterations. A higher number accentuates the effect
+halfcos(x0, y0, x1, y1, ...)
+halfcos((x0, y0), (x1, y1), ...)
+halfcos({x0:y0, x1:y1, ...})
+```
 
 
 
 **Args**
 
-* **args**:
-* **exp** (`int`):  (default: 1)
-* **numiter** (`int`):  (default: 1)
+* **args**: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
+    a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
+    or two arrays `xs` and `ys`
+* **exp** (`int`): the exponent to use (default: 1)
+* **numiter** (`int`): Number of iterations. A higher number accentuates the
+    effect (default: 1)
 * **kws**:
 
 
@@ -176,27 +201,29 @@ def halfcosm(args, kws) -> core.Halfcosm
 ```
 
 
-Similar to halfcos, but when used with an exponent, the exponent is inverted
+Halfcos interpolation with symmetric exponent
 
 
-for downwards segments (y1 > y0)
+When used with an exponent, the exponent is inverted for downwards 
+segments `(y1 > y0)`
 
 A bpf can be constructed in multiple ways:
 
-    halfcosm(x0, y0, x1, y1, ...)
-    halfcosm((x0, y0), (x1, y1), ...)
-    halfcosm({x0:y0, x1:y1, ...})
+```python
 
-Keywords:
-    exp: exponent to apply prior to cosine interpolation. The higher the exponent, the
-        more skewed to the right the shape will be
-    numiter: Number of iterations. A higher number accentuates the effect
+halfcosm(x0, y0, x1, y1, ..., exp=2.0)
+halfcosm(2.0, x0, y0, x1, y1, ...)    # The exponent can be placed first
+halfcosm((x0, y0), (x1, y1), ...)
+halfcosm({x0:y0, x1:y1, ...})
+```
 
 
 
 **Args**
 
-* **args**:
+* **args**: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
+    a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
+    or two arrays `xs` and `ys`
 * **kws**:
 
 
@@ -216,17 +243,23 @@ def linear(args) -> core.Linear
 Construct a Linear bpf.
 
 
-A bpf can be constructed in multiple ways:
+A bpf can be constructed in multiple ways, all of which result
+in the same Linear instance:
 
-    linear(x0, y0, x1, y1, ...)
-    linear((x0, y0), (x1, y1), ...)
-    linear({x0:y0, x1:y1, ...})
+```python
+
+linear(x0, y0, x1, y1, ...)
+linear((x0, y0), (x1, y1), ...)
+linear({x0:y0, x1:y1, ...})
+```
 
 
 
 **Args**
 
-* **args**:
+* **args**: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
+    a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
+    or two arrays `xs` and `ys`
 
 
 ---------
@@ -247,20 +280,23 @@ A bpf with a per-pair interpolation
 
 ### Example
 
-    # (0,0) --linear-- (1,10) --expon(3)-- (2,3) --expon(3)-- (10, -1) --halfcos-- (20,0)
+```python
 
-    multi(0, 0,   'linear' 
-          1, 10,  'expon(3)', 
-          2, 3,   # assumes previous interpolation 
-          10, -1, 'halfcos'      
-          20, 0)
+# (0,0) --linear-- (1,10) --expon(3)-- (2,3) --expon(3)-- (10, -1) --halfcos-- (20,0)
 
-    # also the following syntax is possible
-    multi((0, 0, 'linear')
-          (1, 10, 'expon(3)'), 
-          (2, 3), 
-          (10, -1, 'halfcos'), 
-          (20, 0))
+multi(0, 0,   'linear' 
+      1, 10,  'expon(3)', 
+      2, 3,   # assumes previous interpolation 
+      10, -1, 'halfcos'      
+      20, 0)
+
+# also the following syntax is possible
+multi((0, 0, 'linear')
+      (1, 10, 'expon(3)'), 
+      (2, 3), 
+      (10, -1, 'halfcos'), 
+      (20, 0))
+```
 
 
 
@@ -345,15 +381,21 @@ Monotonic Cubic Hermite Intepolation
 
 A bpf can be constructed in multiple ways:
 
-    pchip(x0, y0, x1, y1, ...)
-    pchip((x0, y0), (x1, y1), ...)
-    pchip({x0:y0, x1:y1, ...})
+```python
+
+pchip(x0, y0, x1, y1, ...)
+pchip((x0, y0), (x1, y1), ...)
+pchip({x0:y0, x1:y1, ...})
+
+```    
 
 
 
 **Args**
 
-* **args**:
+* **args**: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
+    a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
+    or two arrays `xs` and `ys`
 
 
 ---------
@@ -370,10 +412,21 @@ def slope(slope: float, offset: float = 0.0, keepslope: bool = True
 ```
 
 
-Generate a straight line with the given slope and offset (the
+Generate a straight line with the given slope and offset
 
 
-same as linear(0, offset, 1, slope)
+This is the same as linear(0, offset, 1, slope)
+
+### Example
+
+```python
+
+>>> a = slope(0.5, 1)
+>>> a
+Slope[-inf:inf]
+>>> a[0:10].plot()
+```
+![](assets/slope-plot.png)
 
 
 
@@ -397,26 +450,21 @@ def smooth(args, numiter: int = 1) -> core.Smooth
 ```
 
 
-A bpf with smoothstep interpolation. `numiter` determines the number
-
-
-of smoothstep steps applied (see https://en.wikipedia.org/wiki/Smoothstep)
-
-A bpf can be constructed in multiple ways:
-
-    smooth(x0, y0, x1, y1, ...)
-    smooth((x0, y0), (x1, y1), ...)
-    smooth({x0:y0, x1:y1, ...})
-
-Keywords:
-    numiter: number of smoothstep steps. 
+A bpf with smoothstep interpolation.
 
 
 
 **Args**
 
-* **args**:
-* **numiter** (`int`):  (default: 1)
+* **args**: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
+    a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
+    or two arrays `xs` and `ys`
+* **numiter** (`int`): determines the number of smoothstep steps applied
+    (see https://en.wikipedia.org/wiki/Smoothstep) (default: 1)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`core.Smooth`) A bpf with smoothstep interpolation
 
 
 ---------
@@ -432,22 +480,23 @@ def smoother(args) -> core.Smoother
 ```
 
 
-A bpf with smootherstep interpolation (Perlin's variation on smoothstep,
+A bpf with smootherstep interpolation
 
 
+This bpf uses Perlin's variation on smoothstep,
 see https://en.wikipedia.org/wiki/Smoothstep)
-
-A bpf can be constructed in multiple ways:
-
-    smoother(x0, y0, x1, y1, ...)
-    smoother((x0, y0), (x1, y1), ...)
-    smoother({x0:y0, x1:y1, ...})
 
 
 
 **Args**
 
-* **args**:
+* **args**: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
+    a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
+    or two arrays `xs` and `ys`
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`core.Smoother`) A bpf with smootherstep interpolation
 
 
 ---------
@@ -468,9 +517,11 @@ Construct a cubic-spline bpf
 
 A bpf can be constructed in multiple ways:
 
-    spline(x0, y0, x1, y1, ...)
-    spline((x0, y0), (x1, y1), ...)
-    spline({x0:y0, x1:y1, ...})
+```python
+spline(x0, y0, x1, y1, ...)
+spline((x0, y0), (x1, y1), ...)
+spline({x0:y0, x1:y1, ...})
+```
 
 
 
@@ -497,9 +548,11 @@ Construct a univariate cubic-spline bpf
 
 A bpf can be constructed in multiple ways:
 
-    uspline(x0, y0, x1, y1, ...)
-    uspline((x0, y0), (x1, y1), ...)
-    uspline({x0:y0, x1:y1, ...})
+```python
+uspline(x0, y0, x1, y1, ...)
+uspline((x0, y0), (x1, y1), ...)
+uspline({x0:y0, x1:y1, ...})
+```
 
 **NB**: This is implemented by wrapping a UnivariateSpline from scipy.
 

@@ -635,7 +635,11 @@ cdef class BpfInterface:
     """
     Base class for all BreakPointFunctions
 
-    It is not possible to create an instance of BpfInterface.
+    !!! note
+
+        BpfInterace is an abstract class. It is not possible to create 
+        an instance of it. 
+
     """
     cdef double _x0, _x1
     cdef int _integration_mode  # 0: dont use scipy, 1: use scipy, -1: calibrate
@@ -692,16 +696,17 @@ cdef class BpfInterface:
 
         """
         return self._x0, self._x1
+
+    @property
+    def x0(self) -> float:
+        """The lower bound of the x coordinate"""
+        return self._x0
     
-    property x0:
-        def __get__(self): 
-            """The start of the x coord"""
-            return self._x0
     
-    property x1:
-        def __get__(self): 
-            """The end of the x coord"""
-            return self._x1
+    @property
+    def x1(self) -> float: 
+        """The upper bound of the x coordinate"""
+        return self._x1
     
     def __add__(a, b):
         return _create_lambda_unordered(a, b, _BpfLambdaAdd, _BpfLambdaAddConst)
@@ -870,7 +875,9 @@ cdef class BpfInterface:
             (BpfInterface) a new bpf representing this bpf. Depending on the interpolation
             this new bpf will be a Sampled, a Linear or a NoInterpol bpf
 
-        **See Also**: [BpfInterface.sampled](#sampled)
+        !!! info "See Also"
+
+            [BpfInterface.sampled](#sampled)
 
         """
         if isinstance(xs, (int, long)):
@@ -890,11 +897,11 @@ cdef class BpfInterface:
         Plot the bpf. Any key is passed to plot.plot_coords
 
         Args:
-            kind: one of 'line', 'bar'
-            n: the number of points to plot
-            show: if the plot should be shown immediately after (default is True). If you
-                want to display multiple BPFs in one plot, for instance to compare them,
-                you can call plot on each of the bpfs with show=False, and then either
+            kind (str): one of 'line', 'bar'
+            n (int): the number of points to plot
+            show (bool): if the plot should be shown immediately after (default is True). 
+                If you want to display multiple BPFs sharing an axes you can call 
+                plot on each of the bpfs with show=False, and then either
                 call the last one with plot=True or call bpf4.plot.show().
             axes (matplotlib.pyplot.Axes): if given, will be used to plot onto it,
                 otherwise an ad-hoc axes is created
@@ -933,15 +940,21 @@ cdef class BpfInterface:
         Returns:
             (Sampled) The sampled bpf
         
-        **NB**: If you need to sample a portion of the bpf, use sampled_between
+        !!! note
+
+            If you need to sample a portion of the bpf, use sampled_between
 
         The same results can be achieved via indexing, in which case the resuling
         bpf will be linearly interpolated:
 
-            bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
-            bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
+        ```python
+        bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
+        bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
+        ```
 
-        **See also**: [ntodx](#ntodx), [dxton](#dxton)
+        !!! info "See Also"
+
+            [ntodx](#ntodx), [dxton](#dxton)
         """
         # we need to account for the edge (x1 IS INCLUDED)
         cdef int n = int((self._x1 - self._x0) / dx + 0.5) + 1
@@ -952,7 +965,9 @@ cdef class BpfInterface:
         """
         Sample this bpf at an interval of dx between x0 and x1 
 
-        **NB**: the interface is similar to numpy's `linspace`
+        !!! note
+
+            The interface is similar to numpy's `linspace`
         
         Args:
             x0 (float): point to start sampling (included)
@@ -1659,7 +1674,9 @@ cdef class BpfInterface:
 
         **NB**: to stretch over the y-axis, just multiply this bpf
         
-        **See also**: [fit_between](#fit_between)
+        !!! info "See Also"
+
+            [fit_between](#fit_between)
 
         Args:
             rx (float): the stretch factor
@@ -1686,10 +1703,10 @@ cdef class BpfInterface:
 
     cpdef BpfInterface fit_between(self, double x0, double x1):
         """
-        Returns a view of this bpf fitted within the interval x0:x1
+        Returns a view of this bpf fitted within the interval `x0:x1`
 
         This operation only makes sense if the bpf is bounded
-        (none of its bounds is inf)
+        (none of its bounds is `inf`)
 
         Args:
             x0: the lower bound to fit this bpf
@@ -1727,8 +1744,7 @@ cdef class BpfInterface:
         """
         Returns a view of this bpf shifted by `dx` over the x-axes
 
-
-        This is the same as `shift`, but a new bpf is returned
+        This is the same as [.shift](#shift), but a new bpf is returned
 
         ## Example
         
@@ -1896,7 +1912,15 @@ cdef class BpfBase(BpfInterface):
 
     def __init__(BpfBase self, xs, ys):
         """
-        xs and ys are arrays of points (x, y)
+        Base constructor for bpfs
+
+        xs and ys should be of the same size
+
+        Args:
+            xs (list[float] | numpy.ndarray): x data 
+            ys (list[float] | numpy.ndarray): y data
+
+
         """
         cdef int len_xs, len_ys
         cdef ndarray [DTYPE_t, ndim=1] _xs = numpy.ascontiguousarray(xs, DTYPE)
@@ -1906,7 +1930,8 @@ cdef class BpfBase(BpfInterface):
         len_xs = PyArray_DIM(_xs, 0)
         len_ys = PyArray_DIM(_ys, 0)
         if len_xs != len_ys:
-            raise ValueError("xs and ys must be of equal length")
+            raise ValueError("xs and ys must be of equal length, but xs has %d items "
+                             "and ys has %d items" % (len_xs, len_ys))
         if len_xs < 1:
             raise ValueError("Can't creat a BPF of 0 points")
         self.xs = _xs
@@ -1922,12 +1947,12 @@ cdef class BpfBase(BpfInterface):
         self.lastbin_x1 = self.xs[1]
         self.lastbin_idx1 = 1
 
-    property descriptor:
-        def __get__(self): 
-            """
-            A string describing the interpolation function of this bpf
-            """
-            return InterpolFunc_get_descriptor(self.interpol_func)
+    @property
+    def descriptor(self) -> str: 
+        """
+        A string describing the interpolation function of this bpf
+        """
+        return InterpolFunc_get_descriptor(self.interpol_func)
 
     cdef void _bounds_changed(self):
         self._invalidate_cache()
@@ -2034,8 +2059,7 @@ cdef class BpfBase(BpfInterface):
         """
         Shift the bpf along the x-coords, **INPLACE**
         
-
-        Use `shifted` to create a new bpf
+        Use [.shifted](#shifted) to create a new bpf
 
         Args:
             dx (float): the shift interval
@@ -2074,7 +2098,7 @@ cdef class BpfBase(BpfInterface):
         """
         return self.xs, self.ys
 
-    def clone_with_new_data(self, xs: ndarray, ys: ndarray) -> BpfInterface:
+    def clone_with_new_data(self, xs, ys) -> BpfInterface:
         """
         Create a new bpf with the same attributes as self but with new data
 
@@ -2158,19 +2182,19 @@ cdef class BpfBase(BpfInterface):
             yield (float(self.xs[i]), float(self.ys[i]), interpoltype, self.interpol_func.exp)
         yield (float(self.xs[num_segments]), float(self.ys[num_segments]), '', 0)
 
-    property exp:
-        def __get__(self):
-            """
-            The exponential of the interpolation function of this bpf
-            """
-            return self.interpol_func.exp
+    @property
+    def exp(self) -> float:
+        """
+        The exponential of the interpolation function of this bpf
+        """
+        return self.interpol_func.exp
 
 
 cdef class Linear(BpfBase):
     """
     A bpf with linear interpolation
     """
-    def __init__(self, xs: ndarray, ys: ndarray):
+    def __init__(self, xs, ys):
         """
         Args:
             xs (ndarray): the x-coord data
@@ -2557,30 +2581,30 @@ cdef class Sampled(BpfInterface):
         self.y0 = self.data[0]
         self.y1 = self.data[l - 1]
 
-    property samplerate:
-        @cython.cdivision(True)
-        def __get__(self): 
-            """
-            The samplerate of this bpf
-            """
-            return 1.0 / self.grid_dx
-    
-    property xs:
-        def __get__(self):
-            """
-            The x-coord array of this bpf
-            """
-            if self._cached_xs is not None:
-                return self._cached_xs
-            self._cached_xs = numpy.linspace(self.grid_x0, self.grid_x1, self.samples_size, endpoint=False)
+    @cython.cdivision(True)
+    @property
+    def samplerate(self) -> float: 
+        """
+        The samplerate of this bpf
+        """
+        return 1.0 / self.grid_dx
+
+    @property
+    def xs(self) -> numpy.ndarray:
+        """
+        The x-coord array of this bpf
+        """
+        if self._cached_xs is not None:
             return self._cached_xs
+        self._cached_xs = numpy.linspace(self.grid_x0, self.grid_x1, self.samples_size, endpoint=False)
+        return self._cached_xs
 
     def points(self):
         """
         Returns a tuple with the points defining this bpf
 
         Returns:
-            (tuple[ndarray, ndarray]) a tuple (xs, ys) where `xs` is an array
+            (tuple[ndarray, ndarray]) A tuple `(xs, ys)` where `xs` is an array
             holding the values for the *x* coordinate, and `ys` holds the values for
             the *y* coordinate
 
@@ -2607,12 +2631,12 @@ cdef class Sampled(BpfInterface):
         def __set__(self, interpolation):
             self.set_interpolation(interpolation)
 
-    property dx:
-        def __get__(self): 
-            """
-            The sampling period (delta x)
-            """
-            return self.grid_dx
+    @property
+    def dx(self) -> float: 
+        """
+        The sampling period (delta x)
+        """
+        return self.grid_dx
 
     cpdef Sampled set_interpolation(self, str interpolation):
         """
@@ -2620,7 +2644,11 @@ cdef class Sampled(BpfInterface):
 
         Returns *self*, so you can do:
 
-            sampled = bpf[x0:x1:dx].set_interpolation('expon(2)')
+        ```python
+
+        sampled = bpf[x0:x1:dx].set_interpolation('expon(2)')
+        
+        ```
         """
         InterpolFunc_free(self.interpolfunc)
         if interpolation == 'nointerpol':
@@ -2733,7 +2761,8 @@ cdef class Sampled(BpfInterface):
     @classmethod
     def fromseq(cls, *args, **kws): raise NotImplementedError
     
-    def _get_points_for_rendering(self, int n= -1): return self.xs, self.ys
+    def _get_points_for_rendering(self, int n= -1): 
+        return self.xs, self.ys
     
     def segments(self):
         """
@@ -2760,7 +2789,7 @@ cdef class Sampled(BpfInterface):
         """
         Return the result of the integration of this bpf. 
 
-        If any of the bounds is inf, the result is also inf.
+        If any of the bounds is `inf`, the result is also `inf`.
 
         **NB**: to determine the limits of the integration, first crop the bpf via a slice
         
@@ -2821,9 +2850,12 @@ cdef class Sampled(BpfInterface):
         
         return Linear(self.xs, self.ys).inverted()
 
-    def flatpairs(self):
+    def flatpairs(self) -> numpy.ndarray:
         """
         Returns a flat 1D array with x and y values interlaced
+
+        Returns:
+            (ndarray) A 1D array with x and y values interlaced
 
         ```python
         >>> a = linear(0, 0, 1, 10, 2, 20)
@@ -3249,9 +3281,9 @@ cdef class Multi(BpfInterface):
 
         **NB**: `len(interpolations) == len(xs) - 1`
 
-        The interpelation is indicated via a descriptor: 'linear' (linear), 'expon(x)' 
-        (exponential with exp=x), 'halfcos', 'halfcos(x)' (cosine interpol with exp=x),
-        'nointerpol', 'smooth' (smoothstep)
+        The interpelation is indicated via a descriptor: `'linear'` (linear), `'expon(x)'` 
+        (exponential with exp=x), `'halfcos'`, `'halfcos(x)'` (cosine interpol with exp=x),
+        `'nointerpol'`, ``'smooth'` (smoothstep)
         """
         cdef int i
         cdef list interpolations_list
@@ -3314,7 +3346,7 @@ cdef class Multi(BpfInterface):
         Returns an iterator over the segments of this bpf
 
         Returns:
-            (Iterable[tuple[float, float, str, float]]) An iterator of segments, 
+            (Iterator[tuple[float, float, str, float]]) An iterator of segments, 
             where each segment has the form `(x, y, interpoltype:str, exponent)`
 
         """
@@ -4332,8 +4364,10 @@ cdef class _BpfCrop(BpfInterface):
         """
         return a new Bpf with the given values outside the bounds
 
-        **NB**: you can specify one value for lower and one for upper bounds, 
-        or just one value for both
+        !!! note
+    
+            One can specify one value for lower and one for upper bounds, 
+            or just one value for both
         """
         if y1 is None:
             y1 = y0
@@ -4555,7 +4589,9 @@ def brentq(bpf, double x0, double xa, double xb, double xtol=9.9999999999999998e
     """
     calculate the zero of (bpf + x0) in the interval (xa, xb) using brentq algorithm
 
-    **NB**: to calculate all the zeros of a bpf, use the [.zeros](#zeros) method
+    !!! note 
+
+        To calculate all the zeros of a bpf, use the [.zeros](#zeros) method
 
     Args:
         bpf (BpfInterface): the bpf to evaluate
@@ -4593,25 +4629,45 @@ def brentq(bpf, double x0, double xa, double xb, double xtol=9.9999999999999998e
 cpdef BpfInterface blend(a, b, mix=0.5):
     """
     Blend these BPFs
+
+    Args:
+        a (BpfInterface): first bpf
+        b (BpfInterface): second bpf
+        mix (float | BpfInterface): how to mix the bpfs. Can be fixed or
+            itself a bpf (or any function) returning a value between 0-1 
+
+    Returns:
+        (BpfInterface) The blended bpf
     
-    if mix == 0: the result is *a*
-    if mix == 1: the result is *b*
     
-    mix can also be a bpf or any function
+    !!! note
+
+        if mix == 0: the result is *a*
+        if mix == 1: the result is *b*
+    
     
     ## Example
     
+    Create a curve which is in between a halfcos and a linear interpolation
+    
+    ```python
+    >>> from bpf4 import *
+    >>> a = halfcos(0, 0, 1, 1)
+    >>> b = linear(0, 0, 1, 1)
+    >>> c = blend(a, b, 0.5)
+    >>> c.plot()
+
+    ```
+    TODO: include image
+
+    Closer to halfcos
 
     ```python
-    # create a curve which is in between a halfcos and a linear interpolation
-    >>> from bpf4 import *
-    a = halfcos(0, 0, 1, 1)
-    b = linear(0, 0, 1, 1)
-    a.blendwith(b, 0.5)
-    
-    # nearer to halfcos
-    a.blendwith(b, 0.1)
+    >>> c = blend(a, b, 0.1)
+    >>> c.plot()
     ```
+    TODO: include image
+
     """
     if isinstance(mix, (int, float)):
         return _BpfBlendConst(_asbpf(a), _asbpf(b), mix)

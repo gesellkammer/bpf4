@@ -19,13 +19,16 @@ def () -> None
 Base class for all BreakPointFunctions
 
 
-It is not possible to create an instance of BpfInterface.
+!!! note
+
+    BpfInterace is an abstract class. It is not possible to create 
+    an instance of it. 
 
 **Attributes**
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -1131,18 +1134,20 @@ BpfInterface.sample_between(self, double x0, double x1, double dx, ndarray out=N
 Sample this bpf at an interval of dx between x0 and x1
 
 
-**NB**: the interface is similar to numpy's `linspace`
+!!! note
 
-#### Example
+    The interface is similar to numpy's `linspace`
 
-```python
+!!! example
 
->>> a = linear(0, 0, 10, 10)
->>> a.sample_between(0, 10, 1)
-[0 1 2 3 4 5 6 7 8 9 10]
-```
+    ```python
 
-This is the same as `a.mapn_between(11, 0, 10)`
+    >>> a = linear(0, 0, 10, 10)
+    >>> a.sample_between(0, 10, 1)
+    [0 1 2 3 4 5 6 7 8 9 10]
+    ```
+
+    This is the same as `a.mapn_between(11, 0, 10)`
 
 
 
@@ -1168,15 +1173,21 @@ Sample this bpf at a regular interval, returns a Sampled bpf
 Sample this bpf at an interval of dx (samplerate = 1 / dx)
 returns a Sampled bpf with the given interpolation between the samples
 
-**NB**: If you need to sample a portion of the bpf, use sampled_between
+!!! note
+
+    If you need to sample a portion of the bpf, use sampled_between
 
 The same results can be achieved via indexing, in which case the resuling
 bpf will be linearly interpolated:
 
-    bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
-    bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
+```python
+bpf[::0.1]    # returns a sampled version of this bpf with a dx of 0.1
+bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
+```
 
-**See also**: [ntodx](#ntodx), [dxton](#dxton)
+!!! info "See Also"
+
+    [ntodx](#ntodx), [dxton](#dxton)
 
 
 
@@ -1410,13 +1421,13 @@ BpfBase(xs, ys)
 
 **Attributes**
 
-* **descriptor**
+* **descriptor**: A string describing the interpolation function of this bpf
 
-* **exp**
+* **exp**: The exponential of the interpolation function of this bpf
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -1429,12 +1440,23 @@ BpfBase(xs, ys)
 
 ```python
 
-def __init__() -> None
+def __init__(xs: list[float] | numpy.ndarray, ys: list[float] | numpy.ndarray
+             ) -> None
 
 ```
 
 
-xs and ys are arrays of points (x, y)
+Base constructor for bpfs
+
+
+xs and ys should be of the same size
+
+
+
+**Args**
+
+* **xs** (`list[float] | numpy.ndarray`): x data
+* **ys** (`list[float] | numpy.ndarray`): y data
 
 ----------
 
@@ -1443,7 +1465,7 @@ xs and ys are arrays of points (x, y)
 
 ```python
 
-BpfBase.clone_with_new_data(self, ndarray xs: ndarray, ndarray ys: ndarray) -> BpfInterface
+BpfBase.clone_with_new_data(self, xs, ys) -> BpfInterface
 
 ```
 
@@ -1704,13 +1726,13 @@ A bpf with exponential interpolation
 
 **Attributes**
 
-* **descriptor**
+* **descriptor**: A string describing the interpolation function of this bpf
 
-* **exp**
+* **exp**: The exponential of the interpolation function of this bpf
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -1793,13 +1815,13 @@ A bpf with symmetrical exponential interpolation
 
 **Attributes**
 
-* **descriptor**
+* **descriptor**: A string describing the interpolation function of this bpf
 
-* **exp**
+* **exp**: The exponential of the interpolation function of this bpf
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -1886,13 +1908,13 @@ names for compatibility
 
 **Attributes**
 
-* **descriptor**
+* **descriptor**: A string describing the interpolation function of this bpf
 
-* **exp**
+* **exp**: The exponential of the interpolation function of this bpf
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -1985,13 +2007,13 @@ is inverted, resulting in a symmetrical interpolation shape
 
 **Attributes**
 
-* **descriptor**
+* **descriptor**: A string describing the interpolation function of this bpf
 
-* **exp**
+* **exp**: The exponential of the interpolation function of this bpf
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -2065,7 +2087,7 @@ Linear((x0, x1, ...), (y0, y1, ...))
 
 ```python
 
-Linear(ndarray xs: ndarray, ndarray ys: ndarray)
+Linear(xs, ys)
 
 ```
 
@@ -2074,13 +2096,13 @@ A bpf with linear interpolation
 
 **Attributes**
 
-* **descriptor**
+* **descriptor**: A string describing the interpolation function of this bpf
 
-* **exp**
+* **exp**: The exponential of the interpolation function of this bpf
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -2266,13 +2288,13 @@ A bpf with nearest interpolation
 
 **Attributes**
 
-* **descriptor**
+* **descriptor**: A string describing the interpolation function of this bpf
 
-* **exp**
+* **exp**: The exponential of the interpolation function of this bpf
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -2355,13 +2377,13 @@ A bpf without interpolation
 
 **Attributes**
 
-* **descriptor**
+* **descriptor**: A string describing the interpolation function of this bpf
 
-* **exp**
+* **exp**: The exponential of the interpolation function of this bpf
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -2451,13 +2473,13 @@ A bpf with smoothstep interpolation.
 
 **Attributes**
 
-* **descriptor**
+* **descriptor**: A string describing the interpolation function of this bpf
 
-* **exp**
+* **exp**: The exponential of the interpolation function of this bpf
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -2545,13 +2567,13 @@ A bpf with smootherstep interpolation (perlin's variation of smoothstep)
 
 **Attributes**
 
-* **descriptor**
+* **descriptor**: A string describing the interpolation function of this bpf
 
-* **exp**
+* **exp**: The exponential of the interpolation function of this bpf
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -2631,9 +2653,9 @@ Const(double value)
 
 **Attributes**
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -2730,9 +2752,9 @@ A bpf where each segment can have its own interpolation kind
 
 **Attributes**
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -2752,9 +2774,9 @@ def __init__(xs: ndarray, ys: ndarray, interpolations: list[str]) -> None
 
 **NB**: `len(interpolations) == len(xs) - 1`
 
-The interpelation is indicated via a descriptor: 'linear' (linear), 'expon(x)' 
-(exponential with exp=x), 'halfcos', 'halfcos(x)' (cosine interpol with exp=x),
-'nointerpol', 'smooth' (smoothstep)
+The interpelation is indicated via a descriptor: `'linear'` (linear), `'expon(x)'` 
+(exponential with exp=x), `'halfcos'`, `'halfcos(x)'` (cosine interpol with exp=x),
+`'nointerpol'`, ``'smooth'` (smoothstep)
 
 
 
@@ -2823,7 +2845,7 @@ Returns an iterator over the segments of this bpf
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;(`Iterable[tuple[float, float, str, float]]`) An iterator of segments, where each segment has the form `(x, y, interpoltype:str, exponent)`
+&nbsp;&nbsp;&nbsp;&nbsp;(`Iterator[tuple[float, float, str, float]]`) An iterator of segments, where each segment has the form `(x, y, interpoltype:str, exponent)`
 
 
 ---------
@@ -2851,17 +2873,17 @@ a given function: linear, expon(x), halfcos, halfcos(x), etc.
 
 **Attributes**
 
-* **dx**
+* **dx**: The sampling period (delta x)
 
 * **interpolation**
 
-* **samplerate**
+* **samplerate**: The samplerate of this bpf
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
-* **xs**
+* **xs**: The x-coord array of this bpf
 
 * **ys**
 
@@ -2920,7 +2942,7 @@ It implements Newtons difference quotiont, so that:
 
 ```python
 
-Sampled.flatpairs(self)
+Sampled.flatpairs(self) -> numpy.ndarray
 
 ```
 
@@ -2933,6 +2955,12 @@ Returns a flat 1D array with x and y values interlaced
 >>> a.flatpairs()
 array([0, 0, 1, 10, 2, 20])
 ```
+
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`<class 'numpy.ndarray'>`) A 1D array with x and y values interlaced
 
 ----------
 
@@ -2991,7 +3019,7 @@ Sampled.integrate(self) -> double
 Return the result of the integration of this bpf.
 
 
-If any of the bounds is inf, the result is also inf.
+If any of the bounds is `inf`, the result is also `inf`.
 
 **NB**: to determine the limits of the integration, first crop the bpf via a slice
 
@@ -3106,7 +3134,7 @@ Returns a tuple with the points defining this bpf
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;(`tuple[ndarray, ndarray]) a tuple (xs, ys`) where `xs` is an array holding the values for the *x* coordinate, and `ys` holds the values for the *y* coordinate
+&nbsp;&nbsp;&nbsp;&nbsp;(`tuple[ndarray, ndarray]`) A tuple `(xs, ys)` where `xs` is an array holding the values for the *x* coordinate, and `ys` holds the values for the *y* coordinate
 
 ----------
 
@@ -3150,7 +3178,11 @@ Sets the interpolation of this Sampled bpf, inplace
 
 Returns *self*, so you can do:
 
-    sampled = bpf[x0:x1:dx].set_interpolation('expon(2)')
+```python
+
+sampled = bpf[x0:x1:dx].set_interpolation('expon(2)')
+
+```
 
 
 ---------
@@ -3175,9 +3207,9 @@ Slope(double slope, double offset=0, tuple bounds=None)
 
 * **slope**: slope: 'double'
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -3257,9 +3289,9 @@ Spline(xs, ys)
 
 **Attributes**
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -3400,9 +3432,9 @@ This is implemented by wrapping a UnivariateSpline from scipy.
 
 **Attributes**
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -3539,9 +3571,9 @@ _MultipleBpfs(bpfs)
 
 **Attributes**
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -3621,9 +3653,9 @@ Max(*bpfs)
 
 **Attributes**
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -3703,9 +3735,9 @@ Min(*bpfs)
 
 **Attributes**
 
-* **x0**
+* **x0**: The lower bound of the x coordinate
 
-* **x1**
+* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -3783,32 +3815,46 @@ blend(a, b, mix=0.5) -> BpfInterface
 Blend these BPFs
 
 
-if mix == 0: the result is *a*
-if mix == 1: the result is *b*
+!!! note
 
-mix can also be a bpf or any function
+    if mix == 0: the result is *a*
+    if mix == 1: the result is *b*
+
 
 ### Example
 
+Create a curve which is in between a halfcos and a linear interpolation
 
 ```python
-# create a curve which is in between a halfcos and a linear interpolation
 >>> from bpf4 import *
-a = halfcos(0, 0, 1, 1)
-b = linear(0, 0, 1, 1)
-a.blendwith(b, 0.5)
+>>> a = halfcos(0, 0, 1, 1)
+>>> b = linear(0, 0, 1, 1)
+>>> c = blend(a, b, 0.5)
+>>> c.plot()
 
-# nearer to halfcos
-a.blendwith(b, 0.1)
 ```
+TODO: include image
+
+Closer to halfcos
+
+```python
+>>> c = blend(a, b, 0.1)
+>>> c.plot()
+```
+TODO: include image
 
 
 
 **Args**
 
-* **a**:
-* **b**:
-* **mix**:
+* **a** (`BpfInterface`): first bpf
+* **b** (`BpfInterface`): second bpf
+* **mix** (`float | BpfInterface`): how to mix the bpfs. Can be fixed or
+    itself a bpf (or any function) returning a value between 0-1
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`BpfInterface`) The blended bpf
 
 
 ---------
@@ -3860,7 +3906,9 @@ brentq(bpf, double x0, double xa, double xb, double xtol=9.9999999999999998e-13,
 calculate the zero of (bpf + x0) in the interval (xa, xb) using brentq algorithm
 
 
-**NB**: to calculate all the zeros of a bpf, use the [.zeros](#zeros) method
+!!! note 
+
+    To calculate all the zeros of a bpf, use the [.zeros](#zeros) method
 
 
 ### Example

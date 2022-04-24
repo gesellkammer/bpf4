@@ -344,9 +344,22 @@ def parseargs(*args, **kws) -> Tuple[List[float], List[float], dict]:
     """
     Convert the args and kws to the canonical form (xs, ys, kws)
     
-    Returns a tuple (xs:list[float], ys:list[float], kws:dict)
+    Returns:
+        (Tuple[list[float], list[float], dict]) A tuple `(xs, ys, kws)`
     
     Raises ValueError if failed
+
+    All the following variants result in the same result:
+
+    ```python
+    
+    x0, y0, x1, y1, …, exp=0.5
+    (x0, y0), (x1, y1), …, exp=0.5           
+    {x0:y0, x1:y1, …}, exp=0.5               
+    [x0, x1, …], [y0, y1, …], exp=0.5        
+    
+    Result: [x0, x1, …], [y0, y1, …], {exp:0.5}
+    ```
     """
     L = len(args)
     if L == 0:
