@@ -88,6 +88,10 @@ def csv_to_bpf(csvfile: str) -> core.BpfInterface:
 def bpf_to_csv(bpf: core.BpfInterface, csvfile: str) -> None:
     """
     Write this bpf as a csv representation
+
+    Args:
+        bpf: the bpf to write as csv
+        csvfile: the output filename
     """
     import csv
     csvfile = _os.path.splitext(csvfile)[0] + '.csv'
@@ -105,6 +109,12 @@ def bpf_to_csv(bpf: core.BpfInterface, csvfile: str) -> None:
 def bpf_to_dict(bpf: core.BpfInterface) -> dict:
     """
     convert a bpf to a dict with the following format
+
+    Args:
+        bpf: the bpf to convert to a dict
+
+    Returns:
+        (dict) The bpf as a dictionary
 
     ```python
 
@@ -176,9 +186,15 @@ def bpf_to_dict(bpf: core.BpfInterface) -> dict:
 def bpf_to_json(bpf: core.BpfInterface, outfile: str = None) -> str:
     """
     convert this bpf to json format.
+
     If outfile is not given, it returns a string, as in dumps
 
-    kws are passed directly to json.dump
+    Args:
+        bpf: the bpf to dump as json
+        outfile: the output filename. If given, output is saved here
+
+    Returns:
+        (str) The json text
     """
     import json
     asdict = bpf_to_dict(bpf)
@@ -188,7 +204,7 @@ def bpf_to_json(bpf: core.BpfInterface, outfile: str = None) -> str:
     return jsontxt
         
 
-def bpf_to_yaml(bpf, outfile: str = None) -> str:
+def bpf_to_yaml(bpf: core.BpfInterface, outfile: str = None) -> str:
     """
     Convert this bpf to json format. 
 
@@ -197,7 +213,7 @@ def bpf_to_yaml(bpf, outfile: str = None) -> str:
         outfile: if given, the yaml text is saved to this file
 
     Returns:
-        the yaml text
+        (str) The yaml text
     """
     from io import StringIO
     import yaml
@@ -219,6 +235,13 @@ def bpf_to_yaml(bpf, outfile: str = None) -> str:
 def dict_to_bpf(d: dict) -> bpf.BpfInterface:
     """
     Convert a dict to a bpf
+
+    Args:
+        d: the dictionary to convert to a bpf
+
+    Returns:
+        the converted bpf
+
 
     **Format 1** 
 
@@ -352,7 +375,7 @@ def parseargs(*args, **kws) -> Tuple[List[float], List[float], dict]:
     All the following variants result in the same result:
 
     ```python
-    
+
     x0, y0, x1, y1, …, exp=0.5
     (x0, y0), (x1, y1), …, exp=0.5           
     {x0:y0, x1:y1, …}, exp=0.5               
@@ -456,7 +479,7 @@ def multi_parseargs(args) -> Tuple[List[float], List[float], List[str]]:
 
     Given a list of args of the form (x0, y0, interpol) or (x0, y0) (or a flat
     version thereof), fills the possibly missing interpolation descriptions
-    and returns a tuple (xs, ys, interpolations)
+    and returns a tuple `(xs, ys, interpolations)`
 
     Returns:
         a tuple (xs, ys, interpolations), where len(interpolations) == len(xs) - 1
@@ -631,9 +654,13 @@ def warped(bpf: core.BpfInterface, dx:float=None, numpoints=1000) -> core.Sample
         dx: the accuracy of the measurement
         numpoints: if dx is not given, the bpf is sampled `numpoints` times
             across its bounds
+
+    Returns:
+        (core.Sampled) The warped bpf
     
 
-    **Example**
+    Example
+    -------
 
     Find the theoretical position of a given point according to a probability distribution
     
@@ -644,6 +671,8 @@ def warped(bpf: core.BpfInterface, dx:float=None, numpoints=1000) -> core.Sample
     >>> original_points = (0, 0.25, 0.33, 0.5)
     >>> warped_points = w.map(original_points)
     ```
+    **TODO**: add plot
+    
     """
     x0, x1 = bpf.bounds()
     if dx is None:
@@ -676,14 +705,14 @@ def _minimize(bpf, N: int, func=min, debug=False) -> Optional[float]:
     
 def minimum(bpf: core.BpfInterface, N=10) -> Optional[float]:
     """
-    return the x where bpf(x) is the minimum of bpf
+    Find the x where bpf(x) is minimized
     
     Args:
         bpf: the bpf to analyze
         N: the number of estimates
 
     Returns:
-        the x value where bpf(x) is the minimum. Returns None if
+        the *x* value where bpf(x) is minimized. Returns `None` if
         no minimum found
 
     """
@@ -698,7 +727,7 @@ def maximum(bpf: core.BpfInterface, N=10) -> Optional[float]:
         bpf: the bpf to analyze
     
     Returns:
-        the x value where bpf(x) is the maximum. Returns None if
+        the *x* value where bpf(x) is the maximum. Returns `None` if
         no maximum found
 
     """

@@ -14,19 +14,18 @@ def findRoot():
         
 
 def main(destfolder: str):
-    renderConfig = doctools.RenderConfig(splitName=True, fmt="markdown", docfmt="markdown")
+    renderConfig = doctools.RenderConfig(splitName=True, fmt="markdown", docfmt="markdown",
+                                         includeInheritedMethods=False)
     dest = Path(destfolder)
-    core = doctools.generateDocsForModule(bpf4.core, renderConfig=renderConfig, 
-                                          title="Core",
-                                          includeCustomExceptions=False)
-    open(dest/"core.md", "w").write(core)
-
-    utildocs = doctools.generateDocsForModule(bpf4.util, renderConfig=renderConfig,
-                                              title='Util')
-    open(dest/'util.md', 'w').write(utildocs)
-    apidocs = doctools.generateDocsForModule(bpf4.api, renderConfig=renderConfig,
-                                             title='API')
-    open(dest/'api.md', 'w').write(apidocs)
+    modules = {'core': bpf4.core, 
+               'util': bpf4.util, 
+               'api': bpf4.api}
+    for name, module in modules.items():
+        docs = doctools.generateDocsForModule(module, renderConfig=renderConfig, 
+                                              title=name,
+                                              includeCustomExceptions=False)
+        open(dest/f"{name}.md", "w").write(docs)
+    
     
 if __name__ == "__main__":
     root = findRoot()

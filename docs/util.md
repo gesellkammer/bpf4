@@ -1,4 +1,4 @@
-# Util
+# util
 
 
 Utilities for bpf4
@@ -28,7 +28,7 @@ is returned as is)
 **Args**
 
 * **obj**:
-* **bounds** (`tuple`):  (default: (-inf, inf))
+* **bounds** (`tuple`):  (*default*: `(-inf, inf)`)
 
 
 ---------
@@ -61,10 +61,10 @@ Creates a binary mask
 
 * **mask** (`Union[str, List[int]]`): a mask string ('x'=1, '-'=0) or a sequence
     of states (a state is either 0 or 1)
-* **durs** (`Sequence[float]`): a sequence of durations (default=[1]) (default:
-    None)
-* **offset** (`float`):  (default: 0.0)
-* **cycledurs** (`bool`):  (default: True)
+* **durs** (`Sequence[float]`): a sequence of durations (default=[1])
+    (*default*: `None`)
+* **offset** (`float`):  (*default*: `0.0`)
+* **cycledurs** (`bool`):  (*default*: `True`)
 
 **Returns**
 
@@ -88,7 +88,7 @@ def blendwithceil(b, mix: float = 0.5) -> core._BpfBlend
 **Args**
 
 * **b**:
-* **mix** (`float`):  (default: 0.5)
+* **mix** (`float`):  (*default*: `0.5`)
 
 
 ---------
@@ -108,7 +108,7 @@ def blendwithfloor(b: core.BpfInterface, mix: float = 0.5) -> core._BpfBlend
 **Args**
 
 * **b** (`core.BpfInterface`):
-* **mix** (`float`):  (default: 0.5)
+* **mix** (`float`):  (*default*: `0.5`)
 
 
 ---------
@@ -130,8 +130,8 @@ Write this bpf as a csv representation
 
 **Args**
 
-* **bpf** (`core.BpfInterface`):
-* **csvfile** (`str`):
+* **bpf** (`core.BpfInterface`): the bpf to write as csv
+* **csvfile** (`str`): the output filename
 
 
 ---------
@@ -176,7 +176,11 @@ convert a bpf to a dict with the following format
 
 **Args**
 
-* **bpf** (`core.BpfInterface`):
+* **bpf** (`core.BpfInterface`): the bpf to convert to a dict
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`dict`) The bpf as a dictionary
 
 
 ---------
@@ -197,14 +201,17 @@ convert this bpf to json format.
 
 If outfile is not given, it returns a string, as in dumps
 
-kws are passed directly to json.dump
-
 
 
 **Args**
 
-* **bpf** (`core.BpfInterface`):
-* **outfile** (`str`):  (default: None)
+* **bpf** (`core.BpfInterface`): the bpf to dump as json
+* **outfile** (`str`): the output filename. If given, output is saved here
+    (*default*: `None`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`str`) The json text
 
 
 ---------
@@ -215,7 +222,7 @@ kws are passed directly to json.dump
 
 ```python
 
-def bpf_to_yaml(bpf, outfile: str = None) -> str
+def bpf_to_yaml(bpf: core.BpfInterface, outfile: str = None) -> str
 
 ```
 
@@ -226,13 +233,13 @@ Convert this bpf to json format.
 
 **Args**
 
-* **bpf**: the bpf to convert
-* **outfile** (`str`): if given, the yaml text is saved to this file (default:
-    None)
+* **bpf** (`core.BpfInterface`): the bpf to convert
+* **outfile** (`str`): if given, the yaml text is saved to this file (*default*:
+    `None`)
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;(`str`) the yaml text
+&nbsp;&nbsp;&nbsp;&nbsp;(`str`) The yaml text
 
 
 ---------
@@ -344,7 +351,11 @@ bpf = {
 
 **Args**
 
-* **d** (`dict`):
+* **d** (`dict`): the dictionary to convert to a bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`bpf.BpfInterface`) the converted bpf
 
 
 ---------
@@ -370,7 +381,7 @@ The bpf can then be reconstructed via `loadbpf`
 **Args**
 
 * **bpf** (`core.BpfInterface`): the bpf to dump
-* **fmt** (`str`): the format, one of 'csv', 'yaml', 'json' (default: yaml)
+* **fmt** (`str`): the format, one of 'csv', 'yaml', 'json' (*default*: `yaml`)
 
 **Returns**
 
@@ -403,8 +414,8 @@ with curvature 'curve' to upperbpf just before the next x
 
 * **xs**:
 * **upperbpf** (`core.BpfInterface`):
-* **lowerbpf** (`int`):  (default: 0)
-* **curve** (`str`):  (default: linear)
+* **lowerbpf** (`int`):  (*default*: `0`)
+* **curve** (`str`):  (*default*: `linear`)
 
 
 ---------
@@ -431,7 +442,7 @@ Possible formats: auto, csv, yaml, json
 
 * **path** (`str`): the path of the saved bpf
 * **fmt** (`str`): the format used to save the bpf ('auto' to detect the format)
-    (default: auto)
+    (*default*: `auto`)
 
 **Returns**
 
@@ -514,11 +525,11 @@ return the x where bpf(x) is the maximum of bpf
 **Args**
 
 * **bpf** (`core.BpfInterface`): the bpf to analyze
-* **N** (`int`):  (default: 10)
+* **N** (`int`):  (*default*: `10`)
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;(`Optional[float]`) is the maximum. Returns None if no maximum found
+&nbsp;&nbsp;&nbsp;&nbsp;(`Optional[float]`) is the maximum. Returns `None` if no maximum found
 
 
 ---------
@@ -560,18 +571,18 @@ def minimum(bpf: core.BpfInterface, N: int = 10) -> Optional[float]
 ```
 
 
-return the x where bpf(x) is the minimum of bpf
+Find the x where bpf(x) is minimized
 
 
 
 **Args**
 
 * **bpf** (`core.BpfInterface`): the bpf to analyze
-* **N** (`int`): the number of estimates (default: 10)
+* **N** (`int`): the number of estimates (*default*: `10`)
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;(`Optional[float]`) is the minimum. Returns None if no minimum found
+&nbsp;&nbsp;&nbsp;&nbsp;(`Optional[float]`) is minimized. Returns `None` if no minimum found
 
 
 ---------
@@ -592,7 +603,7 @@ Parse args of a multi bpf
 
 Given a list of args of the form (x0, y0, interpol) or (x0, y0) (or a flat
 version thereof), fills the possibly missing interpolation descriptions
-and returns a tuple (xs, ys, interpolations)
+and returns a tuple `(xs, ys, interpolations)`
 
 
 
@@ -674,7 +685,7 @@ Parse interpolation description
 **Args**
 
 * **descr** (`str`):
-* **validate** (`bool`):  (default: True)
+* **validate** (`bool`):  (*default*: `True`)
 
 
 ---------
@@ -742,7 +753,7 @@ The rms of this bpf
 **Args**
 
 * **bpf** (`core.BpfInterface`): the bpf
-* **rmstime** (`float`): the time to calculate the rms over (default: 0.1)
+* **rmstime** (`float`): the time to calculate the rms over (*default*: `0.1`)
 
 **Returns**
 
@@ -784,8 +795,8 @@ Create a new bpf which interpolates between adjacent bpfs given
 * **which** (`core.BpfInterface`): returns at any x, which bpf from bpfs should
     return the result
 * **bpfs** (`Sequence[core.BpfInterface]`): a list of bpfs
-* **shape** (`str`): interpolation shape between consecutive bpfs (default:
-    linear)
+* **shape** (`str`): interpolation shape between consecutive bpfs (*default*:
+    `linear`)
 
 **Returns**
 
@@ -814,9 +825,9 @@ Return a linear bpf representing a smooth version of b
 
 * **b** (`core.BpfInterface`): a bpf
 * **window** (`int`): the width (in x coords) of the smoothing window
-* **N** (`int`): number of points to resample the bpf (default: 1000)
+* **N** (`int`): number of points to resample the bpf (*default*: `1000`)
 * **interpol** (`str`): the interpolation to use. One of 'linear', 'smooth',
-    'halfcos' (default: linear)
+    'halfcos' (*default*: `linear`)
 
 **Returns**
 
@@ -873,7 +884,7 @@ position_bpf | warped_bpf = corresponding position after warping
 ```
 
 
-**Example**
+### Example
 
 Find the theoretical position of a given point according to a probability distribution
 
@@ -884,12 +895,17 @@ Find the theoretical position of a given point according to a probability distri
 >>> original_points = (0, 0.25, 0.33, 0.5)
 >>> warped_points = w.map(original_points)
 ```
+**TODO**: add plot
 
 
 
 **Args**
 
 * **bpf** (`core.BpfInterface`):
-* **dx** (`float`): the accuracy of the measurement (default: None)
+* **dx** (`float`): the accuracy of the measurement (*default*: `None`)
 * **numpoints** (`int`): if dx is not given, the bpf is sampled `numpoints`
-    times         across its bounds (default: 1000)
+    times         across its bounds (*default*: `1000`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`core.Sampled`) The warped bpf

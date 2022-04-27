@@ -44,6 +44,16 @@ def linear(*args) -> core.Linear:
     linear((x0, y0), (x1, y1), ...)
     linear({x0:y0, x1:y1, ...})
     ```
+
+    Example
+    -------
+
+    ```python
+    from bpf4 import *
+    a = linear([0, 2, 3.5, 10], [0.1, 0.5, -3.5,  4])
+    a.plot()
+    ```
+    ![](assets/Linear.png)
     """
     X, Y, kws = parseargs(*args)
     if kws:
@@ -70,6 +80,25 @@ def expon(*args, **kws) -> core.Expon:
     expon((x0, y0), (x1, y1), ..., exp=exponent)
     expon({x0:y0, x1:y1, ...}, exp=exponent)
     ```
+    
+    Example
+    -------
+
+    ```python
+    from bpf4 import *
+    import matplotlib.pyplot as plt
+    numplots = 5
+    fig, axs = plt.subplots(2, numplots, tight_layout=True, figsize=(20, 8))
+    for i in range(numplots):
+        exp = i+1
+        expon(0, 0, 1, 1, exp=exp).plot(show=False, axes=axs[0, i])
+        expon(0, 0, 1, 1, exp=1/exp).plot(show=False, axes=axs[1, i])
+        axs[0, i].set_title(f'{exp=}')
+        axs[1, i].set_title(f'exp={1/exp:.2f}')
+        
+    plot.show()
+    ```
+    ![](assets/expon-grid.png)
 
     """
     X, Y, kws = parseargs(*args, **kws)
@@ -97,6 +126,17 @@ def halfcos(*args, exp=1, numiter=1, **kws) -> core.Halfcos:
     halfcos({x0:y0, x1:y1, ...})
     ```
 
+    ```python
+    a = halfcos([0, 1, 3, 10], [0.1, 0.5, 3.5,  1])
+    b = halfcos(*a.points(), exp=2)
+    c = halfcos(*a.points(), exp=0.5)
+    fig, axes = plt.subplots(1, 3, figsize=(16, 4), tight_layout=True)
+    a.plot(axes=axes[0], show=False)
+    b.plot(axes=axes[1], show=False)
+    c.plot(axes=axes[2])
+    ```
+    ![](assets/Halfcos.png)
+
     
     """
     X, Y, kws = parseargs(*args, **kws)
@@ -121,6 +161,10 @@ def halfcosm(*args, **kws) -> core.Halfcosm:
             more skewed to the right the shape will be
         numiter: Number of iterations. A higher number accentuates the effect
     
+    Returns:
+        (core.Halfcosm) A bpf with symmetric cosine interpolation
+
+
     A bpf can be constructed in multiple ways:
 
     ```python
@@ -131,6 +175,20 @@ def halfcosm(*args, **kws) -> core.Halfcosm:
     halfcosm({x0:y0, x1:y1, ...})
     ```
 
+    ```python
+    from bpf4 import *
+    a = halfcosm(0, 0.1,
+                 1, 0.5,
+                 3, 3.5,
+                 10, 1, exp=2)
+    b = halfcosm(*a.points(), exp=2)
+    fig, axes = plt.subplots(1, 2, figsize=(16, 4))
+    a.plot(axes=axes[0], show=False)
+    b.plot(axes=axes[1])
+    ```
+    ![](assets/Halfcosm.png)
+
+
     """
     X, Y, kws = parseargs(*args, **kws)
     return core.Halfcosm(X, Y, **kws)
@@ -140,6 +198,15 @@ def spline(*args) -> core.Spline:
     """
     Construct a cubic-spline bpf 
 
+    Args:
+        args: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
+            a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
+            or two arrays `xs` and `ys`
+    
+    Returns:
+        (core.Spline) A Spline bpf
+    
+
     A bpf can be constructed in multiple ways:
 
     ```python
@@ -147,6 +214,16 @@ def spline(*args) -> core.Spline:
     spline((x0, y0), (x1, y1), ...)
     spline({x0:y0, x1:y1, ...})
     ```
+
+    ```python
+    from bpf4 import *
+    a = smooth(0, 0.1, 1, 0.5, 3, -3.5, 10, 1)
+    b = spline(*a.points())
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+    a.plot(axes=axes[0], show=False)
+    b.plot(axes=axes[1])
+    ```
+    ![](assets/Spline.png)
     """
     X, Y, kws = parseargs(*args)
     return core.Spline(X, Y)
@@ -156,6 +233,14 @@ def uspline(*args) -> core.USpline:
     """
     Construct a univariate cubic-spline bpf 
 
+    Args:
+        args: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
+            a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
+            or two arrays `xs` and `ys`
+    
+    Returns:
+        (core.USpline) A USpline bpf
+
     A bpf can be constructed in multiple ways:
 
     ```python
@@ -164,7 +249,22 @@ def uspline(*args) -> core.USpline:
     uspline({x0:y0, x1:y1, ...})
     ```
 
-    **NB**: This is implemented by wrapping a UnivariateSpline from scipy.
+    ```python
+    from bpf4 import *
+    a = spline(0, 0.1, 1, 0.5, 3, -3.5, 10, 1)
+    b = uspline(*a.points())
+    
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4), sharey=True, tight_layout=True)
+    a.plot(axes=axes[0], show=False)
+    b.plot(axes=axes[1])
+    ```
+    ![](assets/Uspline.png)
+
+    !!! info "See Also"
+
+        * [spline](#spline)
+        * [pchip](#pchip)
+
     """
     X, Y, kws = parseargs(*args)
     return core.USpline(X, Y)
@@ -174,11 +274,27 @@ def nointerpol(*args) -> core.NoInterpol:
     """
     A bpf with floor interpolation
 
+    Args:
+        args: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
+            a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
+            or two arrays `xs` and `ys`
+    
     A bpf can be constructed in multiple ways:
 
         nointerpol(x0, y0, x1, y1, ...)
         nointerpol((x0, y0), (x1, y1), ...)
         nointerpol({x0:y0, x1:y1, ...})
+
+    ```python
+    a = linear([0, 1, 3, 10], [0.1, 0.5, 3.5,  1])
+    b = nointerpol(*a.points())
+    c = nearest(*a.points())
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4), tight_layout=True)
+    a.plot(axes=axes[0], show=False)
+    b.plot(axes=axes[1], show=False)
+    c.plot(axes=axes[2])
+    ```
+    ![](assets/NoInterpol.png)
     """
     X, Y, kws = parseargs(*args)
     return core.NoInterpol(X, Y, **kws)
@@ -188,11 +304,27 @@ def nearest(*args) -> core.Nearest:
     """
     A bpf with floor interpolation
 
+    Args:
+        args: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
+                a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
+                or two arrays `xs` and `ys`
+
     A bpf can be constructed in multiple ways:
 
         nearest(x0, y0, x1, y1, ...)
         nearest((x0, y0), (x1, y1), ...)
         nearest({x0:y0, x1:y1, ...})
+
+    ```python
+    a = linear([0, 1, 3, 10], [0.1, 0.5, 3.5,  1])
+    b = nointerpol(*a.points())
+    c = nearest(*a.points())
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4), tight_layout=True)
+    a.plot(axes=axes[0], show=False)
+    b.plot(axes=axes[1], show=False)
+    c.plot(axes=axes[2])
+    ```
+    ![](assets/NoInterpol.png)
     """
     X, Y, kws = parseargs(*args)
     return core.Nearest(X, Y, **kws)
@@ -211,6 +343,18 @@ def smooth(*args, numiter=1) -> core.Smooth:
 
     Returns:
         (core.Smooth) A bpf with smoothstep interpolation
+
+    ```python
+
+    from bpf4.api import *
+    a = smooth((0, 0.1), (1, 0.5), (3, -3.5), (10, 1))
+    a.plot()
+    ```
+    ![](assets/Smooth.png)
+
+    !!! info "See Also"
+
+        * [smoother](#smoother)
     """
     X, Y, kws = parseargs(*args)
     return core.Smooth(X, Y, numiter=numiter)
@@ -231,6 +375,19 @@ def smoother(*args) -> core.Smoother:
     Returns:
         (core.Smoother) A bpf with smootherstep interpolation
     
+
+    ```python
+    from bpf4 import *
+    a = smooth(0, 0.1, 
+               1, 0.5, 
+               3, -3.5, 
+               10, 1)
+    b = smoother(*a.points())
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+    a.plot(axes=axes[0], show=False)
+    b.plot(axes=axes[1])
+    ```
+    ![](assets/Smoother.png)
     """
     X, Y, kws = parseargs(*args)
     return core.Smoother(X, Y)
@@ -282,7 +439,17 @@ def pchip(*args):
     pchip((x0, y0), (x1, y1), ...)
     pchip({x0:y0, x1:y1, ...})
 
-    ```    
+
+    >>> a = core.Smoother([0, 1, 3, 10, 12, 12.5], [0.1, 0.5, -3.5,  1, 4.5, -1])
+    >>> b = core.Spline(*a.points())
+    >>> c = pchip(*a.points())
+
+    >>> fig, axes = plt.subplots(1, 3, figsize=(16, 4), sharey=True, tight_layout=True)
+    >>> a.plot(axes=axes[0], show=False)
+    >>> b.plot(axes=axes[1], show=False)
+    >>> c.plot()
+    ``` 
+    ![](assets/pchip.png)   
     """
     from . import pyinterp
     xs, ys, kws = parseargs(*args)
@@ -307,7 +474,7 @@ def const(value) -> core.Const:
     return core.Const(value)
 
 
-def slope(slope:float, offset=0., keepslope=True) -> core.Slope:
+def slope(slope:float, offset=0., bounds: tuple[float, float] = None) -> core.Slope:
     """
     Generate a straight line with the given slope and offset 
 
@@ -325,7 +492,7 @@ def slope(slope:float, offset=0., keepslope=True) -> core.Slope:
     ```
     ![](assets/slope-plot.png)
     """
-    return core.Slope(slope, offset)
+    return core.Slope(slope, offset, bounds=bounds)
 
 
 def blendshape(shape0:str, shape1:str, mix, *args) -> core.BpfInterface:

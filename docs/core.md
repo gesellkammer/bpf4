@@ -1,4 +1,4 @@
-# Core
+# core
 
 
 ---------
@@ -16,7 +16,7 @@ def () -> None
 ```
 
 
-Base class for all BreakPointFunctions
+Base class for all Break-Point Functions
 
 
 !!! note
@@ -35,20 +35,6 @@ Base class for all BreakPointFunctions
 
 
 **Methods**
-
-### \_\_init\_\_
-
-
-```python
-
-def __init__(self, args, kwargs) -> None
-
-```
-
-
-Initialize self.  See help(type(self)) for accurate signature.
-
-----------
 
 ### abs
 
@@ -142,6 +128,10 @@ Create a bpf where `func` is applied to the result of this pdf
 
 
 
+**Args**
+
+* **func** (`callable`): a function to apply to the result of this bpf
+
 **Returns**
 
 &nbsp;&nbsp;&nbsp;&nbsp;(`BpfInterface`) A bpf representing `func(self(x))`
@@ -190,6 +180,12 @@ the out-of-bound result is the same as the result at the bounds
 (1.0, 2.0)
 ```
 
+
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`tuple[float, float]`) The bounbs of this bpf
+
 ----------
 
 ### ceil
@@ -221,14 +217,22 @@ Return a bpf clipping the result between y0 and y1
 
 ```python
 
->>> linear(0, -1, 1, 1).clip(0, 1).map(20)
+>>> a = linear(0, -1, 1, 1).clip(0, 1)
+>>> a.map(20)
 array([0.        , 0.        , 0.        , 0.        , 0.        ,
        0.        , 0.        , 0.        , 0.        , 0.        ,
        0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
        0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.        ])
+>>> a.plot()
 ```
+![](assets/clip1.png)
 
 
+
+**Args**
+
+* **y0** (`float`): the min. *y* value
+* **y1** (`float`): the max. *y* value
 
 **Returns**
 
@@ -257,9 +261,20 @@ Concatenate this bpf to other
 
 >>> a = linear(0, 0, 1, 10)
 >>> b = linear(3, 100, 10, 200)
->>> a.concat(b)
+>>> c = a.concat(b)
+>>> c
 _BpfConcat2[0.0:8.0]
+>>> c(1 - 1e-12), c(1)
+(9.99999999999, 100.0)
+>>> c.plot()
 ```
+![](assets/concat1.png)
+
+
+
+**Args**
+
+* **other**:
 
 ----------
 
@@ -341,6 +356,13 @@ keys:
 
 * integrationmode
 
+
+
+**Args**
+
+* **key**:
+* **value**:
+
 ----------
 
 ### derivative
@@ -365,6 +387,19 @@ derivative(x) = -------------------
                           h
 ```
 
+#### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = slope(1)[0:6.28].sin()
+>>> a.plot(show=False, color="red")
+>>> b = a.derivative()
+>>> b.plot(color="blue")
+
+```
+![](assets/derivative1.png)
+
 
 
 **Returns**
@@ -383,15 +418,26 @@ BpfInterface.dxton(self, double dx) -> int
 ```
 
 
-Calculate the number of points as a result of dividing the
+Split the bounds of this bpf according to a given sampling period *dx*
 
 
+Calculate the number of points in as a result of dividing the 
 bounds of this bpf by the sampling period `dx`:
 
     n = (x1 + dx - x0) / dx
 
-where x0 and x1 are the x coord start and end points and dx 
+where *x0* and *x1* are the *x* coord start and end points and *dx* 
 is the sampling period.
+
+
+
+**Args**
+
+* **dx** (`float`): the sampling period
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`int`) The number of points to sample
 
 ----------
 
@@ -464,11 +510,11 @@ BpfInterface.fit_between(self, double x0, double x1) -> BpfInterface
 ```
 
 
-Returns a view of this bpf fitted within the interval x0:x1
+Returns a view of this bpf fitted within the interval `x0:x1`
 
 
 This operation only makes sense if the bpf is bounded
-(none of its bounds is inf)
+(none of its bounds is `inf`)
 
 #### Example
 
@@ -486,6 +532,11 @@ This operation only makes sense if the bpf is bounded
 ```
 
 
+
+**Args**
+
+* **x0**: the lower bound to fit this bpf
+* **x1**: the upper bound to fit this bpf
 
 **Returns**
 
@@ -521,7 +572,6 @@ BpfInterface.fromseq(type cls, *points, **kws)
 
 
 A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
 
 #### Example
 
@@ -596,6 +646,12 @@ Integrate this bpf between x0 and x1
 
 
 
+**Args**
+
+* **x0**: start x of the integration range
+* **x1**: end x of the integration range
+* **N**: number of intervals to use for integration
+
 **Returns**
 
 &nbsp;&nbsp;&nbsp;&nbsp;(`float`) The result of the integration
@@ -613,6 +669,21 @@ BpfInterface.integrated(self) -> BpfInterface
 
 
 Return a bpf representing the integration of this bpf at a given point
+
+
+#### Example
+
+```python
+a = linear(0, 0, 5, 5)
+b = a.integrated()
+a.plot(show=False, color="red")
+b.plot(color="blue")
+```
+![](assets/integrated1.png)
+
+!!! info "See Also"
+
+    * [.integrate](#integrate)
 
 
 
@@ -647,6 +718,8 @@ f.inverted()(f(x)) = x
 
 So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
+![](assets/inverted.png)
+
 
 
 **Returns**
@@ -672,7 +745,23 @@ Return a new bpf which is a copy of this bpf when inside
 bounds() but outside bounds() it behaves as a linear bpf
 with a slope equal to the slope of this bpf at its extremes
 
+#### Example
 
+```python
+
+a = expon(1, 1, 2, 2, exp=2)
+b = a.keep_slope()
+b[0:3].plot(show=False, color="grey")
+a.plot(color="black", linewidth=3)
+```
+![](assets/keepslope1.png)
+
+
+
+**Args**
+
+* **epsilon** (`float`): an epsilon value to use when deriving the         this
+    bpf to calculate its slope
 
 **Returns**
 
@@ -693,6 +782,10 @@ BpfInterface.log(self, double base=M_E) -> _BpfLambdaLog
 Returns a bpf representing the log of this bpf
 
 
+
+**Args**
+
+* **base** (`float`): the base of the log
 
 **Returns**
 
@@ -776,6 +869,17 @@ bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
 
 ```
 
+
+
+**Args**
+
+* **xs** (`ndarray | int`): the x coordinates at which to sample this bpf,
+    or an integer representing the number of elements to calculate         in an
+    evenly spaced grid between the bounds of this bpf
+* **out** (`ndarray`): if given, an attempt will be done to use it as
+    destination         for the result. The user should not trust that this
+    actually happens         (see example)
+
 ----------
 
 ### mapn\_between
@@ -793,9 +897,6 @@ Calculate an array of `n` values representing this bpf between `x0` and `x1`
 
 x0 and x1 are included
 
-If out is passed, an attempt will be done to use it as destination for the result
-Nonetheless, you should NEVER trust that this actually happens. See example
-
 #### Example
 
 ```python
@@ -804,6 +905,20 @@ out = numpy.empty((100,), dtype=float)
 out = thisbpf.mapn_between(100, 0, 10, out)
 
 ```
+
+
+
+**Args**
+
+* **n**:
+* **x0** (`float`): lower bound to map this bpf
+* **x1** (`float`): upper bound to map this bpf     out (ndarray: if included,
+    results are placed here.
+* **out**:
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`ndarray`) An array of `n` elements representing this bpf at the given values within the range `x0:x1`. This is `out` if it was passed
 
 ----------
 
@@ -828,9 +943,15 @@ Returns a bpf representing `max(self, b)`
 >>> b = a.max(4)
 >>> b(0), b(0.5), b(1)
 (4.0, 5.0, 10.0)
+>>> b.plot()
 ```
+![](assets/maxconst.png)
 
 
+
+**Args**
+
+* **b** (`float | BpfInterface`): a const float or a bpf
 
 **Returns**
 
@@ -888,9 +1009,15 @@ Returns a bpf representing `min(self, b)`
 >>> b = a.min(4)
 >>> b(0), b(0.5), b(1)
 (0, 4.0, 5.0)
+>>> b.plot()
 ```
+![](assets/minconst.png)
 
 
+
+**Args**
+
+* **b** (`float | BpfInterface`): a const float or a bpf
 
 **Returns**
 
@@ -913,6 +1040,17 @@ Calculate the sampling period `dx`
 
 Calculate `dx` so that the bounds of this bpf 
 are divided into N parts: `dx = (x1-x0) / (N-1)`
+
+
+
+**Args**
+
+* **N** (`int`): The number of points to sample within the bounds of
+    this bpf
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`float`) The sampling period
 
 ----------
 
@@ -945,8 +1083,17 @@ Return a new Bpf with the given values outside the bounds
 10
 
 # fallback to another curve outside self
->>> a = linear(0, 1, 1, 10).outbound(0, 0) + expon(-1, 2, 4, 10)
+>>> a = linear(0, 1, 1, 10).outbound(0, 0) + expon(-1, 2, 4, 10, exp=2)
+>>> a.plot()
 ```
+![](assets/outbound1.png)
+
+
+
+**Args**
+
+* **y0**:
+* **y1**:
 
 ----------
 
@@ -970,14 +1117,13 @@ and outside it, it replicates it in a periodic way, with no bounds.
 
 ```python
 
->>> b = linear(xs=(0, 1), ys(-1, 1)Linear((0, 1), (-1, 1)).periodic()
->>> b(0.5)
-0
->>> b(1.5)
-0
->>> b(-10)
--1
+>>> from bpf4 import *
+>>> a = core.Linear((0, 1), (-1, 1)).periodic()
+>>> a
+_BpfPeriodic[-inf:inf]
+>>> a.plot()
 ```
+![](assets/periodic1.png)
 
 
 
@@ -1013,6 +1159,20 @@ ax = plt.subplot()
 a.plot(axes=ax)
 ```
 
+
+
+**Args**
+
+* **kind** (`str`): one of 'line', 'bar'
+* **n** (`int`): the number of points to plot
+* **show** (`bool`): if the plot should be shown immediately after (default is
+    True).         If you want to display multiple BPFs sharing an axes you can
+    call          plot on each of the bpfs with show=False, and then either
+    call the last one with plot=True or call bpf4.plot.show().
+* **axes** (`matplotlib.pyplot.Axes`): if given, will be used to plot onto it,
+    otherwise an ad-hoc axes is created
+* **keys**:
+
 ----------
 
 ### preapply
@@ -1046,6 +1206,11 @@ This is equivalent to `func(x) | self`
 **NB**: `bpf1.preapply(bpf2)` is the same as `bpf2 | bpf1`
 
 
+
+**Args**
+
+* **func** (`callable`): a function `func(x: float) -> float` which is applied
+    to         the argument before passing it to this bpf
 
 **Returns**
 
@@ -1091,9 +1256,35 @@ creates a Linear/NoInterpol bpf whereas `.sampled` returns a
 `Sampled` bpf (a `Sampled` bpf works only for regularly sampled data,
 a Linear or NoInterpol bpfs accept any data as its x coordinate)
 
-**See Also**: [BpfInterface.sampled](#sampled)
+#### Example
+
+```python
+
+>>> from bpf4 import *
+>>> from math import *
+>>> a = slope(1)[0:4*pi].sin()
+>>> b = a.render(20)   # Sample this bpf at 20 points within its bounds
+>>> b
+Sampled[0.0:12.566370614359172]
+>>> b.plot()
+```
+![](assets/render1.png)
+
+!!! info "See Also"
+
+    [BpfInterface.sampled](#sampled)
 
 
+
+**Args**
+
+* **xs** (`int | list | np.ndarray`): a seq of points at which this bpf
+    is sampled or a number, in which case an even grid is calculated
+    with that number of points. In the first case a Linear or NoInterpol
+    bpf is returned depending on the `interpolation` parameter (see below).
+    In the second case a `Sampled` bpf is returned.
+* **interpolation** (`str`): the interpoltation type of the returned bpf.
+    One of 'linear', 'nointerpol'
 
 **Returns**
 
@@ -1138,18 +1329,26 @@ Sample this bpf at an interval of dx between x0 and x1
 
     The interface is similar to numpy's `linspace`
 
-!!! example
+#### Example
 
-    ```python
+```python
 
-    >>> a = linear(0, 0, 10, 10)
-    >>> a.sample_between(0, 10, 1)
-    [0 1 2 3 4 5 6 7 8 9 10]
-    ```
+>>> a = linear(0, 0, 10, 10)
+>>> a.sample_between(0, 10, 1)
+[0 1 2 3 4 5 6 7 8 9 10]
+```
 
-    This is the same as `a.mapn_between(11, 0, 10)`
+This is the same as `a.mapn_between(11, 0, 10)`
 
 
+
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **out** (`ndarray`): if given, the result will be placed here and no new array
+    will         be allocated
 
 **Returns**
 
@@ -1175,9 +1374,9 @@ returns a Sampled bpf with the given interpolation between the samples
 
 !!! note
 
-    If you need to sample a portion of the bpf, use sampled_between
+    If you need to sample a portion of the bpf, use [sampled_between](#sampled_between)
 
-The same results can be achieved via indexing, in which case the resuling
+The same results can be achieved via indexing, in which case the resulting
 bpf will be linearly interpolated:
 
 ```python
@@ -1190,6 +1389,13 @@ bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
     [ntodx](#ntodx), [dxton](#dxton)
 
 
+
+**Args**
+
+* **dx** (`float`): the sample interval
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function)
 
 **Returns**
 
@@ -1214,9 +1420,18 @@ Sample a portion of this bpf, returns a `Sampled` bpf
 
 
 
+**Args**
+
+* **x0** (`float`): point to start sampling (included)
+* **x1** (`float`): point to stop sampling (included)
+* **dx** (`float`): the sampling period
+* **interpolation** (`str`): the interpolation kind. One of 'linear',
+    'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
+    exponential passed to the interpolation function). For
+
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;(`Sampled`) The `Sampled` bpf, representing this bpf sampled at a grid of [x0:x1:dx] with the given interpolation
+&nbsp;&nbsp;&nbsp;&nbsp;(`Sampled`) The `Sampled` bpf, representing this bpf sampled at a grid of `[x0:x1:dx]` with the given interpolation
 
 ----------
 
@@ -1233,7 +1448,7 @@ BpfInterface.shifted(self, dx) -> BpfInterface
 Returns a view of this bpf shifted by `dx` over the x-axes
 
 
-This is the same as `shift`, but a new bpf is returned
+This is the same as [.shift](#shift), but a new bpf is returned
 
 #### Example
 
@@ -1244,6 +1459,12 @@ This is the same as `shift`, but a new bpf is returned
 >>> b = a.shifted(2)
 >>> b(3) == a(1)
 ```
+
+
+
+**Args**
+
+* **dx**:
 
 ----------
 
@@ -1304,7 +1525,9 @@ Returns a view of this bpf stretched over the x axis.
 
 **NB**: to stretch over the y-axis, just multiply this bpf
 
-**See also**: [fit_between](#fit_between)
+!!! info "See Also"
+
+    [fit_between()](#fit_between)
 
 #### Example
 
@@ -1313,11 +1536,18 @@ Stretch the shape of the bpf, but preserve the start position
 ```python
 
 >>> a = linear(1, 1, 2, 2)
->>> a.stretched(4, fixpoint=a.x0).bounds()
+>>> b = a.stretched(4, fixpoint=a.x0)
+>>> b.bounds()
 (1, 9)
+>>> a.plot(show=False); b.plot()
 ```
 
 
+
+**Args**
+
+* **rx** (`float`): the stretch factor
+* **fixpoint** (`float`): the point to use as reference
 
 **Returns**
 
@@ -1367,6 +1597,14 @@ Integrate this bpf between [x0, x1] using the trapt method
 
 
 
+**Args**
+
+* **x0** (`float`): start of integration period
+* **x1** (`float`): end of the integration period
+* **N** (`int`): number of subdivisions used to calculate the integral. If not
+    given,        a default is used (default defined in
+    `CONFIG['integrate.trapz_intervals']`)
+
 **Returns**
 
 &nbsp;&nbsp;&nbsp;&nbsp;(`float`) The result of the integration
@@ -1398,6 +1636,19 @@ Find the zeros of this bpf
 
 
 
+**Args**
+
+* **h**: the accuracy to scan for zero-crossings. If two zeros are within
+    this distance, they will be resolved as one.
+* **N**: alternatively, you can give the number of intervals to scan.         h
+    will be derived from this
+* **x0**: the point to start searching. If not given, the starting point of this
+    bpf         will be used
+* **x1**: the point to stop searching. If not given, the end point of this bpf
+    is used
+* **maxzeros**: if > 0, stop the search when this number of zeros have been
+    found
+
 **Returns**
 
 &nbsp;&nbsp;&nbsp;&nbsp;(`List[float]`) A list with the zeros of this bpf
@@ -1424,10 +1675,6 @@ BpfBase(xs, ys)
 * **descriptor**: A string describing the interpolation function of this bpf
 
 * **exp**: The exponential of the interpolation function of this bpf
-
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -1465,7 +1712,7 @@ xs and ys should be of the same size
 
 ```python
 
-BpfBase.clone_with_new_data(self, xs, ys) -> BpfInterface
+BpfBase.clone_with_new_data(self, ndarray xs: ndarray, ndarray ys: ndarray) -> BpfInterface
 
 ```
 
@@ -1474,50 +1721,14 @@ Create a new bpf with the same attributes as self but with new data
 
 
 
+**Args**
+
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+
 **Returns**
 
 &nbsp;&nbsp;&nbsp;&nbsp;(`BpfInterface`) The new bpf. It will be of the same class as self
-
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
-
-```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
-```
-
-
-
-**Args**
-
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
 
 ----------
 
@@ -1531,13 +1742,23 @@ BpfBase.insertpoint(self, double x, double y)
 ```
 
 
-Return a copy of this bpf with the point (x, y) inserted
+Return **a copy** of this bpf with the point `(x, y)` inserted
 
 
-**NB**: *self* is not modified
+!!! note
 
-Retursn:
-    (BpfInterface) A clone of this bpf with the point inserted
+    *self* is not modified
+
+
+
+**Args**
+
+* **x** (`float`): x coord
+* **y** (`float`): y coord
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`BpfInterface`) A clone of this bpf with the point inserted
 
 ----------
 
@@ -1557,6 +1778,13 @@ Return an array of `n` elements resulting of evaluating this bpf regularly
 The x coordinates at which this bpf is evaluated are equivalent to `linspace(xstart, xend, n)`
 
 
+
+**Args**
+
+* **n** (`int`): the number of elements to generate
+* **xstart** (`float`): x to start mapping
+* **xend** (`float`): x to end mapping
+* **out** (`ndarray`): if given, result is put here
 
 **Returns**
 
@@ -1580,6 +1808,13 @@ Set the values **inplace** returned when this bpf is evaluated outside its bound
 The default behaviour is to interpret the values at the bounds to extend to infinity.
 
 In order to not change this bpf inplace, use `b.copy().outbound(y0, y1)`
+
+
+
+**Args**
+
+* **y0**:
+* **y1**:
 
 ----------
 
@@ -1641,6 +1876,10 @@ mybpf = mybpf.clone_with_new_data(xs, ys)
 
 
 
+**Args**
+
+* **x** (`float`): the x point to remove
+
 **Returns**
 
 &nbsp;&nbsp;&nbsp;&nbsp;(`BpfInterface`) A copy of this bpf with the given point removed
@@ -1685,7 +1924,13 @@ BpfBase.shift(self, double dx)
 Shift the bpf along the x-coords, **INPLACE**
 
 
-Use `shifted` to create a new bpf
+Use [.shifted](#shifted) to create a new bpf
+
+
+
+**Args**
+
+* **dx** (`float`): the shift interval
 
 ----------
 
@@ -1703,6 +1948,12 @@ Stretch or compress this bpf in the x-coordinate **INPLACE**
 
 
 **NB**: use `stretched` to create a new bpf
+
+
+
+**Args**
+
+* **rx** (`float`): the stretch/compression factor
 
 
 ---------
@@ -1724,197 +1975,25 @@ Expon(xs, ys, double exp, int numiter=1)
 
 A bpf with exponential interpolation
 
-**Attributes**
-
-* **descriptor**: A string describing the interpolation function of this bpf
-
-* **exp**: The exponential of the interpolation function of this bpf
-
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
-
-
----------
-
-
-**Methods**
-
-### \_\_init\_\_
-
-
-```python
-
-def __init__(self, args, kwargs) -> None
-
-```
-
-
-Initialize self.  See help(type(self)) for accurate signature.
-
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
 
 #### Example
 
-These operations result in the same bpf:
-
 ```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
-```
+from bpf4 import *
+import matplotlib.pyplot as plt
+numplots = 5
+fig, axs = plt.subplots(2, numplots, tight_layout=True, figsize=(20, 8))
+for i in range(numplots):
+    exp = i+1
+    core.Expon([0, 1, 2], [0, 1, 0], exp=exp).plot(show=False, axes=axs[0, i])
+    core.Expon([0, 1, 2], [0, 1, 0], exp=1/exp).plot(show=False, axes=axs[1, i])
+    axs[0, i].set_title(f'{exp=}')
+    axs[1, i].set_title(f'exp={1/exp:.2f}')
 
-
-
-**Args**
-
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
-
-
----------
-
-
-## Exponm
-
- - Base Class: [Expon](#expon)
-
-### 
-
-
-```python
-
-Exponm(xs, ys, double exp, int numiter=1)
+plot.show()
 
 ```
-
-
-A bpf with symmetrical exponential interpolation
-
-**Attributes**
-
-* **descriptor**: A string describing the interpolation function of this bpf
-
-* **exp**: The exponential of the interpolation function of this bpf
-
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
-
-
----------
-
-
-**Methods**
-
-### \_\_init\_\_
-
-
-```python
-
-def __init__(self, args, kwargs) -> None
-
-```
-
-
-Initialize self.  See help(type(self)) for accurate signature.
-
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
-
-```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
-```
-
-
-
-**Args**
-
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
-
-
----------
-
-
-## Halfcos
-
- - Base Class: [BpfBase](#bpfbase)
-
-### 
-
-
-```python
-
-Halfcos(xs, ys, double exp=1.0, int numiter=1)
-
-```
-
-
-A bpf with half-cosine interpolation
-
-
-**NB**: [HalfcosExp](#HalfcosExp) is the same as Halfcos. It exists with two
-names for compatibility
-
-**Attributes**
-
-* **descriptor**: A string describing the interpolation function of this bpf
-
-* **exp**: The exponential of the interpolation function of this bpf
-
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
+![](assets/expon-grid2.png)
 
 
 ---------
@@ -1940,46 +2019,126 @@ def __init__(xs: ndarray, ys: ndarray, exp: float, numiter: int) -> None
 * **exp** (`float`): an exponent applied to the halfcosine interpolation
 * **numiter** (`int`): how many times to apply the interpolation
 
-----------
 
-### fromseq
+---------
+
+
+## Exponm
+
+ - Base Class: [Expon](#expon)
+
+### 
 
 
 ```python
 
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
+Exponm(xs, ys, double exp, int numiter=1)
 
 ```
 
 
-BpfInterface.fromseq(type cls, *points, **kws)
+A bpf with symmetrical exponential interpolation
 
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
 
 ```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
+from bpf4 import *
+import matplotlib.pyplot as plt
+numplots = 5
+fig, axs = plt.subplots(2, numplots, tight_layout=True, figsize=(20, 8))
+for i in range(numplots):
+    exp = i+1
+    core.Exponm([0, 1, 2], [0, 1, 0], exp=exp).plot(show=False, axes=axs[0, i])
+    core.Exponm([0, 1, 2], [0, 1, 0], exp=1/exp).plot(show=False, axes=axs[1, i])
+    axs[0, i].set_title(f'{exp=}')
+    axs[1, i].set_title(f'exp={1/exp:.2f}')
+
+plot.show()
+```
+
+![](assets/exponm-grid.png)
+
+
+---------
+
+
+**Methods**
+
+### \_\_init\_\_
+
+
+```python
+
+def __init__(xs: ndarray, ys: ndarray, exp: float, numiter: int) -> None
+
 ```
 
 
 
 **Args**
 
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+* **exp** (`float`): an exponent applied to the halfcosine interpolation
+* **numiter** (`int`): how many times to apply the interpolation
 
-**Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
+---------
+
+
+## Halfcos
+
+ - Base Class: [BpfBase](#bpfbase)
+
+### 
+
+
+```python
+
+Halfcos(xs, ys, double exp=1.0, int numiter=1)
+
+```
+
+
+A bpf with half-cosine interpolation
+
+
+[HalfcosExp](#HalfcosExp) is the same as Halfcos. It exists with two
+names for compatibility
+
+```python
+a = core.Halfcos([0, 1, 3, 10], [0.1, 0.5, 3.5,  1])
+b = core.Halfcos(*a.points(), exp=2)
+c = core.Halfcos(*a.points(), exp=0.5)
+fig, axes = plt.subplots(1, 3, figsize=(16, 4), tight_layout=True)
+a.plot(axes=axes[0], show=False)
+b.plot(axes=axes[1], show=False)
+c.plot(axes=axes[2])
+```
+![](assets/Halfcos.png)
+
+
+---------
+
+
+**Methods**
+
+### \_\_init\_\_
+
+
+```python
+
+def __init__(xs: ndarray, ys: ndarray, exp: float, numiter: int) -> None
+
+```
+
+
+
+**Args**
+
+* **xs** (`ndarray`): the x-coord data
+* **ys** (`ndarray`): the y-coord data
+* **exp** (`float`): an exponent applied to the halfcosine interpolation
+* **numiter** (`int`): how many times to apply the interpolation
 
 
 ---------
@@ -2005,74 +2164,14 @@ A bpf with half-cosine and exponent depending on the orientation of the interpol
 When interpolating between two y values, y0 and y1, if  y1 < y0 the exponent
 is inverted, resulting in a symmetrical interpolation shape
 
-**Attributes**
-
-* **descriptor**: A string describing the interpolation function of this bpf
-
-* **exp**: The exponential of the interpolation function of this bpf
-
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
-
-
----------
-
-
-**Methods**
-
-### \_\_init\_\_
-
-
 ```python
-
-def __init__(self, args, kwargs) -> None
-
+a = core.Halfcos([0, 1, 3, 10], [0.1, 0.5, 3.5,  1], exp=2)
+b = core.Halfcosm(*a.points(), exp=2)
+fig, axes = plt.subplots(1, 2, figsize=(16, 4))
+a.plot(axes=axes[0], show=False)
+b.plot(axes=axes[1])
 ```
-
-
-Initialize self.  See help(type(self)) for accurate signature.
-
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
-
-```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
-```
-
-
-
-**Args**
-
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
+![](assets/Halfcosm.png)
 
 
 ---------
@@ -2094,15 +2193,13 @@ Linear(xs, ys)
 
 A bpf with linear interpolation
 
-**Attributes**
 
-* **descriptor**: A string describing the interpolation function of this bpf
-
-* **exp**: The exponential of the interpolation function of this bpf
-
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
+```python
+from bpf4 import *
+a = core.Linear([0, 2, 3.5, 10], [0.1, 0.5, -3.5,  4])
+a.plot()
+```
+![](assets/Linear.png)
 
 
 ---------
@@ -2133,7 +2230,7 @@ def __init__(xs: ndarray, ys: ndarray) -> None
 
 ```python
 
-Linear.flatpairs(self) -> ndarray
+Linear.flatpairs(self)
 
 ```
 
@@ -2157,47 +2254,6 @@ array([0, 0, 1, 10, 2, 20])
 
 ----------
 
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
-
-```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
-```
-
-
-
-**Args**
-
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
-
-----------
-
 ### integrate\_between
 
 
@@ -2211,6 +2267,12 @@ Linear.integrate_between(self, double x0, double x1, size_t N=0) -> double
 Integrate this bpf between the given x coords
 
 
+
+**Args**
+
+* **x0** (`float`): start of integration
+* **x1** (`float`): end of integration
+* **N** (`int`): number of integration steps
 
 **Returns**
 
@@ -2231,13 +2293,16 @@ Linear.inverted(self)
 Return a new Linear bpf where x and y coordinates are inverted.
 
 
-This is only possible if y never decreases in value
+This is only possible if y never decreases in value. Otherwise
+a `ValueError` is thrown
+
+![](assets/inverted.png)
 
 
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfInterface`) The inverted bpf
+&nbsp;&nbsp;&nbsp;&nbsp;(`Linear`) The inverted bpf
 
 ----------
 
@@ -2261,6 +2326,11 @@ the range `x0:x1`.
 bpf. In this case a real `Linear` bpf is returned. 
 
 
+
+**Args**
+
+* **x0** (`float`): start x to cut
+* **x1** (`float`): end x to cut
 
 **Returns**
 
@@ -2286,15 +2356,17 @@ Nearest(xs, ys)
 
 A bpf with nearest interpolation
 
-**Attributes**
 
-* **descriptor**: A string describing the interpolation function of this bpf
-
-* **exp**: The exponential of the interpolation function of this bpf
-
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
+```python
+a = core.Linear([0, 1, 3, 10], [0.1, 0.5, 3.5,  1])
+b = core.NoInterpol(*a.points())
+c = core.Nearest(*a.points())
+fig, axes = plt.subplots(1, 3, figsize=(15, 4), tight_layout=True)
+a.plot(axes=axes[0], show=False)
+b.plot(axes=axes[1], show=False)
+c.plot(axes=axes[2])
+```
+![](assets/NoInterpol.png)
 
 
 ---------
@@ -2307,53 +2379,19 @@ A bpf with nearest interpolation
 
 ```python
 
-def __init__(self, args, kwargs) -> None
+def __init__(xs: ndarray, ys: ndarray) -> None
 
 ```
 
 
-Initialize self.  See help(type(self)) for accurate signature.
-
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
-
-```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
-```
+A bpf with nearest interpolation
 
 
 
 **Args**
 
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
+* **xs** (`ndarray`): the x coord data
+* **ys** (`ndarray`): the y coord data
 
 
 ---------
@@ -2375,15 +2413,17 @@ NoInterpol(xs, ys)
 
 A bpf without interpolation
 
-**Attributes**
 
-* **descriptor**: A string describing the interpolation function of this bpf
-
-* **exp**: The exponential of the interpolation function of this bpf
-
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
+```python
+a = core.Linear([0, 1, 3, 10], [0.1, 0.5, 3.5,  1])
+b = core.NoInterpol(*a.points())
+c = core.Nearest(*a.points())
+fig, axes = plt.subplots(1, 3, figsize=(15, 4), tight_layout=True)
+a.plot(axes=axes[0], show=False)
+b.plot(axes=axes[1], show=False)
+c.plot(axes=axes[2])
+```
+![](assets/NoInterpol.png)
 
 
 ---------
@@ -2410,47 +2450,6 @@ A bpf without interpolation
 * **xs** (`ndarray`): the x coord data
 * **ys** (`ndarray`): the y coord data
 
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
-
-```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
-```
-
-
-
-**Args**
-
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
-
 
 ---------
 
@@ -2471,15 +2470,19 @@ Smooth(xs, ys, int numiter=1)
 
 A bpf with smoothstep interpolation.
 
-**Attributes**
 
-* **descriptor**: A string describing the interpolation function of this bpf
+```python
 
-* **exp**: The exponential of the interpolation function of this bpf
+>>> a = Smooth([0, 1, 3, 10], [0.1, 0.5, -3.5,  1])
+>>> a.plot()
+```
+![](assets/Smooth.png)
 
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
+```python
+>>> a = core.Smooth([0, 1, 3, 10], [0.1, 0.5, -3.5,  1], numiter=3)
+>>> a.plot()
+```
+![](assets/Smooth_numiter3.png)
 
 
 ---------
@@ -2504,47 +2507,6 @@ def __init__(xs: ndarray, ys: ndarray, numiter: int) -> None
 * **ys** (`ndarray`): the y-coord data
 * **numiter** (`int`): the number of smoothstep steps
 
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
-
-```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
-```
-
-
-
-**Args**
-
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
-
 
 ---------
 
@@ -2565,74 +2527,16 @@ Smoother(xs, ys)
 
 A bpf with smootherstep interpolation (perlin's variation of smoothstep)
 
-**Attributes**
-
-* **descriptor**: A string describing the interpolation function of this bpf
-
-* **exp**: The exponential of the interpolation function of this bpf
-
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
-
-
----------
-
-
-**Methods**
-
-### \_\_init\_\_
-
 
 ```python
 
-def __init__(self, args, kwargs) -> None
-
+a = core.Smooth([0, 1, 3, 10], [0.1, 0.5, -3.5,  1])
+b = core.Smoother(*a.points())
+fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+a.plot(axes=axes[0], show=False)
+b.plot(axes=axes[1])
 ```
-
-
-Initialize self.  See help(type(self)) for accurate signature.
-
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
-
-```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
-```
-
-
-
-**Args**
-
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
+![](assets/Smoother.png)
 
 
 ---------
@@ -2651,11 +2555,8 @@ Const(double value)
 
 ```
 
-**Attributes**
 
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
+A bpf representing a constant value
 
 
 ---------
@@ -2668,53 +2569,15 @@ Const(double value)
 
 ```python
 
-def __init__(self, args, kwargs) -> None
+def __init__(value: float) -> None
 
-```
-
-
-Initialize self.  See help(type(self)) for accurate signature.
-
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
-
-```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
 ```
 
 
 
 **Args**
 
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
+* **value** (`float`): the constant value of this bpf
 
 ----------
 
@@ -2729,6 +2592,15 @@ def mapn_between(self, n, x0, x1, out) -> None
 
 
 Const.mapn_between(self, int n, double x0, double x1, ndarray out=None) -> ndarray
+
+
+
+**Args**
+
+* **n**:
+* **x0**:
+* **x1**:
+* **out**:
 
 
 ---------
@@ -2750,12 +2622,6 @@ Multi(xs, ys, interpolations)
 
 A bpf where each segment can have its own interpolation kind
 
-**Attributes**
-
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
-
 
 ---------
 
@@ -2772,7 +2638,13 @@ def __init__(xs: ndarray, ys: ndarray, interpolations: list[str]) -> None
 ```
 
 
-**NB**: `len(interpolations) == len(xs) - 1`
+!!! note
+
+    ```python
+
+    len(interpolations) == len(xs) - 1
+
+    ```
 
 The interpelation is indicated via a descriptor: `'linear'` (linear), `'expon(x)'` 
 (exponential with exp=x), `'halfcos'`, `'halfcos(x)'` (cosine interpol with exp=x),
@@ -2785,47 +2657,6 @@ The interpelation is indicated via a descriptor: `'linear'` (linear), `'expon(x)
 * **xs** (`ndarray`): the sequence of x points
 * **ys** (`ndarray`): the sequence of y points
 * **interpolations** (`list[str]`): the interpolation used between these points
-
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
-
-```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
-```
-
-
-
-**Args**
-
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
 
 ----------
 
@@ -2879,10 +2710,6 @@ a given function: linear, expon(x), halfcos, halfcos(x), etc.
 
 * **samplerate**: The samplerate of this bpf
 
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
-
 * **xs**: The x-coord array of this bpf
 
 * **ys**
@@ -2935,6 +2762,19 @@ It implements Newtons difference quotiont, so that:
                     -------------------
                               h
 
+#### Example
+
+```python
+
+>>> from bpf4 import *
+>>> a = slope(1)[0:6.28].sin()
+>>> a.plot(show=False, color="red")
+>>> b = a.derivative()
+>>> b.plot(color="blue")
+
+```
+![](assets/derivative1.png)
+
 ----------
 
 ### flatpairs
@@ -2942,7 +2782,7 @@ It implements Newtons difference quotiont, so that:
 
 ```python
 
-Sampled.flatpairs(self) -> numpy.ndarray
+Sampled.flatpairs(self)
 
 ```
 
@@ -2960,49 +2800,7 @@ array([0, 0, 1, 10, 2, 20])
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;(`<class 'numpy.ndarray'>`) A 1D array with x and y values interlaced
-
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(args, kws) -> None
-
-```
-
-
-Sampled.fromseq(type cls, *args, **kws)
-
-
-
-**Args**
-
-* **args**:
-* **kws**:
-
-----------
-
-### fromxy
-
-
-```python
-
-def fromxy(args, kws) -> None
-
-```
-
-
-Sampled.fromxy(type cls, *args, **kws)
-
-
-
-**Args**
-
-* **args**:
-* **kws**:
+&nbsp;&nbsp;&nbsp;&nbsp;(`ndarray`) A 1D array with x and y values interlaced
 
 ----------
 
@@ -3050,6 +2848,14 @@ It is effectively the same as `bpf[x0:x1].integrate()`, but more efficient
 
 **NB**: N has no effect. It is put here to comply with the signature of the function. 
 
+
+
+**Args**
+
+* **x0**:
+* **x1**:
+* **N**:
+
 ----------
 
 ### inverted
@@ -3077,6 +2883,8 @@ it must be strictly increasing or decreasing, with no local maxima or minima.
 
 So if `y(1) == 2`, then `y.inverted()(2) == 1`
 
+![](assets/inverted.png)
+
 
 
 **Returns**
@@ -3101,6 +2909,13 @@ Return an array of `n` elements resulting of evaluating this bpf regularly
 The x coordinates at which this bpf is evaluated are equivalent to `linspace(xstart, xend, n)`
 
 
+
+**Args**
+
+* **n** (`int`): the number of elements to generate
+* **x0** (`float`): x to start mapping
+* **x1** (`float`): x to end mapping
+* **out** (`ndarray`): if given, result is put here
 
 **Returns**
 
@@ -3185,6 +3000,16 @@ sampled = bpf[x0:x1:dx].set_interpolation('expon(2)')
 ```
 
 
+
+**Args**
+
+* **interpolation** (`str`): the interpolation kind
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`Sampled`) self
+
+
 ---------
 
 
@@ -3201,15 +3026,25 @@ Slope(double slope, double offset=0, tuple bounds=None)
 
 ```
 
+
+A bpf representing a linear equation `y = slope * x + offset`
+
+
+```python
+
+>>> from bpf4.core import *
+>>> a = Slope(0.5, 1)
+>>> a
+Slope[-inf:inf]
+>>> a[0:10].plot()
+```
+![](assets/slope-plot.png)
+
 **Attributes**
 
 * **offset**: offset: 'double'
 
 * **slope**: slope: 'double'
-
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
 
 
 ---------
@@ -3222,53 +3057,21 @@ Slope(double slope, double offset=0, tuple bounds=None)
 
 ```python
 
-def __init__(self, args, kwargs) -> None
+def __init__(slope: float, offset: float, bounds: tuple) -> None
 
 ```
 
 
-Initialize self.  See help(type(self)) for accurate signature.
-
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
-
-```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
-```
+A bpf representing a linear equation `y = slope * x + offset`
 
 
 
 **Args**
 
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
+* **slope** (`float`): the slope of the line
+* **offset** (`float`): an offset added
+* **bounds** (`tuple`): if given, the line is clipped on the x axis to the
+    given bounds
 
 
 ---------
@@ -3287,11 +3090,24 @@ Spline(xs, ys)
 
 ```
 
-**Attributes**
 
-* **x0**: The lower bound of the x coordinate
+A bpf with cubic spline interpolation
 
-* **x1**: The upper bound of the x coordinate
+
+With cubic spline interpolation, for each point `(x, y)` 
+it is ensured that `bpf(x) == y`. Between the defined points,
+depending on their proximity, this bpf can overshoot
+
+#### Example
+
+```python
+a = core.Smooth([0, 1, 3, 10], [0.1, 0.5, -3.5,  1])
+b = core.Spline(*a.points())
+fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+a.plot(axes=axes[0], show=False)
+b.plot(axes=axes[1])
+```
+![](assets/Spline.png)
 
 
 ---------
@@ -3304,53 +3120,19 @@ Spline(xs, ys)
 
 ```python
 
-def __init__(self, args, kwargs) -> None
+def __init__(xs: ndarray, ys: ndarray) -> None
 
 ```
 
 
-Initialize self.  See help(type(self)) for accurate signature.
-
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
-
-```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
-```
+A bpf with cubic spline interpolation
 
 
 
 **Args**
 
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
+* **xs** (`ndarray`): the x coord data
+* **ys** (`ndarray`): the y coord data
 
 ----------
 
@@ -3399,7 +3181,9 @@ Returns an iterator over the segments of this bpf
 
 Each segment is a tuple `(float x, float y, str interpolation_type, float exponent)`
 
-**NB**: exponent is only relevant if the interpolation type makes use of it
+!!! note
+
+    Exponent is only relevant if the interpolation type makes use of it
 
 
 
@@ -3428,13 +3212,15 @@ USpline(xs, ys)
 bpf with univariate spline interpolation.
 
 
-This is implemented by wrapping a UnivariateSpline from scipy.
+```python
+a = core.Spline([0, 1, 3, 10], [0.1, 0.5, -3.5,  1])
+b = core.USpline(*a.points())
 
-**Attributes**
-
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
+fig, axes = plt.subplots(1, 2, figsize=(12, 4), sharey=True, tight_layout=True)
+a.plot(axes=axes[0], show=False)
+b.plot(axes=axes[1])
+```
+![](assets/Uspline.png)
 
 
 ---------
@@ -3447,53 +3233,16 @@ This is implemented by wrapping a UnivariateSpline from scipy.
 
 ```python
 
-def __init__(self, args, kwargs) -> None
+def __init__(xs: ndarray, ys: ndarray) -> None
 
-```
-
-
-Initialize self.  See help(type(self)) for accurate signature.
-
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
-
-```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
 ```
 
 
 
 **Args**
 
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
+* **xs** (`ndarray`): the x coord data
+* **ys** (`ndarray`): the y coord data
 
 ----------
 
@@ -3508,6 +3257,13 @@ def map(self, xs, out) -> None
 
 
 USpline.map(self, xs, ndarray out=None) -> ndarray
+
+
+
+**Args**
+
+* **xs**:
+* **out**:
 
 ----------
 
@@ -3527,6 +3283,13 @@ Return an array of `n` elements resulting of evaluating this bpf regularly
 The x coordinates at which this bpf is evaluated are equivalent to `linspace(x0, x1, n)`
 
 
+
+**Args**
+
+* **n** (`int`): the number of elements to generate
+* **x0** (`float`): x to start mapping
+* **x1** (`float`): x to end mapping
+* **out** (`ndarray`): if given, result is put here
 
 **Returns**
 
@@ -3569,71 +3332,6 @@ _MultipleBpfs(bpfs)
 
 ```
 
-**Attributes**
-
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
-
-
----------
-
-
-**Methods**
-
-### \_\_init\_\_
-
-
-```python
-
-def __init__(self, args, kwargs) -> None
-
-```
-
-
-Initialize self.  See help(type(self)) for accurate signature.
-
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
-
-```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
-```
-
-
-
-**Args**
-
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
-
 
 ---------
 
@@ -3651,70 +3349,18 @@ Max(*bpfs)
 
 ```
 
-**Attributes**
 
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
-
-
----------
-
-
-**Methods**
-
-### \_\_init\_\_
+A bpf which returns the max of multiple bpfs at a given point
 
 
 ```python
-
-def __init__(self, args, kwargs) -> None
-
+a = linear(0, 0, 1, 0.5, 2, 0)
+b = expon(0, 0, 2, 1, exp=3)
+a.plot(show=False, color="red", linewidth=4, alpha=0.3)
+b.plot(show=False, color="blue", linewidth=4, alpha=0.3)
+core.Max((a, b)).plot(color="black", linewidth=4, alpha=0.8, linestyle='dotted')
 ```
-
-
-Initialize self.  See help(type(self)) for accurate signature.
-
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
-
-```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
-```
-
-
-
-**Args**
-
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
+![](assets/Max.png)
 
 
 ---------
@@ -3733,70 +3379,18 @@ Min(*bpfs)
 
 ```
 
-**Attributes**
 
-* **x0**: The lower bound of the x coordinate
-
-* **x1**: The upper bound of the x coordinate
-
-
----------
-
-
-**Methods**
-
-### \_\_init\_\_
+A bpf which returns the min of multiple bpfs at a given point
 
 
 ```python
-
-def __init__(self, args, kwargs) -> None
-
+a = linear(0, 0, 1, 0.5, 2, 0)
+b = expon(0, 0, 2, 1, exp=3)
+a.plot(show=False, color="red", linewidth=4, alpha=0.3)
+b.plot(show=False, color="blue", linewidth=4, alpha=0.3)
+core.Min((a, b)).plot(color="black", linewidth=4, alpha=0.8, linestyle='dotted')
 ```
-
-
-Initialize self.  See help(type(self)) for accurate signature.
-
-----------
-
-### fromseq
-
-
-```python
-
-def fromseq(points: ndarray | list[float], kws) -> BpfBase
-
-```
-
-
-BpfInterface.fromseq(type cls, *points, **kws)
-
-
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
-
-
-#### Example
-
-These operations result in the same bpf:
-
-```python
-Linear.fromseq(x0, y0, x1, y1, x2, y2, ...)
-Linear.fromseq((x0, y0), (x1, y1), (x2, y2), ...)
-Linear((x0, x1, ...), (y0, y1, ...))
-```
-
-
-
-**Args**
-
-* **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
-    example, `exp` in the case of an `Expon` bpf)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`BpfBase`) The constructed bpf
+![](assets/Min.png)
 
 
 ---------
@@ -3826,22 +3420,27 @@ Blend these BPFs
 Create a curve which is in between a halfcos and a linear interpolation
 
 ```python
->>> from bpf4 import *
->>> a = halfcos(0, 0, 1, 1)
->>> b = linear(0, 0, 1, 1)
->>> c = blend(a, b, 0.5)
->>> c.plot()
+from bpf4 import *
+a = halfcos(0, 0, 1, 1, exp=2)
+b = linear(0, 0, 1, 1)
+c = blend(a, b, 0.5)
+
+a.plot(show=False, color="red")
+b.plot(show=False, color="blue")
+c.plot(color="green")
 
 ```
-TODO: include image
+![](assets/blend1.png)
 
 Closer to halfcos
 
 ```python
->>> c = blend(a, b, 0.1)
->>> c.plot()
+c = blend(a, b, 0.2)
+a.plot(show=False, color="red")
+b.plot(show=False, color="blue")
+c.plot(color="green")
 ```
-TODO: include image
+![](assets/blend2.png)
 
 
 
@@ -3932,10 +3531,10 @@ calculate the zero of (bpf + x0) in the interval (xa, xb) using brentq algorithm
 * **xa** (`float`): the starting point to look for a zero
 * **xb** (`float`): the end point
 * **xtol** (`float`): The computed root x0 will satisfy np.allclose(x, x0,
-    atol=xtol, rtol=rtol) (default: 1e-12)
+    atol=xtol, rtol=rtol) (*default*: `1e-12`)
 * **rtol** (`float`): The computed root x0 will satisfy np.allclose(x, x0,
-    atol=xtol, rtol=rtol) (default: 4.440892098500626e-16)
-* **max_iter** (`int`): the max. number of iterations (default: 100)
+    atol=xtol, rtol=rtol) (*default*: `4.440892098500626e-16`)
+* **max_iter** (`int`): the max. number of iterations (*default*: `100`)
 
 **Returns**
 
