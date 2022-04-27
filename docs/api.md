@@ -509,7 +509,7 @@ pchip({x0:y0, x1:y1, ...})
 
 ```python
 
-def slope(slope: float, offset: float = 0.0, keepslope: bool = True
+def slope(slope: float, offset: float = 0.0, bounds: tuple[float, float] = None
           ) -> core.Slope
 
 ```
@@ -537,7 +537,7 @@ Slope[-inf:inf]
 
 * **slope** (`float`):
 * **offset** (`float`):  (*default*: `0.0`)
-* **keepslope** (`bool`):  (*default*: `True`)
+* **bounds** (`tuple[float, float]`):  (*default*: `None`)
 
 
 ---------
