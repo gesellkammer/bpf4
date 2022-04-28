@@ -41,6 +41,9 @@ cdef extern from "math.h":
 # ----------------------------------------------  cimports
 from libc.stdlib cimport malloc, free # , realloc
 from libc.stdlib cimport rand, srand, RAND_MAX
+from libc.stdio cimport printf, fflush, stdout
+from libc.stdint cimport int64_t
+
 from cpython cimport PyList_GET_SIZE, PyList_GET_ITEM, PyTuple_New, PyTuple_SetItem
 cimport cython
 cimport numpy as c_numpy
@@ -553,6 +556,22 @@ cdef inline int _searchsorted(double [:]xs, double x) nogil:
         else:
             imax = imid
     return imin
+
+
+cdef inline int _csearchlinear(DTYPE_t *xs, int xs_length, DTYPE_t x, int index) nogil:
+    # returns -1 if x is left from index
+    cdef int i = index
+    cdef double x0 = xs[i]
+    if x < x0:
+        return -1
+    cdef double x1
+    for i in range(index, xs_length-1):
+        x1 = xs[i+1]
+        if x0 <= x < x1:
+            return i
+        x0 = x1
+    return xs_length-1
+
 
 
 cdef inline int _csearchsorted(DTYPE_t *xs, int xs_length, DTYPE_t x) nogil:
@@ -2113,7 +2132,56 @@ cdef class BpfBase(BpfInterface):
             self.lastbin_idx1 = index1
         return res
 
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
     cpdef ndarray mapn_between(self, int n, double xstart, double xend, ndarray out=None):
+        cdef double[::1] result = out if out is not None else EMPTY1D(n)
+        cdef double dx = _ntodx(n, xstart, xend)
+        cdef double x = xstart, y
+        cdef size_t i = 0, j
+        cdef double outbound1 = self.outbound1
+        cdef double outbound0 = self.outbound0
+        cdef DTYPE_t *xs_data = self.xs_data
+        cdef DTYPE_t *ys_data = self.ys_data
+        cdef double xs_data0, xs_data1, ys_data0, ys_data1
+        cdef double x1 = self._x1
+        cdef int64_t index0 = 0
+        cdef double interpmix = self.interpol_func.mix
+        with nogil:
+            if xstart < self._x0:
+                j = min(n, <int>((self._x0 - xstart) / dx) + 1)
+                for i in range(j):
+                    result[i] = outbound0
+                i = j
+            x = xstart + i*dx
+            if self._x0 <= x <= self._x1:
+                index0 = _csearchsorted(self.xs_data, self.xs_size, x) - 1
+            elif x > self._x1:
+                for j in range(i, n):
+                    result[j] = outbound1
+                i = n
+                
+            xs_data0 = xs_data[index0]
+            xs_data1 = xs_data[index0+1]
+            ys_data0 = ys_data[index0]
+            ys_data1 = ys_data[index0+1]
+            while x <= x1 and i < n:
+                if x > xs_data1:
+                    index0 = _csearchlinear(xs_data, self.xs_size, x, index0)
+                    xs_data0 = xs_data[index0]
+                    xs_data1 = xs_data[index0+1]
+                    ys_data0 = ys_data[index0]
+                    ys_data1 = ys_data[index0+1]
+                
+                result[i] = InterpolFunc_call(self.interpol_func, x, xs_data0, ys_data0, xs_data1, ys_data1)
+                i += 1
+                x = xstart + i*dx
+            if i < n - 1:
+                for j in range(i, n):
+                    result[j] = outbound1  
+        return numpy.asarray(result)
+        
+    cpdef ndarray _mapn_between(self, int n, double xstart, double xend, ndarray out=None):
         """
         Return an array of `n` elements resulting of evaluating this bpf regularly
 
@@ -3393,6 +3461,52 @@ cdef class Slope(BpfInterface):
             return a + (-b)
         else:
             return _create_rlambda(a, b, _BpfLambdaSub, _BpfLambdaSubConst, _BpfLambdaRSub, _BpfLambdaRSubConst)
+
+    cpdef ndarray mapn_between(self, int n, double x0, double x1, ndarray out=None):
+        """
+        Return an array of `n` elements resulting of evaluating this bpf regularly
+
+        The x coordinates at which this bpf is evaluated are equivalent to `linspace(x0, 1, n)`
+
+        Args:
+            n (int): the number of elements to generate
+            x0 (float): x to start mapping
+            x1 (float): x to end mapping
+            out (ndarray): if given, result is put here
+
+        Returns:
+            (ndarray) An array of this bpf evaluated at a grid [x0:x1:dx], where *dx*
+            is `(xend-xstart)/n`
+
+        YYYY
+        """
+        cdef c_numpy.ndarray[DTYPE_t, ndim=1] A
+        cdef DTYPE_t *data
+        cdef double offset = self.offset
+        cdef double slope = self.slope
+        cdef int i
+        cdef double x
+        cdef double dx = _ntodx(n, x0, x1)
+        cdef double slopex0 = slope * x0
+        cdef double slopedx = slope * dx
+        cdef double offset2 = offset + slopex0
+        if out is not None:
+            if not PyArray_ISCONTIGUOUS(out):
+                raise ValueError("out should be contiguous")    
+            data = <DTYPE_t *>out.data
+            with nogil:
+                for i in range(n):
+                    data[i] = offset2 + i * slopedx
+            return out
+        else:
+            A = EMPTY1D(n)
+            with nogil:
+                for i in range(n):
+                    # x = x0 + i * dx
+                    # y = offset + (x0 + i*dx)*slope
+                    # y = offset + slope*x0 + i*(dx*slope)
+                    A[i] = offset2 + i * slopedx
+            return A
 
     def __mul__(a, b):
         if isnumber(a):
