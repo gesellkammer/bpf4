@@ -347,6 +347,9 @@ cdef inline double _clip(double x, double x0, double x1) nogil:
 cdef inline double _ntodx(size_t n, double x0, double x1):
     return (x1 - x0) / (n - 1)
 
+cdef inline size_t _dxton(double dx, double x0, double x1):
+    return <size_t>round((x1-x0)/dx+1)
+    
 cdef double _a4 = 442.0
 DEF loge_2 = 0.6931471805599453094172321214581766
 
@@ -4605,11 +4608,20 @@ cdef class _BpfDeriv(BpfInterface):
         self.bpf = bpf
         self._x0, self._x1 = bpf.bounds()
 
+
     @cython.cdivision(True)
     cdef double __ccall__(self, double x) nogil:
         cdef double h = self.h if self.h > 0 else (SQRT_EPS if x == 0 else SQRT_EPS*x)
-        cdef double f1 = self.bpf.__ccall__(x+h)
-        cdef double f0 = self.bpf.__ccall__(x)
+        cdef double xh = x+h
+        cdef double f0, f1
+        cdef double x1 = self._x1
+        if x <= x1 and xh > x1:
+            # Prevent discontinuities at the boundaries
+            f1 = self.bpf.__ccall__(x1)
+            f0 = self.bpf.__ccall__(x1-h)
+        else:
+            f1 = self.bpf.__ccall__(x+h)
+            f0 = self.bpf.__ccall__(x)
         return (f1 - f0) / h   
        
     def __getstate__(self):
@@ -4908,21 +4920,6 @@ cdef class _BpfCrop(BpfInterface):
         if x1 <= self._x0:
             return numpy.ones((n,), dtype=float) * self.__ccall__(x1)
 
-        """
-        In general
-
-        -inf   :   own.x0      :    own.x1    : inf
-              own.y0          bpf(x)          : own.y1
-
-        if x0 < own.x0:
-            x0 : own.x0 -> own.y0
-            intersect_x0 = own_x0
-
-        if x0 > own.x0:
-            own.x0 : x0 -> bpf.y0
-            intersect_x0 = own_x0
-
-        """
         cdef double x, y0, y1, intersect_x0, intersect_x1, dx
         cdef int i = 0
         cdef int intersect_n, intersect_i0, intersect_i
@@ -4935,30 +4932,29 @@ cdef class _BpfCrop(BpfInterface):
         dx = (x1 - x0) / (n - 1)
         
         if x0 < self._x0:
-            x = x0
-            y0 = self._y0
-            while x < self._x0:
-                data[i] = y0
-                i += 1
-                x = x0 + dx*i
-            intersect_x0_quant = x
+            i = <int>((self._x0 - x0) / dx)
+            for j in range(i):
+                data[j] = y0
+            intersect_x0_quant = x0 + dx*i
         else:
             intersect_x0_quant = x0
 
         intersect_x1 = min(x1, self._x1)
-        intersect_x1_quant = intersect_x1 - ((intersect_x1 - x0) % dx)
-        intersect_n = <int>((intersect_x1_quant - intersect_x0_quant) / dx) + 1
+        cdef double diff = ((intersect_x1 - x0) % dx)
+        if diff < 1e-15 or (dx - diff) < 1e-15:
+            diff = 0
+        intersect_x1_quant = intersect_x1 - diff
+        intersect_n = _dxton(dx, intersect_x0_quant, intersect_x1_quant)
         intersection = self.bpf.mapn_between(intersect_n, intersect_x0_quant, intersect_x1_quant)
         cdef DTYPE_t *intersection_data = <DTYPE_t*>(intersection.data)
-        
+        cdef double intersect_dx = _ntodx(intersect_n, intersect_x0_quant, intersect_x1_quant)
+        # print("dx: %f, intersect_dx: %f, intersect_x1: %f, intersect_x1_quant: %f, x1: %f, diff:%f" % (dx, intersect_dx, intersect_x1, intersect_x1_quant, x1, diff))
         for j in range(intersect_n):
             A[i+j] = intersection_data[j]
 
-        if x1 > self._x1:
-            i = i + intersect_n - 1
-            y1 = self._y1
-            for j in (i, n):
-                data[j] = y1
+        y1 = self._y1
+        for j in range(i+intersect_n, n):
+            data[j] = y1
 
         return A
         
