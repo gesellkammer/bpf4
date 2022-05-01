@@ -878,18 +878,12 @@ cdef class BpfInterface:
         elif t == 5:    # >=
             return _create_lambda(self, other, _BpfLambdaGreaterOrEqualThan, _BpfLambdaGreaterOrEqualThanConst) # (self < other) == 0
     
-    def _get_xs_for_rendering(self, int n):
-        cdef double x0, x1
-        x0 = self.x0 if self.x0 != INFNEG else 0.0
-        x1 = self.x1 if (self.x1 != INF and self.x1 > x0) else x0 + 1.0
-        out = numpy.linspace(x0, x1, n)
-        return out
-    
     def _get_points_for_rendering(self, int n= -1):
+        # BpfInterface
         if n == -1:
             n = NUM_XS_FOR_RENDERING
-        xs = self._get_xs_for_rendering(n)
-        ys = self.map(xs)
+        xs = numpy.linspace(self._x0, self._x1, n)
+        ys = self.mapn_between(n, self._x0, self._x1)
         return xs, ys
     
     def render(self, xs, interpolation='linear'):
@@ -1079,7 +1073,7 @@ cdef class BpfInterface:
         Args:
             x0 (float): lower bound to map this bpf
             x1 (float): upper bound to map this bpf
-            out (ndarray: if included, results are placed here. 
+            out (ndarray): if included, results are placed here. 
 
         Returns:
             (ndarray) An array of `n` elements representing this bpf at the given 
@@ -1097,10 +1091,14 @@ cdef class BpfInterface:
         
         ```
         """
-        cdef ndarray[DTYPE_t, ndim=1] X = numpy.linspace(x0, x1, n)
-        if out is None:
-            out = X
-        return self.map(X, out=out)
+        cdef double[::1] result = out if out is not None else EMPTY1D(n)
+        cdef double dx = _ntodx(n, x0, x1)
+        cdef size_t i
+        cdef double x
+        for i in range(n):
+            x = x0 + i*dx
+            result[i] = self.__ccall__(x)
+        return numpy.asarray(result)
 
     cpdef ndarray map(self, xs, ndarray out=None):
         """
@@ -1130,28 +1128,18 @@ cdef class BpfInterface:
         
         ```
         """
-        cdef ndarray [DTYPE_t, ndim=1] _xs
-        cdef ndarray [DTYPE_t, ndim=1] result
-        cdef DTYPE_t *data0
-        cdef int i, nx
-        cdef double x0,x1, dx
         if isinstance(xs, int):
             return self.mapn_between(xs, self._x0, self._x1, out)
-        _xs = <ndarray>xs
-        nx = PyArray_DIM(_xs, 0)
-        if out is None:
-            result = EMPTY1D(nx)
-        else:
-            result = <ndarray>out
-        if PyArray_ISCONTIGUOUS(result):
-            data0 = <DTYPE_t *>(result.data)
-            with nogil:
-                for i in range(nx):
-                    data0[i] = self.__ccall__(_xs[i])
-        else:
+        
+        cdef double[::1] _xs = <ndarray>xs if isinstance(xs, ndarray) else numpy.asarray(xs)
+        cdef int nx  = len(_xs)
+        cdef double[::1] result = out if out is not None else EMPTY1D(nx)
+        cdef int i
+        cdef double x0,x1, dx
+        with nogil:
             for i in range(nx):
                 result[i] = self.__ccall__(_xs[i])
-        return result
+        return numpy.asarray(result)
     
     cpdef BpfInterface concat(self, BpfInterface other):
         """
@@ -1812,12 +1800,22 @@ cdef class BpfInterface:
         >>> b.bounds()
         (1, 9)
         >>> a.plot(show=False); b.plot()
+
         ```
         """
         if rx == 0:
             raise ValueError("the stretch factor cannot be 0")
-        return _BpfProjection(self, rx=1.0/rx, dx=0, offset=-fixpoint)
-
+        
+        if self._x0 == INF or self._x0 == INFNEG or self._x1 == INF or self._x1 == INFNEG:
+            qrx = 1/rx
+            return _BpfProjection(rx=qrx, dx=0, offset=fixpoint)
+        
+        cdef double x0 = self._x0
+        cdef double x1 = self._x1
+        cdef double p0 = (x0 - fixpoint)*rx + fixpoint
+        cdef double p1 = (x1 - x0) * rx + p0
+        return self.fit_between(p0, p1)
+        
     cpdef BpfInterface fit_between(self, double x0, double x1):
         """
         Returns a view of this bpf fitted within the interval `x0:x1`
@@ -2132,8 +2130,6 @@ cdef class BpfBase(BpfInterface):
             self.lastbin_idx1 = index1
         return res
 
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
     cpdef ndarray mapn_between(self, int n, double xstart, double xend, ndarray out=None):
         cdef double[::1] result = out if out is not None else EMPTY1D(n)
         cdef double dx = _ntodx(n, xstart, xend)
@@ -3017,7 +3013,7 @@ cdef class Sampled(BpfInterface):
         
         cdef DTYPE_t *data
         cdef DTYPE_t *selfdata
-        cdef int i, index0, nointerpol
+        cdef int i, j, index0, nointerpol
         cdef double x, y
         cdef double grid_x0, grid_x1, self_y0, self_y1, grid_dx, interp_x0, interp_y0, interp_y1
         cdef double dx = (x1 - x0) / (n - 1) # we account for the edge (x1 IS INCLUDED)
@@ -3062,9 +3058,8 @@ cdef class Sampled(BpfInterface):
                                           interp_x0 + grid_dx, selfdata[index0+1])
                 data[i] = y
                 i += 1
-            while i < n:
-                data[i] = self_y1
-                i += 1
+            for j in range(i, n):
+                data[j] = self_y1
         return out
 
     @classmethod
@@ -3445,6 +3440,9 @@ cdef class Slope(BpfInterface):
     cdef double __ccall__(self, double x) nogil:
         return self.offset + x*self.slope
 
+    cpdef Slope _slice(self, double x0, double x1):
+        return Slope(self.slope, self.offset, bounds=(x0, x1))
+
     def __add__(a, b):
         if isnumber(a):
             # we are b
@@ -3478,10 +3476,8 @@ cdef class Slope(BpfInterface):
             (ndarray) An array of this bpf evaluated at a grid [x0:x1:dx], where *dx*
             is `(xend-xstart)/n`
 
-        YYYY
         """
-        cdef c_numpy.ndarray[DTYPE_t, ndim=1] A
-        cdef DTYPE_t *data
+        cdef double[::1] result = out if out is not None else EMPTY1D(n)
         cdef double offset = self.offset
         cdef double slope = self.slope
         cdef int i
@@ -3490,23 +3486,14 @@ cdef class Slope(BpfInterface):
         cdef double slopex0 = slope * x0
         cdef double slopedx = slope * dx
         cdef double offset2 = offset + slopex0
-        if out is not None:
-            if not PyArray_ISCONTIGUOUS(out):
-                raise ValueError("out should be contiguous")    
-            data = <DTYPE_t *>out.data
-            with nogil:
-                for i in range(n):
-                    data[i] = offset2 + i * slopedx
-            return out
-        else:
-            A = EMPTY1D(n)
-            with nogil:
-                for i in range(n):
-                    # x = x0 + i * dx
-                    # y = offset + (x0 + i*dx)*slope
-                    # y = offset + slope*x0 + i*(dx*slope)
-                    A[i] = offset2 + i * slopedx
-            return A
+        with nogil:
+            for i in range(n):
+                # x = x0 + i * dx
+                # y = offset + (x0 + i*dx)*slope
+                # y = offset + slope*x0 + i*(dx*slope)
+                result[i] = offset2 + i * slopedx
+        return numpy.asarray(result)
+
 
     def __mul__(a, b):
         if isnumber(a):
@@ -3553,7 +3540,6 @@ cdef class _BpfCompose(BpfInterface):
             (ndarray) An array of this bpf evaluated at a grid [x0:x1:dx], where *dx*
             is `(xend-xstart)/n`
         """
-        
         cdef c_numpy.ndarray[DTYPE_t, ndim=1] A
         if out is not None:
             self.a.mapn_between(n, x0, x1, out)
@@ -3959,8 +3945,10 @@ cdef class Const(BpfInterface):
     def __getstate__(self):
         return (self.value,)
     
-    def _get_xs_for_rendering(self, int n):
-        return CONST_XS_FOR_RENDERING
+    def _get_points_for_rendering(self, int n):
+        x0 = self._x0 if self._x0 > INFNEG else 0.
+        x1 = self._x1 if self._x1 < INF else 1.
+        return numpy.array([x0, x1]), numpy.array([self.value, self.value])
     
     def __getitem__(self, slice):
         if not hasattr(slice, 'start'):
@@ -3975,9 +3963,11 @@ cdef class Const(BpfInterface):
         if out is not None:
             out[...] = self.value
             return out
-        cdef ndarray[DTYPE_t, ndim=1] a = EMPTY1D(n)
-        a[...] = self.value
-        return a
+        cdef double[::1] out2 = EMPTY1D(n)
+        cdef int i
+        for i in range(n):
+            out2[i] = self.value
+        return numpy.asarray(out2)
         
 cdef _create_lambda_unordered(a, b, class_bin, class_const):
     if isinstance(a, BpfInterface):        
@@ -4048,11 +4038,16 @@ cdef class _BpfBinOp(BpfInterface):
         pass
     
     cpdef ndarray mapn_between(self, int n, double x0, double x1, ndarray out=None):
-        cdef c_numpy.ndarray[DTYPE_t, ndim=1] ys_a = self.a.mapn_between(n, x0, x1, out)
-        cdef c_numpy.ndarray[DTYPE_t, ndim=1] ys_b = self.b.mapn_between(n, x0, x1)
+        cdef c_numpy.ndarray[DTYPE_t, ndim=1] A = <ndarray>out if out is not None else EMPTY1D(n)
+        cdef c_numpy.ndarray[DTYPE_t, ndim=1] B = EMPTY1D(n)
+        self.a.mapn_between(n, x0, x1, A)
+        self.b.mapn_between(n, x0, x1, B)
+        #cdef c_numpy.ndarray[DTYPE_t, ndim=1] ys_a = self.a.mapn_between(n, x0, x1, out)
+        #cdef c_numpy.ndarray[DTYPE_t, ndim=1] ys_b = self.b.mapn_between(n, x0, x1)
         with nogil:
-            self._apply(<DTYPE_t *>(ys_a.data), <DTYPE_t *>(ys_b.data), n)
-        return ys_a
+            self._apply(<DTYPE_t*>A.data, <DTYPE_t*>B.data, n)
+            # self._apply(&A[0], &B[0], n)
+        return A
         
     cpdef ndarray map(self, xs, ndarray out=None):
         """
@@ -4064,17 +4059,17 @@ cdef class _BpfBinOp(BpfInterface):
         bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
         ( this is the same as bpf.mapn_between(10, bpf.x0, bpf.x1) )
         """
-        cdef c_numpy.ndarray[DTYPE_t, ndim=1] A
-        cdef c_numpy.ndarray[DTYPE_t, ndim=1] B
         cdef int len_xs
         if isinstance(xs, (int, long)):
             return self.mapn_between(xs, self._x0, self._x1, out)
-        A = self.a.map(xs, out)
-        B = self.b.map(xs)
         len_xs = len(xs)
+        cdef c_numpy.ndarray[DTYPE_t, ndim=1] A = out if out is not None else EMPTY1D(len_xs)
+        cdef c_numpy.ndarray[DTYPE_t, ndim=1] B = EMPTY1D(len_xs)
+        self.a.map(xs, A)
+        self.b.map(xs, B)
         with nogil:
             self._apply(<DTYPE_t *>(A.data), <DTYPE_t *>(B.data), len_xs)
-        return A
+        return numpy.asarray(A)
 
 
 cdef class _BpfUnaryFunc(BpfInterface):
@@ -4255,6 +4250,7 @@ cdef class _BpfLambdaAdd(_BpfBinOp):
     cdef void _apply(self, DTYPE_t *A, DTYPE_t *B, int n) nogil:
         for i in range(n):
             A[i] += B[i]
+
     cpdef double integrate_between(self, double x0, double x1, size_t N=0):
         return self.a.integrate_between(x0, x1, N) + self.b.integrate_between(x0, x1, N)
 
@@ -4263,6 +4259,7 @@ cdef class _BpfLambdaAddConst(_BpfBinOpConst):
     cdef void _apply(self, DTYPE_t *A, int n, double b) nogil:
         for i in range(n):
             A[i] += b
+
     def __add__(a, b):
         cdef double c
         if isinstance(a, BpfInterface):
@@ -4277,6 +4274,7 @@ cdef class _BpfLambdaAddConst(_BpfBinOpConst):
                 return _BpfLambdaAddConst(b.a, b.b + a)
             except:
                 return _BpfBinOpConst.__add__(b, a)
+
     cpdef double integrate_between(self, double x0, double x1, size_t N=0):
         return self.a.integrate_between(x0, x1, N) + (x1 - x0) * self.b_const
 
@@ -4761,7 +4759,7 @@ cdef class _BpfProjection(BpfInterface):
     cdef double bpf_x0
     cdef readonly double dx, rx, offset
 
-    def __init__(self, BpfInterface bpf, double rx, double dx=0, double offset=0):
+    def __init__(self, BpfInterface bpf, double rx, double dx=0, double offset=0, bounds=None):
         """
         equation:
 
@@ -4775,19 +4773,26 @@ cdef class _BpfProjection(BpfInterface):
         self.rx = rx
         self.dx = dx
         self.offset = offset
-        cdef double x0 = (bpf._x0 - dx)/rx + offset
-        cdef double x1 = (bpf._x1 - dx)/rx + offset
-        if x0 < x1:
-            self._set_bounds(x0, x1)
+        cdef double x0, x1
+        if bounds:
+            self._set_bounds(bounds[0], bounds[1])
         else:
-            self._set_bounds(x1, x0)
-    
+            x0 = (bpf._x0 - dx)/rx + offset
+            x1 = (bpf._x1 - dx)/rx + offset
+            if x0 < x1:
+                self._set_bounds(x0, x1)
+            else:
+                self._set_bounds(x1, x0)
+
     @cython.cdivision(True)
     cdef double __ccall__(self, double x) nogil:
         x = (x - self.offset) * self.rx + self.dx
         return self.bpf.__ccall__(x)
 
-    def __getstate__(self): return (self.bpf, self.rx, self.dx)
+    def fixpoint(self):
+        return 1 - (self.fx - self.offset*self.rx)/self.rx
+
+    def __getstate__(self): return (self.bpf, self.rx, self.dx, self.bounds())
 
 
 cdef double m_log(double x) nogil:
@@ -4881,63 +4886,82 @@ cdef class _BpfCrop(BpfInterface):
     cpdef double integrate_between(self, double x0, double x1, size_t N=0):
         if x0 >= self.bpf._x0 and x1 <= self.bpf._x1:
             return self.bpf.integrate_between(x0, x1)
-        cdef double integr0, integr1, integr2, _x0, _x1
+        cdef double integr0=0., integr1=0., integr2=0., _x0, _x1
         if x0 < self.bpf._x0:
             integr0 = self.__ccall__(x0) * (self.bpf._x0 - x0)
             _x0 = self.bpf._x0
         else:
-            integr0 = 0
             _x0 = x0
         if self._x1 > self.bpf._x1:
             integr2 = self.__ccall__(x1) * (x1 - self.bpf._x1)
             _x1 = self.bpf._x1
         else:
-            integr2 = 0
             _x1 = x1
         integr1 = self.bpf.integrate_between(_x0, _x1)
         return integr0 + integr1 + integr2
 
     cpdef ndarray mapn_between(self, int n, double x0, double x1, ndarray out=None):
-        cdef double x, y0, y1, intersect_x0, intersect_x1, dx
-        cdef int i, i0, i1, intersect_n, intersect_i0, intersect_i
-        cdef c_numpy.ndarray[DTYPE_t, ndim=1] A = out if out is not None else EMPTY1D(n)
-        cdef c_numpy.ndarray[DTYPE_t, ndim=1] intersection
-        cdef DTYPE_t *data = <DTYPE_t*>(A.data)
-        cdef DTYPE_t *data_intersection
         if self.outbound_mode == OUTBOUND_DONOTHING:
             return self.bpf.mapn_between(n, x0, x1, out)
-        elif x0 >= self._x1:
+        if x0 >= self._x1:
             return numpy.ones((n,), dtype=float) * self.__ccall__(x0)
-        elif x1 <= self._x0:
+        if x1 <= self._x0:
             return numpy.ones((n,), dtype=float) * self.__ccall__(x1)
+
+        """
+        In general
+
+        -inf   :   own.x0      :    own.x1    : inf
+              own.y0          bpf(x)          : own.y1
+
+        if x0 < own.x0:
+            x0 : own.x0 -> own.y0
+            intersect_x0 = own_x0
+
+        if x0 > own.x0:
+            own.x0 : x0 -> bpf.y0
+            intersect_x0 = own_x0
+
+        """
+        cdef double x, y0, y1, intersect_x0, intersect_x1, dx
+        cdef int i = 0
+        cdef int intersect_n, intersect_i0, intersect_i
+         
+        cdef c_numpy.ndarray[DTYPE_t, ndim=1] A = out if out is not None else EMPTY1D(n)
+        cdef c_numpy.ndarray[DTYPE_t, ndim=1] intersection
+        
+        cdef DTYPE_t *data = <DTYPE_t*>(A.data)
+        
         dx = (x1 - x0) / (n - 1)
-        intersect_x0 = x0 if x0 > self.bpf.x0 else self.bpf.x0
-        intersect_x0_quant = intersect_x0 - ((intersect_x0 - x0) % dx)
-        intersect_x1 = x1 if x1 < self.bpf.x1 else self.bpf.x1
+        
+        if x0 < self._x0:
+            x = x0
+            y0 = self._y0
+            while x < self._x0:
+                data[i] = y0
+                i += 1
+                x = x0 + dx*i
+            intersect_x0_quant = x
+        else:
+            intersect_x0_quant = x0
+
+        intersect_x1 = min(x1, self._x1)
         intersect_x1_quant = intersect_x1 - ((intersect_x1 - x0) % dx)
         intersect_n = <int>((intersect_x1_quant - intersect_x0_quant) / dx) + 1
-        intersect_i0 = <int>((intersect_x0_quant - x0) / dx)
-        intersect_i1 = <int>((intersect_x1_quant - x0) / dx)
         intersection = self.bpf.mapn_between(intersect_n, intersect_x0_quant, intersect_x1_quant)
-        data_intersection = <DTYPE_t*>(intersection.data)
-        y0 = self._y0
-        y1 = self._y1
-        x = x0
-        i = 0
-        while x < self._x0:
-            data[i] = y0
-            i += 1
-            x = x0 + dx*i
-        for intersect_i in range(intersect_n):
-            A[i] = data_intersection[intersect_i]
-            i += 1
-        x = x0 + dx*i
-        while x <= x1:
-            data[i] = y1
-            i += 1
-            x = x0 + dx*i
-        return A    
+        cdef DTYPE_t *intersection_data = <DTYPE_t*>(intersection.data)
+        
+        for j in range(intersect_n):
+            A[i+j] = intersection_data[j]
 
+        if x1 > self._x1:
+            i = i + intersect_n - 1
+            y1 = self._y1
+            for j in (i, n):
+                data[j] = y1
+
+        return A
+        
 
 cpdef _BpfCrop _BpfCrop_new(BpfInterface bpf, double x0, double x1, int outbound_mode, 
                             double outbound0=0, double outbound1=0):

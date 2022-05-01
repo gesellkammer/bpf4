@@ -1,5 +1,24 @@
 """
-API for bpf4
+## High-level API for bpf4
+
+The API allows a high-level and flexible interface to the core of bpf4,
+which is implemented in cython for efficiency. 
+
+### API vs core
+
+These three curves, *a*, *b* and *c* define the same linear break-point-function
+The first two definitions, *a* and *b*, use the high-level API, which allows for
+points to be defined as a flat sequence, as tuples of (x, y). The *core* classes
+need to be instantiated with two arrays of *x* and *y* values, as in *c*
+ 
+```python
+
+from bpf4 import *
+a = linear(0, 0, 1, 2.5, 3, 10)
+b = linear((0, 0), (1, 2.5), (3, 10))
+c = core.Linear([0, 1, 3], [0, 2.5, 10])
+```
+
 """
 from __future__ import annotations
 

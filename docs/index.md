@@ -2,8 +2,13 @@
 
 Welcome to the **bpf4** documentation!
 
-**bpf4** is a library for curve fitting and break-point functions in python. It is mainly programmed
+**bpf4** is a python library to operate with curves in 2D space. Curves can be 
+defined via breakpoints (break-point functions, hence the name), using functions or 
+curves can be used to build other curves. It can be used to perform
+curve fitting, data analysis, plotting, etc. It is mainly programmed
 in cython for efficiency.
+
+<https://github.com/gesellkammer/bpf4>
 
 -----------------
 
@@ -23,7 +28,13 @@ A BPF (Break-Point-Function) is defined by points in 2D space. Each different BP
 a specific interpolation type: linear, exponential, spline, etc. Operations on BPFs 
 are lazy and result in new BPFs representing these operations. A BPF can be evaluated
 at a specific x coord or an array of such coords or rendered with a given sampling 
-period.
+period. 
+
+All curve types implement the standard arithmetic methods (`+`, `-`, `*`, `/`, `**`, etc) 
+plus all standard mathematical functions (`sin`, `cos`, `asin`, `log`, `sqrt`). Each operation
+results in a new curve representing such operation and together they build a pipeline representing
+a given function. When a curve is evaluated, each child curve is itself evaluated to generate
+the numerical result. 
 
 ### Example 1
 
@@ -37,7 +48,9 @@ period.
 >>> avgbpf
 _BpfLambdaDivConst[0.0:4.0]
 
-# Sample the bpf at a regular interval, generate 30 elements
+# Sample the bpf at a regular interval, generate 30 elements. This first
+# samples curve `a` and `b`, then performs the binary operations
+# on the resulting arrays, avoiding any extra allocation
 >>> avgbpf.map(30)
 array([ 0.5       ,  0.95977011,  2.67816092,  4.51724138,  6.35632184,
         7.29885057,  7.75862069,  8.2183908 ,  8.67816092,  9.13793103,
@@ -81,19 +94,18 @@ plt.plot(zeros, a.map(zeros), 'o')
 ## Features
 
 
-Many interpolation types besides linear:
+Many interpolation and curve-fitting types:
 
 * spline
-* half-cosine
+* univariate splie
+* pchip (hermite)
+* cosine
 * exponential
-* fibonacci
-* exponantial half-cosine
-* pchip
 * logarithmic
 * etc. 
 
-Interpolation types can be mixed, so that each segment has a different interpolation (with the exception of spline interpolation)  
-Curves can be combined non-destructively. Following from the example above.  
+With the exception of curve-fitting bpfs, interpolation types can be mixed, so that each segment 
+has a different interpolation. Following from the example above:  
 
 
 ```pyton
@@ -110,15 +122,38 @@ Syntax support for shifting, scaling and slicing a bpf
 
 ```python
 
-a >> 2        # a shifted to the right
-(a * 5) ^ 2   # scale the x coord by 2, scale the y coord by 5
-a[2:2.5]      # slice only a portion of the bpf
-a[::0.01]     # sample the bpf with an interval of 0.01
+from bpf4 import *
+a = spline((0, 0), (1, 5), (2, 3), (5, 10))  
+b = expon((0, -10), (2,15), (5, 3), exp=3)
 
+shifted = a >> 2        # a shifted to the right
+scaled = (a * 2) ^ 3   # scale the x coord by 3, scale the y coord by 2
+cropped = a[2:2.5]      # slice only a portion of the bpf
+sampled = a[::0.5]     # sample the bpf with an interval of 0.5
+
+import matplotlib.pyplot as plt
+fig, axs = plt.subplots(1, 4, figsize=(16, 4), sharey=True, tight_layout=True)
+for curve, ax in zip((shifted,scaled, cropped, sampled), axs):
+    curve.plot(axes=ax, show=False)
+plt.show()
 ```
+![](assets/shifted-scaled.png)
 
-* Derivation and Integration: `c.derivative().plot()` or `c.integrated().integrated().plot()`  
-* Numerical integration: `c.integrate_between(2, 4)`  
+### Derivation / Integration
+
+```python
+from bpf4 import *
+a = spline((0, 0), (1, 5), (2, 3), (5, 10))
+deriv = a.derivative()
+integr = a.integrated()
+
+import matplotlib.pyplot as plt 
+fig, axs = plt.subplots(3, 1, sharex=True, figsize=(16, 8), tight_layout=True)
+a.plot(axes=axs[0], show=False)
+deriv.plot(axes=axs[1], show=False)
+integr.plot(axes=axs[2])
+```
+![](assets/deriv3.png)
 
 
 -------------------

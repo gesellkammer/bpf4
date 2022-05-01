@@ -750,8 +750,33 @@ def rms(bpf: core.BpfInterface, rmstime=0.1) -> core.BpfInterface:
 
     def func(x):
         return sqrt(bpf2.integrate_between(x, x+rmstime) / rmstime)
-    return asbpf(func).set_bounds(bpf.x0, bpf.x1)
- 
+    return asbpf(func, bounds=(bpf.x0, bpf.x1))
+
+
+def calculate_projection(x0, x1, p0, p1):
+    """
+    Calculate a projection needed to map the interval x0:x1 to p0:p1
+
+    Returns:
+        (tuple[float, float, float]) A tuple (rx, dx, offset)
+    """
+    rx = (x1-x0) / (p1-p0)
+    dx = x0
+    offset = p0
+    return rx, dx, offset
+    
+
+def projection_fixedpoint(rx, dx, offset):
+    """
+    Returns the fixed point given the projection parameters
+
+    x2 = (x-offset)*rx + dx
+
+    For a fixed point, x2 == x
+    """
+    return (-offset*rx + dx)/(1-rx)
+    
+    
 
 def binarymask(mask: Union[str, List[int]], durs: Sequence[float]=None, 
                offset=0., cycledurs=True) -> core.NoInterpol:

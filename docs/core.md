@@ -1767,28 +1767,21 @@ Return **a copy** of this bpf with the point `(x, y)` inserted
 
 ```python
 
-BpfBase.mapn_between(self, int n, double xstart, double xend, ndarray out=None) -> ndarray
+def mapn_between(self, n, xstart, xend, out) -> None
 
 ```
 
 
-Return an array of `n` elements resulting of evaluating this bpf regularly
-
-
-The x coordinates at which this bpf is evaluated are equivalent to `linspace(xstart, xend, n)`
+BpfBase.mapn_between(self, int n, double xstart, double xend, ndarray out=None) -> ndarray
 
 
 
 **Args**
 
-* **n** (`int`): the number of elements to generate
-* **xstart** (`float`): x to start mapping
-* **xend** (`float`): x to end mapping
-* **out** (`ndarray`): if given, result is put here
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`ndarray`) An array of this bpf evaluated at a grid [xstart:xend:dx], where *dx* is `(xend-xstart)/n`
+* **n**:
+* **xstart**:
+* **xend**:
+* **out**:
 
 ----------
 
@@ -3072,6 +3065,38 @@ A bpf representing a linear equation `y = slope * x + offset`
 * **offset** (`float`): an offset added
 * **bounds** (`tuple`): if given, the line is clipped on the x axis to the
     given bounds
+
+----------
+
+### mapn\_between
+
+
+```python
+
+Slope.mapn_between(self, int n, double x0, double x1, ndarray out=None) -> ndarray
+
+```
+
+
+Return an array of `n` elements resulting of evaluating this bpf regularly
+
+
+The x coordinates at which this bpf is evaluated are equivalent to `linspace(x0, 1, n)`
+
+YYYY
+
+
+
+**Args**
+
+* **n** (`int`): the number of elements to generate
+* **x0** (`float`): x to start mapping
+* **x1** (`float`): x to end mapping
+* **out** (`ndarray`): if given, result is put here
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`ndarray`) An array of this bpf evaluated at a grid [x0:x1:dx], where *dx* is `(xend-xstart)/n`
 
 
 ---------
