@@ -963,8 +963,8 @@ probability distribution
 ```python
 >>> from bpf4 import *
 >>> import matplotlib.pyplot as plt
->>> distribution = bpf.halfcos(0,0, 0.5,1, 1, 0)
->>> w = warped(distribution)
+>>> distribution = halfcos(0,0, 0.5,1, 1, 0)
+>>> w = util.warped(distribution)
 >>> distribution.plot()
 >>> w.plot()
 
@@ -977,6 +977,18 @@ original distribution
 plt.hist(w.map(10000), bins=200, density=True)
 ```
 ![](assets/warped-hist.png)
+
+Using another distribution, notice that the histogram follows the
+distribution again:
+
+```python
+distribution = halfcos(0,0, 0.8,1, 1, 0, exp=3.)
+w = util.warped(distribution)
+distribution.plot()
+w.plot()
+_ = plt.hist(w.map(10000), bins=200, density=True)[2]
+```
+![](assets/warped-hist2.png)
 
 
 

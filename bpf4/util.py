@@ -669,8 +669,8 @@ def warped(bpf: core.BpfInterface, dx:float=None, numpoints=1000) -> core.Sample
     ```python
     >>> from bpf4 import *
     >>> import matplotlib.pyplot as plt
-    >>> distribution = bpf.halfcos(0,0, 0.5,1, 1, 0)
-    >>> w = warped(distribution)
+    >>> distribution = halfcos(0,0, 0.5,1, 1, 0)
+    >>> w = util.warped(distribution)
     >>> distribution.plot()
     >>> w.plot()
 
@@ -683,13 +683,25 @@ def warped(bpf: core.BpfInterface, dx:float=None, numpoints=1000) -> core.Sample
     plt.hist(w.map(10000), bins=200, density=True)
     ```
     ![](assets/warped-hist.png)
+
+    Using another distribution, notice that the histogram follows the
+    distribution again:
+
+    ```python
+    distribution = halfcos(0,0, 0.8,1, 1, 0, exp=3.)
+    w = util.warped(distribution)
+    distribution.plot()
+    w.plot()
+    _ = plt.hist(w.map(10000), bins=200, density=True)[2]
+    ```
+    ![](assets/warped-hist2.png)
     """
 
     x0, x1 = bpf.bounds()
     if dx is None:
         dx = (x1 - x0) / numpoints
     integrated = bpf.integrated()[::dx]
-    integrated_at_x1 = integ1rated(bpf.x1)
+    integrated_at_x1 = integrated(bpf.x1)
     # N = int((x1 + dx - x0) / dx + 0.5)
     xs = np.arange(x0, x1+dx, dx)    
     ys = np.ones_like(xs) * np.nan
