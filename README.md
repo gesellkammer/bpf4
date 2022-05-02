@@ -90,8 +90,21 @@ a[::0.01]     # sample the bpf with an interval of 0.01
 
 ```
 
-* Derivation and Integration: `c.derivative().plot()` or `c.integrated().integrated().plot()`  
-* Numerical integration: `c.integrate_between(2, 4)`  
+### Derivation / Integration
+
+```python
+from bpf4 import *
+a = spline((0, 0), (1, 5), (2, 3), (5, 10))
+deriv = a.derivative()
+integr = a.integrated()
+
+import matplotlib.pyplot as plt 
+fig, axs = plt.subplots(3, 1, sharex=True, figsize=(16, 8), tight_layout=True)
+a.plot(axes=axs[0], show=False)
+deriv.plot(axes=axs[1], show=False)
+integr.plot(axes=axs[2])
+```
+![](assets/deriv3.png)
 
 
 ----------------
