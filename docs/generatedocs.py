@@ -13,23 +13,20 @@ def findRoot():
     raise RuntimeError("Could not locate the root folder")
         
 
-def main(destfolder: str):
-    renderConfig = doctools.RenderConfig(splitName=True, fmt="markdown", docfmt="markdown",
-                                         includeInheritedMethods=False)
-    dest = Path(destfolder)
+def main(dest: Path):
+    config = doctools.RenderConfig(splitName=True, includeInheritedMethods=False)
     modules = {'core': bpf4.core, 
                'util': bpf4.util, 
                'api': bpf4.api}
+
     for name, module in modules.items():
-        docs = doctools.generateDocsForModule(module, renderConfig=renderConfig, 
-                                              title=name,
+        docs = doctools.generateDocsForModule(module, renderConfig=config, title=name,
                                               includeCustomExceptions=False)
         open(dest/f"{name}.md", "w").write(docs)
     
     
 if __name__ == "__main__":
-    root = findRoot()
-    docsfolder = root / "docs"
+    docsfolder = findRoot() / "docs"
     assert docsfolder.exists()
     main(docsfolder)
     os.chdir(root)
