@@ -245,6 +245,35 @@ Convert this bpf to json format.
 ---------
 
 
+## calculate\_projection
+
+
+```python
+
+def calculate_projection(x0, x1, p0, p1) -> tuple[float, float, float]
+
+```
+
+
+Calculate a projection needed to map the interval x0:x1 to p0:p1
+
+
+
+**Args**
+
+* **x0**:
+* **x1**:
+* **p0**:
+* **p1**:
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`tuple[float, float, float]`) A tuple (rx, dx, offset)
+
+
+---------
+
+
 ## concat\_bpfs
 
 
@@ -396,7 +425,7 @@ The bpf can then be reconstructed via `loadbpf`
 
 ```python
 
-def jagged_band(xs, upperbpf: core.BpfInterface, lowerbpf: int = 0, 
+def jagged_band(xs: list[float], upperbpf: core.BpfInterface, lowerbpf: int = 0, 
                 curve: str = linear) -> core.BpfInterface
 
 ```
@@ -408,11 +437,24 @@ Create a jagged bpf between lowerbpf and upperbpf at the x values given
 At each x in xs the, the value is equal to lowerbpf, sweeping
 with curvature 'curve' to upperbpf just before the next x
 
+### Example
+
+```python
+
+from bpf4 import *
+import numpy as np
+a = expon(0, 0, 1, 10, exp=2)
+b = expon(0, 0, 1, 5, exp=4)
+j = util.jagged_band(list(np.arange(0, 1, 0.1)), a, b, curve='expon(1.5)')
+j.plot()
+```
+![](assets/jagged.png)
+
 
 
 **Args**
 
-* **xs**:
+* **xs** (`list[float]`):
 * **upperbpf** (`core.BpfInterface`):
 * **lowerbpf** (`int`):  (*default*: `0`)
 * **curve** (`str`):  (*default*: `linear`)
@@ -691,6 +733,35 @@ Parse interpolation description
 ---------
 
 
+## projection\_fixedpoint
+
+
+```python
+
+def projection_fixedpoint(rx, dx, offset) -> None
+
+```
+
+
+Returns the fixed point given the projection parameters
+
+
+x2 = (x-offset)*rx + dx
+
+For a fixed point, x2 == x
+
+
+
+**Args**
+
+* **rx**:
+* **dx**:
+* **offset**:
+
+
+---------
+
+
 ## randombw
 
 
@@ -874,10 +945,10 @@ def warped(bpf: core.BpfInterface, dx: float = None, numpoints: int = 1000
 ```
 
 
-bpf represents the curvature of a linear space. the result is a
+Represents the curvature of a linear space.
 
 
-warped bpf so that:
+The result is a warped bpf so that:
 
 ```
 position_bpf | warped_bpf = corresponding position after warping
@@ -886,16 +957,26 @@ position_bpf | warped_bpf = corresponding position after warping
 
 ### Example
 
-Find the theoretical position of a given point according to a probability distribution
+Find the theoretical position of a given point according to a 
+probability distribution
 
 ```python
 >>> from bpf4 import *
+>>> import matplotlib.pyplot as plt
 >>> distribution = bpf.halfcos(0,0, 0.5,1, 1, 0)
 >>> w = warped(distribution)
->>> original_points = (0, 0.25, 0.33, 0.5)
->>> warped_points = w.map(original_points)
+>>> distribution.plot()
+>>> w.plot()
+
 ```
-**TODO**: add plot
+![](assets/warped.png)
+
+Now plot the histrogram of the warped bpf. It should resemble the
+original distribution
+```python
+plt.hist(w.map(10000), bins=200, density=True)
+```
+![](assets/warped-hist.png)
 
 
 

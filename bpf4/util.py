@@ -643,8 +643,9 @@ def concat_bpfs(bpfs: List[core.BpfInterface]) -> core._BpfConcat:
 
 def warped(bpf: core.BpfInterface, dx:float=None, numpoints=1000) -> core.Sampled:
     """
-    bpf represents the curvature of a linear space. the result is a 
-    warped bpf so that:
+    Represents the curvature of a linear space. 
+
+    The result is a warped bpf so that:
     
     ```
     position_bpf | warped_bpf = corresponding position after warping
@@ -662,23 +663,33 @@ def warped(bpf: core.BpfInterface, dx:float=None, numpoints=1000) -> core.Sample
     Example
     -------
 
-    Find the theoretical position of a given point according to a probability distribution
+    Find the theoretical position of a given point according to a 
+    probability distribution
     
     ```python
     >>> from bpf4 import *
+    >>> import matplotlib.pyplot as plt
     >>> distribution = bpf.halfcos(0,0, 0.5,1, 1, 0)
     >>> w = warped(distribution)
-    >>> original_points = (0, 0.25, 0.33, 0.5)
-    >>> warped_points = w.map(original_points)
+    >>> distribution.plot()
+    >>> w.plot()
+
     ```
-    **TODO**: add plot
+    ![](assets/warped.png)
     
+    Now plot the histrogram of the warped bpf. It should resemble the
+    original distribution
+    ```python
+    plt.hist(w.map(10000), bins=200, density=True)
+    ```
+    ![](assets/warped-hist.png)
     """
+
     x0, x1 = bpf.bounds()
     if dx is None:
         dx = (x1 - x0) / numpoints
     integrated = bpf.integrated()[::dx]
-    integrated_at_x1 = integrated(bpf.x1)
+    integrated_at_x1 = integ1rated(bpf.x1)
     # N = int((x1 + dx - x0) / dx + 0.5)
     xs = np.arange(x0, x1+dx, dx)    
     ys = np.ones_like(xs) * np.nan
@@ -830,17 +841,32 @@ def _pairwise(iterable):
     return zip(a, b)
 
     
-def jagged_band(xs, upperbpf: core.BpfInterface, lowerbpf=0, curve='linear'
+def jagged_band(xs: list[float], upperbpf: core.BpfInterface, lowerbpf=0, curve='linear'
                 ) -> core.BpfInterface:
     """
     Create a jagged bpf between lowerbpf and upperbpf at the x values given
     
     At each x in xs the, the value is equal to lowerbpf, sweeping
     with curvature 'curve' to upperbpf just before the next x
+
+    Example
+    -------
+
+    ```python
+    
+    from bpf4 import *
+    import numpy as np
+    a = expon(0, 0, 1, 10, exp=2)
+    b = expon(0, 0, 1, 5, exp=4)
+    j = util.jagged_band(list(np.arange(0, 1, 0.1)), a, b, curve='expon(1.5)')
+    j.plot()
+    ```
+    ![](assets/jagged.png)
     """
-    constructor = get_bpf_constructor(curve)
     upperbpf = asbpf(upperbpf)
     lowerbpf = asbpf(lowerbpf)
+    if not isinstance(xs, list): 
+        xs = list(xs)
     EPSILON = 1e-12
     fragments = []
     if xs[0] > upperbpf.x0 > float('-inf'):
@@ -849,12 +875,12 @@ def jagged_band(xs, upperbpf: core.BpfInterface, lowerbpf=0, curve='linear'
         xs.append(upperbpf.x1)
     for x0, x1 in _pairwise(xs[:-1]):
         x1 = x1 - EPSILON
-        fragment = constructor(x0, lowerbpf(x0), x1, upperbpf(x1))[x0:x1].outbound(0, 0)
+        fragment = makebpf(curve, [x0, x1], [lowerbpf(x0), upperbpf(x1)])[x0:x1].outbound(0, 0)
         fragments.append(fragment)
     x0 = xs[-2]
     x1 = xs[-1]
-    fragments.append(constructor(x0, lowerbpf(x0), x1, upperbpf(x1))[x0:x1].outbound(0, 0))
-    return sum_(*fragments)
+    fragments.append(makebpf(curve, [x0, x1], [lowerbpf(x0), upperbpf(x1)])[x0:x1].outbound(0, 0))
+    return max_(*fragments)
     
 
 def randombw(bw: Union[float, core.BpfInterface], center: Union[float, core.BpfInterface]

@@ -912,9 +912,8 @@ out = thisbpf.mapn_between(100, 0, 10, out)
 
 * **n**:
 * **x0** (`float`): lower bound to map this bpf
-* **x1** (`float`): upper bound to map this bpf     out (ndarray: if included,
-    results are placed here.
-* **out**:
+* **x1** (`float`): upper bound to map this bpf
+* **out** (`ndarray`): if included, results are placed here.
 
 **Returns**
 
@@ -1540,6 +1539,7 @@ Stretch the shape of the bpf, but preserve the start position
 >>> b.bounds()
 (1, 9)
 >>> a.plot(show=False); b.plot()
+
 ```
 
 
@@ -2544,7 +2544,7 @@ b.plot(axes=axes[1])
 
 ```python
 
-Const(double value)
+Const(double value, bounds: tuple[float, float] = None)
 
 ```
 
@@ -3082,8 +3082,6 @@ Return an array of `n` elements resulting of evaluating this bpf regularly
 
 
 The x coordinates at which this bpf is evaluated are equivalent to `linspace(x0, 1, n)`
-
-YYYY
 
 
 

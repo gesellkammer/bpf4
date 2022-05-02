@@ -12,7 +12,7 @@ These three curves, *a*, *b* and *c* define the same linear break-point-function
 The first two definitions, *a* and *b*, use the high-level API, which allows for
 points to be defined as a flat sequence, as tuples of (x, y). The *core* classes
 need to be instantiated with two arrays of *x* and *y* values, as in *c*
- 
+
 ```python
 
 from bpf4 import *
@@ -31,7 +31,7 @@ c = core.Linear([0, 1, 3], [0, 2.5, 10])
 
 ```python
 
-def blendshape(shape0: str, shape1: str, mix: float | core.BpfInterface, args
+def blendshape(shape0: str, shape1: str, mix: float | core.BpfInterface, points
                ) -> core.BpfInterface
 
 ```
@@ -44,8 +44,13 @@ Create a bpf blending two interpolation forms
 
 ```python
 
-example here
+from bpf4 import *
+a = blendshape('halfcos(2.0)', 'linear', mix=0.5, points=(0, 0, 1, 1))
+halfcos(0, 0, 1, 1, exp=2).plot(color='red')
+linear(0, 0, 1, 1).plot(color='blue')
+a.plot(color='green')
 ```
+![](assets/blend1.png)
 
 
 
@@ -57,7 +62,9 @@ example here
     (use only `shape0`)         and 1 (use only `shape1`). A value of `0.5` will
     result in         an average between the first and second interpolation
     kind.         Can be a bpf itself, returning the mix value at any x value
-* **args**:
+* **points**: either a tuple `(x0, y0, x1, y1, ...)` or a tuple `(xs, ys)`
+    where *xs* and *ys* are lists/arrays containing the *x* and *y*
+    coordinates of the points
 
 **Returns**
 
@@ -93,7 +100,7 @@ A bpf which always returns a constant value
 
 **Args**
 
-* **value**:
+* **value**: the constant value
 
 
 ---------

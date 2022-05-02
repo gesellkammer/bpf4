@@ -10,7 +10,7 @@ These three curves, *a*, *b* and *c* define the same linear break-point-function
 The first two definitions, *a* and *b*, use the high-level API, which allows for
 points to be defined as a flat sequence, as tuples of (x, y). The *core* classes
 need to be instantiated with two arrays of *x* and *y* values, as in *c*
- 
+
 ```python
 
 from bpf4 import *
@@ -479,6 +479,9 @@ def const(value) -> core.Const:
     """
     A bpf which always returns a constant value
 
+    Args:
+        value: the constant value
+
     Example
     -------
 
@@ -514,7 +517,7 @@ def slope(slope:float, offset=0., bounds: tuple[float, float] = None) -> core.Sl
     return core.Slope(slope, offset, bounds=bounds)
 
 
-def blendshape(shape0:str, shape1:str, mix, *args) -> core.BpfInterface:
+def blendshape(shape0:str, shape1:str, mix, points) -> core.BpfInterface:
     """
     Create a bpf blending two interpolation forms
 
@@ -526,6 +529,9 @@ def blendshape(shape0:str, shape1:str, mix, *args) -> core.BpfInterface:
             and 1 (use only `shape1`). A value of `0.5` will result in
             an average between the first and second interpolation kind.
             Can be a bpf itself, returning the mix value at any x value
+        points: either a tuple `(x0, y0, x1, y1, ...)` or a tuple `(xs, ys)`
+            where *xs* and *ys* are lists/arrays containing the *x* and *y*
+            coordinates of the points
 
     Returns:
         (core.BpfInterface) A bpf blending two different interpolation kinds
@@ -535,10 +541,15 @@ def blendshape(shape0:str, shape1:str, mix, *args) -> core.BpfInterface:
 
     ```python
 
-    example here
+    from bpf4 import *
+    a = blendshape('halfcos(2.0)', 'linear', mix=0.5, points=(0, 0, 1, 1))
+    halfcos(0, 0, 1, 1, exp=2).plot(color='red')
+    linear(0, 0, 1, 1).plot(color='blue')
+    a.plot(color='green')
     ```
+    ![](assets/blend1.png)
     """
-    X, Y, kws = parseargs(*args)
+    X, Y, kws = parseargs(*points)
     a = makebpf(shape0, X, Y)
     b = makebpf(shape1, X, Y)
     return core.blend(a, b, mix)

@@ -3932,12 +3932,15 @@ cdef class Const(BpfInterface):
 
     cdef double value
     
-    def __init__(self, double value):
+    def __init__(self, double value, bounds: tuple[float, float]=None):
         """
         Args:
             value (float): the constant value of this bpf
         """
-        self._set_bounds(INFNEG, INF)
+        if bounds:
+            self._set_bounds(bounds[0], bounds[1])
+        else:
+            self._set_bounds(INFNEG, INF)
         self.value = value
     
     def __call__(self, x): return self.value
@@ -4934,7 +4937,7 @@ cdef class _BpfCrop(BpfInterface):
         if x0 < self._x0:
             i = <int>((self._x0 - x0) / dx)
             for j in range(i):
-                data[j] = y0
+                data[j] = self._y0
             intersect_x0_quant = x0 + dx*i
         else:
             intersect_x0_quant = x0
