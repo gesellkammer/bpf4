@@ -104,7 +104,8 @@ a.plot(axes=axs[0], show=False)
 deriv.plot(axes=axs[1], show=False)
 integr.plot(axes=axs[2])
 ```
-![](assets/deriv3.png)
+
+![](docs/assets/deriv3.png)
 
 
 ----------------
