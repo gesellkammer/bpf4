@@ -517,6 +517,52 @@ def slope(slope:float, offset=0., bounds: tuple[float, float] = None) -> core.Sl
     return core.Slope(slope, offset, bounds=bounds)
 
 
+def stack(*bpfs) -> core.Stack:
+    """
+    A bpf representing a stack of bpf
+
+    Within a Stack, a bpf does not have outbound values. When evaluated
+    outside its bounds the bpf below is used, iteratively until the
+    lowest bpf is reached. Only the lowest bpf is evaluated outside its
+    bounds
+
+    Args:
+        bpfs: a sequence of bpfs
+
+    Returns:
+        (core.Stack) A stacked bpf
+
+
+    Example
+    -------
+
+    ```python
+    # Interval    bpf
+    # [0, 3]      a
+    # (3, 4]      b
+    # (4, 10]     c
+
+    from bpf4 import *
+    import matplotlib.pyplot as plt
+    a = linear(0, 0, 3, 1)
+    b = linear(2, 9, 4, 10)
+    c = halfcos(0, 0, 10, 10)
+    s = core.Stack((a, b, c))
+
+    ax = plt.subplot(111)
+    a.plot(color="#f00", alpha=0.4, axes=ax, linewidth=4, show=False)
+    b.plot(color="#00f", alpha=0.4, axes=ax, linewidth=4, show=False)
+    c.plot(color="#f0f", alpha=0.4, axes=ax, linewidth=4, show=False)
+    s.plot(axes=ax, linewidth=2, color="#000", linestyle='dotted')
+    ```
+    ![](assets/stack2.png)
+
+    """
+    if len(bpfs) == 1 and isinstance(bpfs[0], (list, tuple)):
+        bpfs = bpfs[0]
+    return core.Stack(bpfs)
+
+
 def blendshape(shape0:str, shape1:str, mix, points) -> core.BpfInterface:
     """
     Create a bpf blending two interpolation forms

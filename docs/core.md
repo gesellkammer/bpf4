@@ -310,6 +310,15 @@ BpfInterface.cos(self) -> _BpfUnaryFunc
 
 Returns a bpf representing the cosine of this bpf
 
+
+```python
+from bpf4 import *
+from math import pi
+a = slope(1).cos()
+a[0:8*pi].plot()
+```
+![](assets/cos.png)
+
 ----------
 
 ### db2amp
@@ -338,30 +347,6 @@ array([1.        , 0.46415888, 0.21544347, 0.1       , 0.04641589,
 **Returns**
 
 &nbsp;&nbsp;&nbsp;&nbsp;(`BpfInterface`) A bpf representing `\x -> db2amp(self(x))`
-
-----------
-
-### debug
-
-
-```python
-
-BpfInterface.debug(self, key, value=None)
-
-```
-
-
-keys:
-
-
-* integrationmode
-
-
-
-**Args**
-
-* **key**:
-* **value**:
 
 ----------
 
@@ -429,6 +414,22 @@ bounds of this bpf by the sampling period `dx`:
 where *x0* and *x1* are the *x* coord start and end points and *dx* 
 is the sampling period.
 
+```python
+>>> from bpf4 import *
+>>> a = linear(0, 0, 1,  10, 2, 5)
+# Sample a with a period of 0.1
+>>> ys = a.map(a.dxton(0.1))
+>>> len(ys)
+21
+>>> ys
+array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.,  9.,  8.,
+7.,  6.,  5.,  4.,  3.,  2.,  1.,  0.])
+```
+
+!!! info "See Also"
+
+    [ntodx()](#ntodx)
+
 
 
 **Args**
@@ -466,6 +467,7 @@ Returns a bpf representing the exp operation with this bpf
 2.718281828459045
 >>> a.expon()(0.1)
 2.718281828459045
+```
 
 ----------
 
@@ -571,7 +573,7 @@ def fromseq(points: ndarray | list[float], kws) -> BpfBase
 BpfInterface.fromseq(type cls, *points, **kws)
 
 
-A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+A helper constructor with points given as tuples or as a flat sequence. 
 
 #### Example
 
@@ -588,9 +590,10 @@ Linear((x0, x1, ...), (y0, y1, ...))
 **Args**
 
 * **points** (`ndarray | list[float]`): either the interleaved x and y points,
-    or each point as a                 2D tuple
-* **kws**: any keyword will be passed to the default constructor (for
+    or each point as a                 2D tuple             `**kws` (dict): any
+    keyword will be passed to the default constructor (for
     example, `exp` in the case of an `Expon` bpf)
+* **kws**:
 
 **Returns**
 
@@ -611,9 +614,11 @@ BpfInterface.integrate(self) -> double
 Return the result of the integration of this bpf.
 
 
-If any of the bounds is inf, the result is also inf.
+If any of the bounds is `inf`, the result is also `inf`.
 
-**NB**: to set the bounds of the integration, first crop the bpf via a slice
+!!! note
+
+    To set the bounds of the integration, first crop the bpf by slicing it: `bpf[start:end]`
 
 #### Example
 
@@ -1037,8 +1042,26 @@ BpfInterface.ntodx(self, int N) -> double
 Calculate the sampling period `dx`
 
 
-Calculate `dx` so that the bounds of this bpf 
-are divided into N parts: `dx = (x1-x0) / (N-1)`
+ Calculate sampling period *dx* so that the bounds of 
+ this bpf are divided into *N* parts: `dx = (x1-x0) / (N-1)`.
+ The period is calculated so that lower and upper bounds are
+ included, following numpy's `linspace`
+
+ !!! info "See Also"
+
+     [dxton()](#dxton)
+
+ Example
+ -------
+
+ ```python
+ >>> a = linear(0, 0, 1, 1)
+ >>> dx = a.ntodx(10)
+ >>> dx
+ 0.11111111
+ >>> np.arange(a.x0, a.x1, dx)
+ array([0.        , 0.11111111, 0.22222222, 0.33333333, 0.44444444,
+0.55555556, 0.66666667, 0.77777778, 0.88888889, 1.        ])
 
 
 
@@ -1049,7 +1072,7 @@ are divided into N parts: `dx = (x1-x0) / (N-1)`
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;(`float`) The sampling period
+&nbsp;&nbsp;&nbsp;&nbsp;(`float`) The sampling period *dx*
 
 ----------
 
@@ -1479,6 +1502,15 @@ BpfInterface.sin(self) -> _BpfUnaryFunc
 
 Returns a bpf representing the sine of this bpf
 
+
+```
+from bpf4 import *
+from math import pi
+a = slope(1).sin()
+a[0:8*pi].plot()
+```
+![](assets/sin.png)
+
 ----------
 
 ### sinh
@@ -1581,33 +1613,13 @@ BpfInterface.tanh(self) -> _BpfUnaryFunc
 
 Returns a bpf representing the tanh of this bpf
 
-----------
-
-### trapz\_integrate\_between
-
 
 ```python
-
-BpfInterface.trapz_integrate_between(self, double x0, double x1, size_t N=0) -> double
-
+from bpf4 import *
+a = slope(1).tanh()
+a[-4:4].plot()
 ```
-
-
-Integrate this bpf between [x0, x1] using the trapt method
-
-
-
-**Args**
-
-* **x0** (`float`): start of integration period
-* **x1** (`float`): end of the integration period
-* **N** (`int`): number of subdivisions used to calculate the integral. If not
-    given,        a default is used (default defined in
-    `CONFIG['integrate.trapz_intervals']`)
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;(`float`) The result of the integration
+![](assets/tanh.png)
 
 ----------
 
@@ -3419,6 +3431,79 @@ core.Min((a, b)).plot(color="black", linewidth=4, alpha=0.8, linestyle='dotted')
 ---------
 
 
+## Stack
+
+ - Base Class: [_MultipleBpfs](#_multiplebpfs)
+
+### 
+
+
+```python
+
+Stack(bpfs)
+
+```
+
+
+A bpf representing a stack of bpf
+
+
+Within a Stack, a bpf does not have outbound values. When evaluated
+outside its bounds the bpf below is used, iteratively until the
+lowest bpf is reached. Only the lowest bpf is evaluated outside its
+bounds
+
+#### Example
+
+```python
+# Interval    bpf
+# [0, 3]      a
+# (3, 4]      b
+# (4, 10]     c
+
+from bpf4 import *
+import matplotlib.pyplot as plt
+
+a = linear(0, 0, 3, 1)
+b = linear(2, 9, 4, 10)
+c = halfcos(0, 0, 10, 10)
+s = core.Stack((a, b, c))
+
+ax = plt.subplot(111)
+a.plot(color="#f00", alpha=0.4, axes=ax, linewidth=4, show=False)
+b.plot(color="#00f", alpha=0.4, axes=ax, linewidth=4, show=False)
+c.plot(color="#f0f", alpha=0.4, axes=ax, linewidth=4, show=False)
+s.plot(axes=ax, linewidth=2, color="#000", linestyle='dotted')
+```
+![](assets/stack2.png)
+
+
+---------
+
+
+**Methods**
+
+### \_\_init\_\_
+
+
+```python
+
+def __init__(bpfs: list|tuple) -> None
+
+```
+
+
+
+**Args**
+
+* **bpfs** (`list|tuple`): A sequence of bpfs. The order defined the evaluation
+    order. The first bpf is on top, the last bpf is on bottom. Only         the
+    last bpf is evaluated outside its bounds
+
+
+---------
+
+
 ## blend
 
 
@@ -3505,7 +3590,8 @@ Return the zeros if b in the interval defined
     will be calculated         from *N* (the *h* parameter is not used)
 * **x0** (`float`): If given, the bounds to search within
 * **x1** (`float`): If given, the bounds to search within
-* **maxzeros**: if given, search will stop if this number of zeros is found
+* **maxzeros** (`int`): if given, search will stop if this number of zeros is
+    found
 
 **Returns**
 
@@ -3525,12 +3611,12 @@ brentq(bpf, double x0, double xa, double xb, double xtol=9.9999999999999998e-13,
 ```
 
 
-calculate the zero of (bpf + x0) in the interval (xa, xb) using brentq algorithm
+Calculate the zero of `bpf + x0` in the interval `(xa, xb)` using brentq algorithm
 
 
 !!! note 
 
-    To calculate all the zeros of a bpf, use the [.zeros](#zeros) method
+    To calculate all the zeros of a bpf, use [.zeros()](#zeros)
 
 
 ### Example

@@ -680,15 +680,34 @@ cdef class BpfInterface:
         """
         Calculate the sampling period `dx` 
 
-        Calculate `dx` so that the bounds of this bpf 
-        are divided into N parts: `dx = (x1-x0) / (N-1)`
+        Calculate sampling period *dx* so that the bounds of 
+        this bpf are divided into *N* parts: `dx = (x1-x0) / (N-1)`.
+        The period is calculated so that lower and upper bounds are
+        included, following numpy's `linspace`
 
         Args:
             N (int): The number of points to sample within the bounds of
                 this bpf
 
         Returns:
-            (float) The sampling period
+            (float) The sampling period *dx*
+
+        !!! info "See Also"
+
+            [dxton()](#dxton)
+
+        Example
+        -------
+
+        ```python
+        >>> a = linear(0, 0, 1, 1)
+        >>> dx = a.ntodx(10)
+        >>> dx
+        0.11111111
+        >>> np.arange(a.x0, a.x1, dx)
+        array([0.        , 0.11111111, 0.22222222, 0.33333333, 0.44444444,
+       0.55555556, 0.66666667, 0.77777778, 0.88888889, 1.        ])
+
         """
         return (self._x1 - self._x0) / (N - 1)
     
@@ -711,6 +730,21 @@ cdef class BpfInterface:
         where *x0* and *x1* are the *x* coord start and end points and *dx* 
         is the sampling period.
 
+        ```python
+        >>> from bpf4 import *
+        >>> a = linear(0, 0, 1,  10, 2, 5)
+        # Sample a with a period of 0.1
+        >>> ys = a.map(a.dxton(0.1))
+        >>> len(ys)
+        21
+        >>> ys
+        array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.,  9.,  8.,
+        7.,  6.,  5.,  4.,  3.,  2.,  1.,  0.])
+        ```
+
+        !!! info "See Also"
+
+            [ntodx()](#ntodx)
         """
         return <int>(((self._x1 + dx) - self._x0) / dx)
     
@@ -1188,11 +1222,30 @@ cdef class BpfInterface:
         return _BpfRand(self)
     
     cpdef _BpfUnaryFunc cos(self):  
-        """Returns a bpf representing the cosine of this bpf"""
+        """
+        Returns a bpf representing the cosine of this bpf
+
+        ```python
+        from bpf4 import *
+        from math import pi
+        a = slope(1).cos()
+        a[0:8*pi].plot()
+        ```
+        ![](assets/cos.png)
+        """
         return _BpfUnaryFunc_new_from_index(self, 0)
     
     cpdef _BpfUnaryFunc sin(self):  
-        """Returns a bpf representing the sine of this bpf"""    
+        """Returns a bpf representing the sine of this bpf
+
+        ```
+        from bpf4 import *
+        from math import pi
+        a = slope(1).sin()
+        a[0:8*pi].plot()
+        ```
+        ![](assets/sin.png)
+        """    
         return _BpfUnaryFunc_new_from_index(self, 1)
     
     cpdef _BpfUnaryFunc ceil(self): 
@@ -1214,6 +1267,7 @@ cdef class BpfInterface:
         2.718281828459045
         >>> a.expon()(0.1)
         2.718281828459045
+        ```
         """
         return _BpfUnaryFunc_new_from_index(self, 4)
     
@@ -1222,7 +1276,15 @@ cdef class BpfInterface:
         return _BpfUnaryFunc_new_from_index(self, 5)
     
     cpdef _BpfUnaryFunc tanh(self): 
-        """Returns a bpf representing the tanh of this bpf"""
+        """Returns a bpf representing the tanh of this bpf
+
+        ```python
+        from bpf4 import *
+        a = slope(1).tanh()
+        a[-4:4].plot()
+        ```
+        ![](assets/tanh.png)
+        """
         return _BpfUnaryFunc_new_from_index(self, 6)
     
     cpdef _BpfUnaryFunc abs(self):  
@@ -1429,9 +1491,11 @@ cdef class BpfInterface:
         """
         Return the result of the integration of this bpf. 
 
-        If any of the bounds is inf, the result is also inf.
+        If any of the bounds is `inf`, the result is also `inf`.
 
-        **NB**: to set the bounds of the integration, first crop the bpf via a slice
+        !!! note
+
+            To set the bounds of the integration, first crop the bpf by slicing it: `bpf[start:end]`
         
         Returns:
             (float) The result of the integration
@@ -1449,9 +1513,9 @@ cdef class BpfInterface:
             return INFINITY
         return self.integrate_between(self._x0, self._x1)
     
-    cpdef double trapz_integrate_between(self, double x0, double x1, size_t N=0):
+    cdef double _trapz_integrate_between(self, double x0, double x1, size_t N=0):
         """
-        Integrate this bpf between [x0, x1] using the trapt method
+        Integrate this bpf between [x0, x1] using the traptz method
 
         Args:
             x0 (float): start of integration period
@@ -1506,7 +1570,7 @@ cdef class BpfInterface:
         if mode == 1 or mode == 2:
             inbound = integrate_simpsons(self, x0, x1, SIMPSONS_ACCURACY, SIMPSONS_MAXITER)
         else:
-            inbound = self.trapz_integrate_between(x0, x1, N)
+            inbound = self._trapz_integrate_between(x0, x1, N)
         return outbound0 + inbound + outbound1
 
     cpdef double mean(self):
@@ -1924,7 +1988,7 @@ cdef class BpfInterface:
     @classmethod
     def fromseq(cls, *points, **kws):
         """
-        A helper constructor, in this variant points are given as tuples or as a flat sequence. 
+        A helper constructor with points given as tuples or as a flat sequence. 
 
         ## Example
 
@@ -1939,7 +2003,7 @@ cdef class BpfInterface:
         Args:
             points (ndarray | list[float]): either the interleaved x and y points, or each point as a
                 2D tuple
-            kws: any keyword will be passed to the default constructor (for 
+            `**kws` (dict): any keyword will be passed to the default constructor (for 
                 example, `exp` in the case of an `Expon` bpf)
 
         Returns:
@@ -1981,16 +2045,7 @@ cdef class BpfInterface:
         x0, x1 = self.bounds()
         return "%s[%s:%s]" % (self.__class__.__name__, str(x0), str(x1))
 
-    def debug(self, key, value=None):
-        """
-        keys:
-            * integrationmode
-        """
-        if key == "integrationmode":
-            if value is not None:
-                self._integration_mode = value
-            return self._integration_mode
-
+    
 
 cdef BpfInterface _asbpf(obj):
     if isinstance(obj, BpfInterface):
@@ -4965,13 +5020,21 @@ cdef class _BpfCrop(BpfInterface):
 cpdef _BpfCrop _BpfCrop_new(BpfInterface bpf, double x0, double x1, int outbound_mode, 
                             double outbound0=0, double outbound1=0):
     """
-    create a cropped bpf. 
+    Create a cropped bpf. 
     
-    outbound_mode:
-        -1: use the default
-         0: do nothing. in this case, the bpf is evaluated at the cropping point each time it is called outside the bounds
-         1: cache the values. the values at the bounds are cached and returned when an outbound call takes place
-         2: set. in this case the last parameters outbount0 and outbound1 are used when called outside the bounds
+    Args:
+        bpf: the bpf to crop
+        x0: the lower bound
+        x1: the upper bound
+        outbound_mode: -1=use the default; 0=do nothing (the bpf is evaluated at the cropping 
+            point each time it is called outside the bounds); 1=cache the values; 2=set (in  
+            this case the last parameters outbount0 and outbound1 are used when called outside 
+            the bounds) 
+        outbound0: lower outbound value, returned when called with `x < x0` and *outbound_mode* is 2
+        outbound1: upper outbound value, returned when called with `x > x1` and *outbound_mode* is 2
+    
+    Returns:
+        (_BpfCrop) a cropped bpf
     """
     self = _BpfCrop()
     self._set_bounds(x0, x1)
@@ -5090,6 +5153,79 @@ cdef class Min(_MultipleBpfs):
         return y
 
 
+cdef class Stack(_MultipleBpfs):
+    """
+    A bpf representing a stack of bpf
+
+    Within a Stack, a bpf does not have outbound values. When evaluated
+    outside its bounds the bpf below is used, iteratively until the
+    lowest bpf is reached. Only the lowest bpf is evaluated outside its
+    bounds
+
+    Example
+    -------
+
+    ```python
+    # Interval    bpf
+    # [0, 3]      a
+    # (3, 4]      b
+    # (4, 10]     c
+
+    from bpf4 import *
+    import matplotlib.pyplot as plt
+    
+    a = linear(0, 0, 3, 1)
+    b = linear(2, 9, 4, 10)
+    c = halfcos(0, 0, 10, 10)
+    s = core.Stack((a, b, c))
+
+    ax = plt.subplot(111)
+    a.plot(color="#f00", alpha=0.4, axes=ax, linewidth=4, show=False)
+    b.plot(color="#00f", alpha=0.4, axes=ax, linewidth=4, show=False)
+    c.plot(color="#f0f", alpha=0.4, axes=ax, linewidth=4, show=False)
+    s.plot(axes=ax, linewidth=2, color="#000", linestyle='dotted')
+    ```
+    ![](assets/stack2.png)
+
+    """
+    cdef double[::1] flatbounds
+
+    def __init__(self, bpfs):
+        """
+        Args:
+            bpfs (list|tuple): A sequence of bpfs. The order defined the evaluation
+                order. The first bpf is on top, the last bpf is on bottom. Only
+                the last bpf is evaluated outside its bounds
+
+        """
+        self.flatbounds = EMPTY1D(len(bpfs)*2)
+        _MultipleBpfs.__init__(self, bpfs)
+
+    def _calculate_bounds(self):
+        cdef double x0 = INF, x1 = INFNEG
+        cdef BpfInterface b
+        cdef int i = 0
+        for b in self._bpfs:
+            if b.x0 < x0:
+                x0 = b.x0
+            if b.x1 > x1:
+                x1 = b.x1
+            self.flatbounds[i] = b.x0
+            self.flatbounds[i+1] = b.x1
+            i += 2
+        self._set_bounds(x0, x1)
+
+    cdef double __ccall__(self, double x) nogil:
+        cdef double out = 0.
+        for i in range(self._numbpfs):
+            if self.flatbounds[i*2] <= x <= self.flatbounds[i*2+1] or i == self._numbpfs - 1:
+                with gil:
+                    self.tmp = <BpfInterface>(self.bpfpointers[i])
+                out = self.tmp.__ccall__(x)
+                break
+        return out
+
+
 cdef class _BpfSelect(_MultipleBpfs):
     cdef BpfInterface which
     cdef InterpolFunc* func
@@ -5140,11 +5276,11 @@ cdef class _BpfSelect(_MultipleBpfs):
 def brentq(bpf, double x0, double xa, double xb, double xtol=9.9999999999999998e-13, 
            double rtol=4.4408920985006262e-16, max_iter=100):
     """
-    calculate the zero of (bpf + x0) in the interval (xa, xb) using brentq algorithm
+    Calculate the zero of `bpf + x0` in the interval `(xa, xb)` using brentq algorithm
 
     !!! note 
 
-        To calculate all the zeros of a bpf, use the [.zeros](#zeros) method
+        To calculate all the zeros of a bpf, use [.zeros()](#zeros)
 
     Args:
         bpf (BpfInterface): the bpf to evaluate
@@ -5311,6 +5447,7 @@ cdef inline double _bpf_brentq(BpfInterface bpf, double x0, double xa, double xb
     outfuncalls[0] = funcalls
     return xcur
 
+
 @cython.boundscheck(False)
 @cython.cdivision(True)
 cpdef list bpf_zero_crossings(BpfInterface b, double h=0.01, int N=0, 
@@ -5325,7 +5462,7 @@ cpdef list bpf_zero_crossings(BpfInterface b, double h=0.01, int N=0,
             from *N* (the *h* parameter is not used)
         x0 (float): If given, the bounds to search within 
         x1 (float): If given, the bounds to search within
-        maxzeros: if given, search will stop if this number of zeros is found
+        maxzeros (int): if given, search will stop if this number of zeros is found
 
     Returns:
         (List[float]) A list of zeros (x coord points where the bpf is 0)
@@ -5353,9 +5490,7 @@ cpdef list bpf_zero_crossings(BpfInterface b, double h=0.01, int N=0,
         y0 = b.__ccall__(xa)
         y1 = b.__ccall__(xb)
         add_it = 0
-        # print(xa, xb, y0, y1)
         if y0 * y1 < 0:
-            # print("y0*y1")
             outerror = -1
             zero = _bpf_brentq(b, 0, xa, xb, &outerror, 9.9999999999999998e-13, 4.4408920985006262e-16, 100, &funcalls)
             if outerror == 0:
@@ -5391,6 +5526,7 @@ cdef inline double _integrate_adaptive_simpsons_inner(BpfInterface f, double a, 
         return S2 + (S2 - S) / 15.
     return _integrate_adaptive_simpsons_inner(f, a, c, epsilon / 2, Sleft, fa, fc, fd, bottom - 1) + \
            _integrate_adaptive_simpsons_inner(f, c, b, epsilon / 2, Sright, fc, fb, fe, bottom - 1)
+
 
 cdef double integrate_simpsons(BpfInterface f, double a, double b, double accuracy=10e-10, int max_iterations=50):
     cdef:

@@ -705,6 +705,62 @@ b.plot(axes=axes[1])
 ---------
 
 
+## stack
+
+
+```python
+
+def stack(bpfs) -> core.Stack
+
+```
+
+
+A bpf representing a stack of bpf
+
+
+Within a Stack, a bpf does not have outbound values. When evaluated
+outside its bounds the bpf below is used, iteratively until the
+lowest bpf is reached. Only the lowest bpf is evaluated outside its
+bounds
+
+
+### Example
+
+```python
+# Interval    bpf
+# [0, 3]      a
+# (3, 4]      b
+# (4, 10]     c
+
+from bpf4 import *
+import matplotlib.pyplot as plt
+a = linear(0, 0, 3, 1)
+b = linear(2, 9, 4, 10)
+c = halfcos(0, 0, 10, 10)
+s = core.Stack((a, b, c))
+
+ax = plt.subplot(111)
+a.plot(color="#f00", alpha=0.4, axes=ax, linewidth=4, show=False)
+b.plot(color="#00f", alpha=0.4, axes=ax, linewidth=4, show=False)
+c.plot(color="#f0f", alpha=0.4, axes=ax, linewidth=4, show=False)
+s.plot(axes=ax, linewidth=2, color="#000", linestyle='dotted')
+```
+![](assets/stack2.png)
+
+
+
+**Args**
+
+* **bpfs**: a sequence of bpfs
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`core.Stack`) A stacked bpf
+
+
+---------
+
+
 ## uspline
 
 
