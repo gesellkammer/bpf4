@@ -7,8 +7,22 @@ BPF4
 About
 -----
 
-bpf4 is a library for curve fitting and break-point functions in python. It is mainly programmed in Cython for efficiency. 
+**bpf4** is a python library to operate with curves in 2D space. 
 
+Curves can be defined via breakpoints (break-point functions, hence the name) or using functions.
+Moreover, curves can be used to build other curves. **bpf4** can be used to perform
+curve fitting, data analysis, plotting, etc. Its core is programmed
+in cython for efficiency.
+
+
+Installation
+------------
+
+
+```bash
+pip install --upgrade bpf4
+
+```
 
 Documentation
 -------------
@@ -43,21 +57,23 @@ Features
 Many interpolation types besides linear:
 
 * spline
-* half-cosine
+* univariate splie
+* pchip (hermite)
+* cosine
 * exponential
-* fibonacci
-* exponantial half-cosine
-* pchip
 * logarithmic
 * etc. 
 
-Interpolation types can be mixed, so that each segment has a different interpolation (with the exception of spline interpolation)  
-Curves can be combined non-destructively. Following from the example above.  
+
+With the exception of curve-fitting bpfs (splines), interpolation types can be mixed, so that each segment 
+has a different interpolation. Following from the example above:  
+
 
 ```pyton
 
 c = (a + b).sin().abs()
-c[1.5:4].plot()  # plot only the range (1.5, 4)
+# plot only the range (1.5, 4)
+c[1.5:4].plot()  
 
 ```
 
@@ -77,26 +93,6 @@ a[::0.01]     # sample the bpf with an interval of 0.01
 * Derivation and Integration: `c.derivative().plot()` or `c.integrated().integrated().plot()`  
 * Numerical integration: `c.integrate_between(2, 4)`  
 
-
-Installation
-------------
-
-
-```bash
-pip install --upgrade bpf4
-
-```
-
-
-To install from source:
-
-
-```bash
-
-git clone https://github.com/gesellkammer/bpf4.git
-cd bpf4
-pip install .
-```
 
 ----------------
 
