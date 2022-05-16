@@ -3095,6 +3095,7 @@ cdef class Sampled(BpfInterface):
         nointerpol = self.nointerpol
         interpolfunc = self.interpolfunc.func
         interpolfunc_exp = self.interpolfunc.exp
+        cdef size_t datasize = self.samples_size
         i = 0
         with nogil:
             while i < n:
@@ -3108,7 +3109,7 @@ cdef class Sampled(BpfInterface):
                 if x >= grid_x1:
                     break
                 index0 = int((x - grid_x0) / grid_dx)
-                if nointerpol == 0:
+                if nointerpol == 1:
                     y = selfdata[index0]
                 else:
                     interp_x0 = grid_x0 + index0 * grid_dx
@@ -3124,7 +3125,12 @@ cdef class Sampled(BpfInterface):
     def fromseq(cls, *args, **kws): raise NotImplementedError
     
     def _get_points_for_rendering(self, int n= -1): 
-        return self.xs, self.ys
+        if self.interpolation == 'linear':
+            return self.xs, self.ys
+        else:
+            if n < 0:
+                n = NUM_XS_FOR_RENDERING
+            return numpy.linspace(self.x0, self.x1, n), self.mapn_between(n, self.x0, self.x1)
     
     def segments(self):
         """

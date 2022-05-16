@@ -23,19 +23,7 @@ c = core.Linear([0, 1, 3], [0, 2.5, 10])
 from __future__ import annotations
 
 from . import core
-from .util import (
-    minimum,
-    maximum, 
-    max_,
-    min_,
-    sum_,
-    select,
-    asbpf,
-    loadbpf,
-    parseargs,
-    multi_parseargs,
-    makebpf
-)
+from . import util
 
 from .core import (
     blend,
@@ -74,7 +62,7 @@ def linear(*args) -> core.Linear:
     ```
     ![](assets/Linear.png)
     """
-    X, Y, kws = parseargs(*args)
+    X, Y, kws = util.parseargs(*args)
     if kws:
         raise ValueError("linear does not take any keyword")
     return core.Linear(X, Y)
@@ -120,7 +108,7 @@ def expon(*args, **kws) -> core.Expon:
     ![](assets/expon-grid.png)
 
     """
-    X, Y, kws = parseargs(*args, **kws)
+    X, Y, kws = util.parseargs(*args, **kws)
     assert "exp" in kws
     return core.Expon(X, Y, **kws)
     
@@ -158,7 +146,7 @@ def halfcos(*args, exp=1, numiter=1, **kws) -> core.Halfcos:
 
     
     """
-    X, Y, kws = parseargs(*args, **kws)
+    X, Y, kws = util.parseargs(*args, **kws)
     return core.Halfcos(X, Y, exp=exp, numiter=numiter, **kws)  
 
 
@@ -209,7 +197,7 @@ def halfcosm(*args, **kws) -> core.Halfcosm:
 
 
     """
-    X, Y, kws = parseargs(*args, **kws)
+    X, Y, kws = util.parseargs(*args, **kws)
     return core.Halfcosm(X, Y, **kws)
 
 
@@ -244,7 +232,7 @@ def spline(*args) -> core.Spline:
     ```
     ![](assets/Spline.png)
     """
-    X, Y, kws = parseargs(*args)
+    X, Y, kws = util.parseargs(*args)
     return core.Spline(X, Y)
 
 
@@ -285,7 +273,7 @@ def uspline(*args) -> core.USpline:
         * [pchip](#pchip)
 
     """
-    X, Y, kws = parseargs(*args)
+    X, Y, kws = util.parseargs(*args)
     return core.USpline(X, Y)
 
 
@@ -315,7 +303,7 @@ def nointerpol(*args) -> core.NoInterpol:
     ```
     ![](assets/NoInterpol.png)
     """
-    X, Y, kws = parseargs(*args)
+    X, Y, kws = util.parseargs(*args)
     return core.NoInterpol(X, Y, **kws)
     
 
@@ -345,7 +333,7 @@ def nearest(*args) -> core.Nearest:
     ```
     ![](assets/NoInterpol.png)
     """
-    X, Y, kws = parseargs(*args)
+    X, Y, kws = util.parseargs(*args)
     return core.Nearest(X, Y, **kws)
 
 
@@ -375,7 +363,7 @@ def smooth(*args, numiter=1) -> core.Smooth:
 
         * [smoother](#smoother)
     """
-    X, Y, kws = parseargs(*args)
+    X, Y, kws = util.parseargs(*args)
     return core.Smooth(X, Y, numiter=numiter)
 
 
@@ -408,7 +396,7 @@ def smoother(*args) -> core.Smoother:
     ```
     ![](assets/Smoother.png)
     """
-    X, Y, kws = parseargs(*args)
+    X, Y, kws = util.parseargs(*args)
     return core.Smoother(X, Y)
 
 
@@ -437,7 +425,7 @@ def multi(*args):
           (20, 0))
     ```
     """
-    xs, ys, interpolations = multi_parseargs(args)
+    xs, ys, interpolations = util.multi_parseargs(args)
     return core.Multi(xs, ys, interpolations)
 
 
@@ -471,7 +459,7 @@ def pchip(*args):
     ![](assets/pchip.png)   
     """
     from . import pyinterp
-    xs, ys, kws = parseargs(*args)
+    xs, ys, kws = util.parseargs(*args)
     return pyinterp.Pchip(xs, ys, **kws)
 
 
@@ -595,7 +583,7 @@ def blendshape(shape0:str, shape1:str, mix, points) -> core.BpfInterface:
     ```
     ![](assets/blend1.png)
     """
-    X, Y, kws = parseargs(*points)
+    X, Y, kws = util.parseargs(*points)
     a = makebpf(shape0, X, Y)
     b = makebpf(shape1, X, Y)
     return core.blend(a, b, mix)
