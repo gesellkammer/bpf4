@@ -1,6 +1,6 @@
 from __future__ import annotations
 from .config import CONFIG
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 import numpy as np
 
 from typing import TYPE_CHECKING
@@ -24,20 +24,22 @@ def plot_coords(xs: Union[List[float], np.ndarray],
         ys: a seq. of y coords
         kind: one of line or bar
         axes: if given, this axes is used
-        kws: any keywords will be bassed to `axes.plot` or `axes.bar` depending
-            on `kind`
+        keys: any keywords will be bassed to `axes.plot` (or `axes.bar` depending
+            on `kind`)
+
+    Returns:
+        the matplotlib's Axes object used. If it was passed as the axes
+        arg, then the returned axes will be this same Axes object
 
     """
-    if axes:
-        if kind == 'line':
-            axes.plot(xs, ys, **keys)
-        elif kind == 'bar':
-            axes.bar(xs, ys, **keys)    
-    else:
-        if kind == 'line':
-            plt.plot(xs, ys, **keys)
-        elif kind == 'bar':
-            plt.bar(xs, ys, **keys)
+    if not axes:
+        fig, axes = plt.subplots()
+    if kind == 'line':
+        axes.plot(xs, ys, **keys)
+    elif kind == 'bar':
+        axes.bar(xs, ys, **keys)
+    elif kind == 'stem':
+        axes.stem(xs, ys, **keys) 
     plot_always_show = CONFIG['plot.always_show']
     if plot_always_show and (show is None or show is True):
         if axes:
@@ -46,6 +48,7 @@ def plot_coords(xs: Union[List[float], np.ndarray],
             plt.show()
     elif not plot_always_show and show is True:
         plt.show()
+    return axes
 
         
 def bpfplot(*bpfs: core.BpfInterface, npoints=400, show=True, **kws) -> None:

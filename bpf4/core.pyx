@@ -979,7 +979,7 @@ cdef class BpfInterface:
 
     def plot(self, kind='line', int n=-1, show=True, axes=None, **keys):
         """
-        Plot the bpf. Any key is passed to plot.plot_coords
+        Plot the bpf using matplotlib.pyplot. Any key is passed to plot.plot_coords
 
         Args:
             kind (str): one of 'line', 'bar'
@@ -990,7 +990,8 @@ cdef class BpfInterface:
                 call the last one with plot=True or call bpf4.plot.show().
             axes (matplotlib.pyplot.Axes): if given, will be used to plot onto it,
                 otherwise an ad-hoc axes is created
-            kws: any keyword will be passed to plot.plot_coords
+            kws: any keyword will be passed to plot.plot_coords, which is passed
+                to ``axes.plot`` (or axes.bar, etc)
                 
         ## Example
 
