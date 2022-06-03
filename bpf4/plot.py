@@ -14,6 +14,7 @@ def plot_coords(xs: Union[List[float], np.ndarray],
                 show:bool=None, 
                 kind='line', 
                 axes:plt.Axes=None, 
+                figsize:tuple(float, float)=None,
                 **keys
                 ) -> None:
     """
@@ -24,6 +25,8 @@ def plot_coords(xs: Union[List[float], np.ndarray],
         ys: a seq. of y coords
         kind: one of line or bar
         axes: if given, this axes is used
+        figsize: as passed to pyplot.figure(...), a tuple (width, height). This setting
+            only has effect if axes is not given
         keys: any keywords will be bassed to `axes.plot` (or `axes.bar` depending
             on `kind`)
 
@@ -33,7 +36,10 @@ def plot_coords(xs: Union[List[float], np.ndarray],
 
     """
     if not axes:
-        fig, axes = plt.subplots()
+        if figsize:
+            fig, axes = plt.subplots(figsize=figsize)
+        else:
+            fig, axes = plt.subplots()
     if kind == 'line':
         axes.plot(xs, ys, **keys)
     elif kind == 'bar':

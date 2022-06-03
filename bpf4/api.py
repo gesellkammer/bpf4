@@ -25,12 +25,6 @@ from __future__ import annotations
 from . import core
 from . import util
 
-from .core import (
-    blend,
-    brentq,
-    BpfInterface,
-    BpfBase
-)
 
 
 def linear(*args) -> core.Linear:
