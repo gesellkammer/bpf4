@@ -6,16 +6,16 @@ import operator as _operator
 import os as _os
 import itertools as _itertools
 from functools import reduce
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from typing import *
+from typing import Sequence
 
 import numpy as np
 from scipy.integrate import quad as _quad
 from scipy.optimize import brentq as _brentq
 from . import core
 
+
 _CSV_COLUMN_NAMES = ('x', 'y', 'interpolation', 'exponent')
+
 
 _CONSTRUCTORS = {
     'linear': core.Linear,
@@ -363,12 +363,12 @@ def asbpf(obj, bounds=(-np.inf, np.inf)) -> core.BpfInterface:
         raise TypeError("can't wrap %s" % str(obj))
  
 
-def parseargs(*args, **kws) -> Tuple[List[float], List[float], dict]:
+def parseargs(*args, **kws) -> tuple[list[float], list[float], dict]:
     """
     Convert the args and kws to the canonical form (xs, ys, kws)
     
     Returns:
-        (Tuple[list[float], list[float], dict]) A tuple `(xs, ys, kws)`
+        (tuple[list[float], list[float], dict]) A tuple `(xs, ys, kws)`
     
     Raises ValueError if failed
 
@@ -421,7 +421,7 @@ def parseargs(*args, **kws) -> Tuple[List[float], List[float], dict]:
         
 
 
-def parsedescr(descr: str, validate=True) -> Tuple[str, dict]:
+def parsedescr(descr: str, validate=True) -> tuple[str, dict]:
     """
     Parse interpolation description
 
@@ -473,7 +473,7 @@ def makebpf(descr: str, X: Sequence[float], Y: Sequence[float]) -> core.BpfInter
     return bpfclass(X, Y, **kws)
     
 
-def multi_parseargs(args) -> Tuple[List[float], List[float], List[str]]:
+def multi_parseargs(args) -> tuple[list[float], list[float], list[str]]:
     """
     Parse args of a multi bpf
 
@@ -626,7 +626,7 @@ def dumpbpf(bpf: core.BpfInterface, fmt='yaml') -> str:
         raise ValueError(f"Format {fmt} not supported")
         
             
-def concat_bpfs(bpfs: List[core.BpfInterface]) -> core._BpfConcat:
+def concat_bpfs(bpfs: list[core.BpfInterface]) -> core._BpfConcat:
     """
     Concatenate these bpfs together, one after the other
     """
@@ -713,7 +713,7 @@ def warped(bpf: core.BpfInterface, dx:float=None, numpoints=1000) -> core.Sample
     return core.Sampled(ys, dx=dx, x0=x0)
 
         
-def _minimize(bpf, N: int, func=min, debug=False) -> Optional[float]:
+def _minimize(bpf, N: int, func=min, debug=False) -> float | None:
     x0, x1 = bpf.bounds()
     xs = np.linspace(x0, x1, N)
     from scipy.optimize import brent
@@ -726,7 +726,7 @@ def _minimize(bpf, N: int, func=min, debug=False) -> Optional[float]:
     return None
 
     
-def minimum(bpf: core.BpfInterface, N=10) -> Optional[float]:
+def minimum(bpf: core.BpfInterface, N=10) -> float | None:
     """
     Find the x where bpf(x) is minimized
     
@@ -742,7 +742,7 @@ def minimum(bpf: core.BpfInterface, N=10) -> Optional[float]:
     return _minimize(bpf, N, min)
 
 
-def maximum(bpf: core.BpfInterface, N=10) -> Optional[float]:
+def maximum(bpf: core.BpfInterface, N=10) -> float | None:
     """
     return the x where bpf(x) is the maximum of bpf
 
@@ -801,8 +801,11 @@ def projection_fixedpoint(rx, dx, offset):
     
     
 
-def binarymask(mask: Union[str, List[int]], durs: Sequence[float]=None, 
-               offset=0., cycledurs=True) -> core.NoInterpol:
+def binarymask(mask: str | list[int],
+               durs: Sequence[float]=None,
+               offset=0.,
+               cycledurs=True
+               ) -> core.NoInterpol:
     """
     Creates a binary mask
 
@@ -895,7 +898,8 @@ def jagged_band(xs: list[float], upperbpf: core.BpfInterface, lowerbpf=0, curve=
     return max_(*fragments)
     
 
-def randombw(bw: Union[float, core.BpfInterface], center: Union[float, core.BpfInterface]
+def randombw(bw: float | core.BpfInterface,
+             center: float | core.BpfInterface
              ) -> core.BpfInterface:
     """
     Create a random bpf
@@ -962,3 +966,68 @@ def smoothen(b: core.BpfInterface, window:int, N=1000, interpol='linear') -> cor
     else:
         raise ValueError(f"Interpolation {interpol} not supported here. "
                           "Possible values: linear, smooth, halfcos")
+
+
+def zigzag(b0: core.BpfInterface,
+           b1: core.BpfInterface,
+           xs: Sequence[float],
+           shape='linear'
+           ) -> core.BpfInterface:
+    """
+    Creates a curve formed of lines from b0(x) to b1(x) for each x in xs
+
+    Args:
+        b0: a bpf
+        b1: a bpf
+        xs: a seq. of x values to evaluate b0 and b1
+        shape: the shape of each segment
+
+    Returns:
+        The resulting bpf
+
+    ::
+
+       *.
+        *...  b0
+         *  ...
+         *     ...
+          *       ....
+           *          ...
+            *         :  ...
+             *        :*    ...
+             *        : *      ...
+              *       :  **       ...
+               *      :    *         :*.
+                *     :     *        : **...
+                 *    :      *       :   *  ...
+                 *    :       *      :    *    ...
+                  *   :        *     :     **     .:.
+                   *  :         *    :       *     :**..
+                    * :          **  :        **   :  ****.
+                     *:            * :          *  :      ****
+        -----------  *:             *:           * :          ****
+          b1       ---*--------------*---         **:             ****
+                                         -----------*----------      .**
+                                                               -----------
+        x0            x1              x2                       x3
+
+    """
+    curves = []
+    for x0, x1 in pairwise(xs):
+        X = [x0, x1]
+        Y = [b0(x0), b1(x1)]
+        curve = bpf.util.makebpf(shape, X, Y)
+        curves.append(curve)
+    jointcurve = bpf.max_(*[c.outbound(0, 0) for c in curves])
+    return jointcurve
+
+
+def bpfavg(b: core.BpfInterface,
+           dx: float
+           ) -> core.BpfInterface:
+    """
+    Return a Bpf which is the average of b over the range `dx`
+    """
+    dx2 = dx/2
+    avg = ((b<<dx2)+b+(b>>dx2))/3.0
+    return avg[b.x0:b.x1]
