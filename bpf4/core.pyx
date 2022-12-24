@@ -414,7 +414,7 @@ ctypedef struct InterpolFunc:
     char *name
     unsigned int needs_free
 
-DTYPE = numpy.float #np.float64
+DTYPE = numpy.float64  #np.float64
 ctypedef c_numpy.float_t DTYPE_t
 
 # InterpolFunc
