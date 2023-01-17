@@ -37,9 +37,11 @@ setup(
     name = "bpf4",
     python_requires='>=3.9',
     ext_modules = [
-        Extension("bpf4.core", 
-        sources=["bpf4/core.pyx"], 
-        include_dirs=get_includes(), 
+        Extension(
+            "bpf4.core",
+            sources=["bpf4/core.pyx"],
+            include_dirs=get_includes()
+        )
     ],
     include_dirs = get_includes(),
     install_requires = ['numpy>=1.8', 'matplotlib', 'scipy'],
