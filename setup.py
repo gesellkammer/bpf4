@@ -19,7 +19,6 @@ def get_version():
 
 long_description = open('README.md').read()
     
-compiler_args = [] 
 versionstr = get_version()
 
 
@@ -37,17 +36,10 @@ def get_includes():
 setup(
     name = "bpf4",
     python_requires='>=3.9',
-    setup_requires = [
-        'setuptools>=18.0', 
-        'cython>=0.21', 
-        'numpy>=1.8',
-    ],
     ext_modules = [
         Extension("bpf4.core", 
         sources=["bpf4/core.pyx"], 
         include_dirs=get_includes(), 
-        extra_link_args=compiler_args, 
-        compiler_args=compiler_args),  
     ],
     include_dirs = get_includes(),
     install_requires = ['numpy>=1.8', 'matplotlib', 'scipy'],
@@ -63,7 +55,5 @@ setup(
     maintainer_email = '',
     long_description = long_description,
     long_description_content_type = 'text/markdown',
-    description = "Peace-wise interpolation and lazy evaluation in cython"
+    description = "Piece-wise interpolation and lazy evaluation in cython"
 )
-
-print("Version: %s" % versionstr)
