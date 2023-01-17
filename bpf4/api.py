@@ -581,6 +581,5 @@ def blendshape(shape0:str, shape1:str, mix, points) -> core.BpfInterface:
     a = makebpf(shape0, X, Y)
     b = makebpf(shape1, X, Y)
     return core.blend(a, b, mix)
-    # return core.BlendShape(X, Y, shape0, shape1, mix)
 
 

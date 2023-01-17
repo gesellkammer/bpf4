@@ -39,8 +39,6 @@ class Pchip(_NumpyInterp):
     Monotonic Piecewise Cubit Hermite interpolation, similar to matlab's pchip
     """
     def __init__(self, xs: np.ndarray, ys: np.ndarray):
-        # from . import wafointerpol
-        # interpolator = wafointerpol.Pchip(xs, ys)
         from scipy.interpolate import PchipInterpolator
         interpolator = PchipInterpolator(xs, ys)
         super().__init__(interpolator, xs, ys)
