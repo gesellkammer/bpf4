@@ -1099,6 +1099,7 @@ cdef class BpfInterface:
         Returns:
             (Sampled) The `Sampled` bpf, representing this bpf sampled at a grid of `[x0:x1:dx]`
             with the given interpolation
+
         """
         cdef int n = int((x1 - x0) / dx + 0.5) + 1
         ys = self.mapn_between(n, x0, x1)
@@ -2957,7 +2958,7 @@ cdef class Sampled(BpfInterface):
         """
         if self._cached_xs is not None:
             return self._cached_xs
-        self._cached_xs = numpy.linspace(self.grid_x0, self.grid_x1, self.samples_size, endpoint=False)
+        self._cached_xs = numpy.linspace(self.grid_x0, self.grid_x1, self.samples_size)
         return self._cached_xs
 
     def points(self):
