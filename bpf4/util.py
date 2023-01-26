@@ -776,6 +776,32 @@ def rms(bpf: core.BpfInterface, rmstime=0.1) -> core.BpfInterface:
     return asbpf(func, bounds=(bpf.x0, bpf.x1))
 
 
+def rmsbpf(samples: np.ndarray, sr:int, dt=0.01, overlap=1) -> core.Sampled:
+    """
+    Return a bpf representing the rms of the given samples as a function of time
+
+    Args:
+        samples: the audio samples
+        sr: the sample rate
+        dt: analysis time period
+        overlap: overlap of analysis frames
+
+    Returns:
+        a samples bpf
+    """
+    s = samples
+    period = int(sr * dt + 0.5)
+    hopsamps = period // overlap
+    dt2 = hopsamps / sr
+    numperiods = len(s) // hopsamps
+    data = np.empty((numperiods,), dtype=float)
+    for i in range(numperiods):
+        idx0 = i * hopsamps
+        chunk = s[idx0:idx0+period]
+        data[i] = rms(chunk)
+    return bpf4.core.Sampled(data, x0=0, dx=dt2)
+
+
 def calculate_projection(x0, x1, p0, p1):
     """
     Calculate a projection needed to map the interval x0:x1 to p0:p1
@@ -1027,7 +1053,57 @@ def bpfavg(b: core.BpfInterface,
            ) -> core.BpfInterface:
     """
     Return a Bpf which is the average of b over the range `dx`
+
+    Args:
+        b: the bpf
+        dx: the period to average *b* over
+
+    Returns:
+        a bpf representing the average of *b* along the bounds of
+        *b* over a sliding period of *dx*
     """
     dx2 = dx/2
     avg = ((b<<dx2)+b+(b>>dx2))/3.0
     return avg[b.x0:b.x1]
+
+
+def histbpf(b: core.BpfInterface, numbins=10, numsamples=200, interpolation='linear'
+            ) -> core.BpfInterface:
+    """
+    Create a historgram of *b*
+
+    Args:
+        b: the bpf
+        numbins: the number of bins
+        numsamples: how many samples to take to determine the histogram
+        interpolation: the kind of interpolation of the returned bpf
+
+    Returns:
+        a bpf representing the percentile associated with a given value of *b*
+        Percentiles are given between 0 and 1
+
+    Example
+    ~~~~~~~
+
+    >>> from sndfileio import *
+    >>> samples, sr = sndread("path/to/soundfile.wav")
+    >>> dbcurve = rmsbpf(samples, sr=sr).amp2db()
+    >>> dbhist = histbpf(dbcurve)
+    # Find the db percentile at a given time, this gives a measurement of the
+    # relative strength of the sound at a given moment
+    >>> dur = len(samples)/sr
+    >>> percentile = dbhist(dur*0.5)
+    0.312
+
+    This indicates that at the middle of the sound the amplitude is at percentile ~30
+
+    """
+    samples = b.map(numsamples)
+    edges, hist = np.histogram(b, bins=numbins)
+    percentile = np.linspace(0, 1, len(hist))
+    if interpolation == 'linear':
+        return core.Linear(hist, percentile)
+    elif interpolation == 'nointerpol':
+        return core.NoInterpol(hist, percentile)
+    else:
+        raise ValueError("Only 'linear' or 'nointerpol' are supported")
