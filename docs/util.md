@@ -39,7 +39,7 @@ is returned as is)
 
 ```python
 
-def binarymask(mask: Union[str, list[int]], durs: Sequence[float] = None, 
+def binarymask(mask: str | list[int], durs: Sequence[float] = None, 
                offset: float = 0.0, cycledurs: bool = True) -> core.NoInterpol
 
 ```
@@ -59,8 +59,8 @@ Creates a binary mask
 
 **Args**
 
-* **mask** (`Union[str, List[int]]`): a mask string ('x'=1, '-'=0) or a sequence
-    of states (a state is either 0 or 1)
+* **mask** (`str | list[int]`): a mask string ('x'=1, '-'=0) or a sequence of
+    states (a state is either 0 or 1)
 * **durs** (`Sequence[float]`): a sequence of durations (default=[1])
     (*default*: `None`)
 * **offset** (`float`):  (*default*: `0.0`)
@@ -245,6 +245,29 @@ Convert this bpf to json format.
 ---------
 
 
+## bpfavg
+
+
+```python
+
+def bpfavg(b: core.BpfInterface, dx: float) -> core.BpfInterface
+
+```
+
+
+Return a Bpf which is the average of b over the range `dx`
+
+
+
+**Args**
+
+* **b** (`core.BpfInterface`):
+* **dx** (`float`):
+
+
+---------
+
+
 ## calculate\_projection
 
 
@@ -290,7 +313,7 @@ Concatenate these bpfs together, one after the other
 
 **Args**
 
-* **bpfs** (`List[core.BpfInterface]`):
+* **bpfs** (`list[core.BpfInterface]`):
 
 
 ---------
@@ -555,7 +578,7 @@ Return a bpf representing the max over the given elements
 
 ```python
 
-def maximum(bpf: core.BpfInterface, N: int = 10) -> Optional[float]
+def maximum(bpf: core.BpfInterface, N: int = 10) -> float | None
 
 ```
 
@@ -571,7 +594,7 @@ return the x where bpf(x) is the maximum of bpf
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;(`Optional[float]`) is the maximum. Returns `None` if no maximum found
+&nbsp;&nbsp;&nbsp;&nbsp;(`float | None`) is the maximum. Returns `None` if no maximum found
 
 
 ---------
@@ -608,7 +631,7 @@ Return a bpf representing the min over elements
 
 ```python
 
-def minimum(bpf: core.BpfInterface, N: int = 10) -> Optional[float]
+def minimum(bpf: core.BpfInterface, N: int = 10) -> float | None
 
 ```
 
@@ -624,7 +647,7 @@ Find the x where bpf(x) is minimized
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;(`Optional[float]`) is minimized. Returns `None` if no minimum found
+&nbsp;&nbsp;&nbsp;&nbsp;(`float | None`) is minimized. Returns `None` if no minimum found
 
 
 ---------
@@ -655,7 +678,7 @@ and returns a tuple `(xs, ys, interpolations)`
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;(`Tuple[List[float], List[float], List[str]]`) a tuple (xs, ys, interpolations), where len(interpolations) == len(xs) - 1
+&nbsp;&nbsp;&nbsp;&nbsp;(`tuple[list[float], list[float], list[str]]`) a tuple (xs, ys, interpolations), where len(interpolations) == len(xs) - 1
 
 
 ---------
@@ -697,7 +720,7 @@ Result: [x0, x1, …], [y0, y1, …], {exp:0.5}
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;(`Tuple[List[float], List[float], dict]`) A tuple `(xs, ys, kws)`
+&nbsp;&nbsp;&nbsp;&nbsp;(`tuple[list[float], list[float], dict]`) A tuple `(xs, ys, kws)`
 
 
 ---------
@@ -767,8 +790,8 @@ For a fixed point, x2 == x
 
 ```python
 
-def randombw(bw: Union[float, core.BpfInterface], center: Union[float, 
-             core.BpfInterface]) -> core.BpfInterface
+def randombw(bw: float | core.BpfInterface, center: float | core.BpfInterface
+             ) -> core.BpfInterface
 
 ```
 
@@ -795,8 +818,8 @@ are calculated as needed. Sample it to freeze it to a known state.
 
 **Args**
 
-* **bw** (`Union[float, core.BpfInterface]`): a (time-varying) bandwidth
-* **center** (`Union[float, core.BpfInterface]`): the center of the random
+* **bw** (`float | core.BpfInterface`): a (time-varying) bandwidth
+* **center** (`float | core.BpfInterface`): the center of the random
     distribution
 
 **Returns**
@@ -1002,3 +1025,60 @@ _ = plt.hist(w.map(10000), bins=200, density=True)[2]
 **Returns**
 
 &nbsp;&nbsp;&nbsp;&nbsp;(`core.Sampled`) The warped bpf
+
+
+---------
+
+
+## zigzag
+
+
+```python
+
+def zigzag(b0: core.BpfInterface, b1: core.BpfInterface, xs: Sequence[float], 
+           shape: str = linear) -> core.BpfInterface
+
+```
+
+
+Creates a curve formed of lines from b0(x) to b1(x) for each x in xs
+
+
+::
+
+   *.
+    *...  b0
+     *  ...
+     *     ...
+      *       ....
+       *          ...
+        *         :  ...
+         *        :*    ...
+         *        : *      ...
+          *       :  **       ...
+           *      :    *         :*.
+            *     :     *        : **...
+             *    :      *       :   *  ...
+             *    :       *      :    *    ...
+              *   :        *     :     **     .:.
+               *  :         *    :       *     :**..
+                * :          **  :        **   :  ****.
+                 *:            * :          *  :      ****
+    -----------  *:             *:           * :          ****
+      b1       ---*--------------*---         **:             ****
+                                     -----------*----------      .**
+                                                           -----------
+    x0            x1              x2                       x3
+
+
+
+**Args**
+
+* **b0** (`core.BpfInterface`): a bpf
+* **b1** (`core.BpfInterface`): a bpf
+* **xs** (`Sequence[float]`): a seq. of x values to evaluate b0 and b1
+* **shape** (`str`): the shape of each segment (*default*: `linear`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`core.BpfInterface`) The resulting bpf

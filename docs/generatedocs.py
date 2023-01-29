@@ -26,7 +26,9 @@ def main(dest: Path):
     
     
 if __name__ == "__main__":
-    docsfolder = findRoot() / "docs"
+    root = findRoot()
+    docsfolder = root / "docs"
+    print("Documentation folder", docsfolder)
     assert docsfolder.exists()
     main(docsfolder)
     os.chdir(root)

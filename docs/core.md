@@ -1165,7 +1165,7 @@ BpfInterface.plot(self, kind=u'line', int n=-1, show=True, axes=None, **keys)
 ```
 
 
-Plot the bpf. Any key is passed to plot.plot_coords
+Plot the bpf using matplotlib.pyplot. Any key is passed to plot.plot_coords
 
 
 #### Example
