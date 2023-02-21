@@ -46,8 +46,8 @@ setup(
     include_dirs = get_includes(),
     install_requires = ['numpy>=1.8', 'matplotlib', 'scipy'],
     packages = ['bpf4'],
-    data_files=[('.', ['core.pyi'])],
-
+    package_data={'bpf4': ['core.pyi', 'py.typed']},
+    include_package_data=True,
     # metadata
     version          = versionstr,
     url              = 'https://github.com/gesellkammer/bpf4',
