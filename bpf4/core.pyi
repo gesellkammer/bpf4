@@ -1,4 +1,6 @@
 import numpy as np
+from typing import Union, Optional
+
 
 class BpfPointsError(ValueError): pass
 class BpfInversionError(ValueError): pass
@@ -135,7 +137,10 @@ class BpfInterface:
         
 class BpfBase(BpfInterface):
 
-    def __init__(self, xs: np.ndarray|list[float], ys: np.ndarray | list[float]): ...
+    def __init__(self,
+                 xs: Union[np.ndarray, list[float]],
+                 ys: Union[np.ndarray, list[float]]
+                 ): ...
         
     @property
     def descriptor(self) -> str: ... 
@@ -158,46 +163,84 @@ class BpfBase(BpfInterface):
 
 class Linear(BpfBase): 
 
+    def __init__(self,
+                 xs: Union[np.ndarray, list[float]],
+                 ys: Union[np.ndarray, list[float]]
+                 ): ...
+
+
     def inverted(self) -> Linear: ...
         
     def flatpairs(self) -> np.ndarray: ...
         
 
 class Smooth(BpfBase): ...
+    def __init__(self,
+                 xs: Union[np.ndarray, list[float]],
+                 ys: Union[np.ndarray, list[float]]
+                 ): ...
 
    
 class Smoother(BpfBase): ...
+    def __init__(self,
+                 xs: Union[np.ndarray, list[float]],
+                 ys: Union[np.ndarray, list[float]]
+                 ): ...
 
     
 class Halfcos(BpfBase):
-    def __init__(self, xs, ys, exp: float = 1.0, numiter: int =1): ...
+    def __init__(self,
+                 xs: Union[np.ndarray, list[float]],
+                 ys: Union[np.ndarray, list[float]],
+                 exp: float = 1.0, numiter: int =1): ...
     
 
 class Halfcosm(Halfcos):
-    def __init__(self, xs, ys, exp: float = 1.0, numiter: int =1): ...
+    def __init__(self,
+                 xs: Union[np.ndarray, list[float]],
+                 ys: Union[np.ndarray, list[float]],
+                 exp: float = 1.0, numiter: int =1): ...
 
-    
 
 class Expon(BpfBase):
-    def __init__(self, xs, ys, exp: float = 1.0, numiter: int =1): ...
+    def __init__(self,
+                 xs: Union[np.ndarray, list[float]],
+                 ys: Union[np.ndarray, list[float]],
+                 exp: float = 1.0, numiter: int =1): ...
 
 
 class Exponm(Expon):
-    def __init__(self, xs, ys, exp: float = 1.0, numiter: int =1): ...
+    def __init__(self,
+                 xs: Union[np.ndarray, list[float]],
+                 ys: Union[np.ndarray, list[float]],
+                 exp: float = 1.0, numiter: int =1): ...
 
 
 class NoInterpol(BpfBase): ...
+    def __init__(self,
+                 xs: Union[np.ndarray, list[float]],
+                 ys: Union[np.ndarray, list[float]]
+                 ): ...
 
     
 class Nearest(BpfBase): ...
+    def __init__(self,
+                 xs: Union[np.ndarray, list[float]],
+                 ys: Union[np.ndarray, list[float]]
+                 ): ...
 
 
 class Sampled(BpfInterface): 
+    def __init__(self,
+                 samples: np.ndarray,
+                 dx: float,
+                 x0: float = 0.,
+                 interpolation: str = 'linear'): ...
+
     @property
     def ys(self) -> np.ndarray: ...
     
-    def __init__(self, samples: np.ndarray, dx: float, x0: float = 0., interpolation: str = 'linear'): ...
-        
+
     @property
     def samplerate(self) -> float: ...
         
@@ -214,11 +257,20 @@ class Sampled(BpfInterface):
     def flatpairs(self) -> np.ndarray: ...
         
 
+
 class Spline(BpfInterface): ...
+    def __init__(self,
+                 xs: Union[np.ndarray, list[float]],
+                 ys: Union[np.ndarray, list[float]]
+                 ): ...
 
     
 
 class USpline(BpfInterface): ...
+    def __init__(self,
+                 xs: Union[np.ndarray, list[float]],
+                 ys: Union[np.ndarray, list[float]]
+                 ): ...
 
     
 class Slope(BpfInterface):
