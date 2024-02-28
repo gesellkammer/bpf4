@@ -992,7 +992,11 @@ cdef class BpfInterface:
                 otherwise an ad-hoc axes is created
             kws: any keyword will be passed to plot.plot_coords, which is passed
                 to ``axes.plot`` (or axes.bar, etc)
-                
+
+        Returns:
+        	the pyplot.Axes object. This will be the axes passed as argument,
+        	if given, or a new axes created for this plot
+        	 
         ## Example
 
         ```python
@@ -1008,7 +1012,7 @@ cdef class BpfInterface:
         """
         xs, ys = self._get_points_for_rendering(n)
         from . import plot
-        plot.plot_coords(xs, ys, kind=kind, show=show, axes=axes, **keys)
+        return plot.plot_coords(xs, ys, kind=kind, show=show, axes=axes, **keys)
         
     cpdef BpfInterface sampled(self, double dx, interpolation='linear'):
         """

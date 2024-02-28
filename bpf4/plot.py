@@ -5,18 +5,18 @@ import numpy as np
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import List, Sequence, Union
+    from typing import Sequence, Union
     from bpf4 import core
 
 
-def plot_coords(xs: Union[List[float], np.ndarray], 
-                ys: Union[List[float], np.ndarray], 
+def plot_coords(xs: Union[list[float], np.ndarray],
+                ys: Union[list[float], np.ndarray],
                 show:bool=None, 
                 kind='line', 
-                axes:plt.Axes=None, 
+                axes: plt.Axes = None,
                 figsize:tuple(float, float)=None,
                 **keys
-                ) -> None:
+                ) -> plt.Axes:
     """
     Plot the points defined by xs and ys
 
