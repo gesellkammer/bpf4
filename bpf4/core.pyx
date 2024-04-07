@@ -2104,8 +2104,8 @@ cdef class BpfBase(BpfInterface):
         """
         cdef int len_xs, len_ys
         cdef ndarray [DTYPE_t, ndim=1] _xs = numpy.ascontiguousarray(xs, DTYPE)
-        if _array_issorted(_xs) < 1:
-            raise BpfPointsError(f"Points along the x coord should be sorted without duplicates.\n xs:\n{xs}")
+        if _array_issorted(_xs) == -1:
+            raise BpfPointsError(f"Points along the x coord should be sorted\nxs: \n{xs}")
         cdef ndarray [DTYPE_t, ndim=1] _ys = numpy.ascontiguousarray(ys, DTYPE)
         len_xs = PyArray_DIM(_xs, 0)
         len_ys = PyArray_DIM(_ys, 0)
