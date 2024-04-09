@@ -7,6 +7,7 @@ import os as _os
 import itertools as _itertools
 from functools import reduce
 from typing import Sequence
+from math import isnan, sqrt
 
 import numpy as np
 from scipy.integrate import quad as _quad
@@ -769,14 +770,13 @@ def rms(bpf: core.BpfInterface, rmstime=0.1) -> core.BpfInterface:
         a bpf representing the rms of this bpf at any x coord
     """
     bpf2 = bpf**2
-    from math import sqrt
 
     def func(x):
         return sqrt(bpf2.integrate_between(x, x+rmstime) / rmstime)
     return asbpf(func, bounds=(bpf.x0, bpf.x1))
 
 
-def rmsbpf(samples: np.ndarray, sr:int, dt=0.01, overlap=1) -> core.Sampled:
+def rmsbpf(samples: np.ndarray, sr: int, dt=0.01, overlap=2, smoothen=0.) -> core.BpfInterface:
     """
     Return a bpf representing the rms of the given samples as a function of time
 
@@ -785,9 +785,11 @@ def rmsbpf(samples: np.ndarray, sr:int, dt=0.01, overlap=1) -> core.Sampled:
         sr: the sample rate
         dt: analysis time period
         overlap: overlap of analysis frames
+        smoothen: if given, the returned bpf is smoothen using the given value as window
 
     Returns:
-        a samples bpf
+        a sampled bpf if not smoothening operation is performed, or a linear
+        bpf if smoothening is required
     """
     s = samples
     period = int(sr * dt + 0.5)
@@ -798,8 +800,10 @@ def rmsbpf(samples: np.ndarray, sr:int, dt=0.01, overlap=1) -> core.Sampled:
     for i in range(numperiods):
         idx0 = i * hopsamps
         chunk = s[idx0:idx0+period]
-        data[i] = rms(chunk)
-    return bpf4.core.Sampled(data, x0=0, dx=dt2)
+        data[i] = sqrt(np.mean(np.square(chunk)))
+    out = bpf4.core.Sampled(data, x0=0, dx=dt2)
+    if smoothen:
+        out = smoothen(out, window=smoothen)
 
 
 def calculate_projection(x0, x1, p0, p1):
@@ -977,14 +981,15 @@ def smoothen(b: core.BpfInterface, window: float, N=1000, interpol='linear') -> 
     Returns:
         a bpf representing a smoother version of b
 
-    Example
-    ~~~~~~~
+    ## Example
 
-        >>> import bpf4 as bpf
-        >>> b = bpf.linear(0, 0, 0.1, 1, 0.2, 10, 0.3, 1, 0.5, 3, 0.8, -2)
-        >>> bsmooth = bpf.util.smoothen(b, window=0.05)
-        >>> axes = b.plot(show=False)
-        >>> bsmooth.plot(axes=axes)
+    ```python
+    >>> import bpf4 as bpf
+    >>> b = bpf.linear(0, 0, 0.1, 1, 0.2, 10, 0.3, 1, 0.5, 3, 0.8, -2)
+    >>> bsmooth = bpf.util.smoothen(b, window=0.05)
+    >>> axes = b.plot(show=False)
+    >>> bsmooth.plot(axes=axes)
+    ```
 
     ![](assets/smoothen.png)
 
@@ -1081,8 +1086,8 @@ def bpfavg(b: core.BpfInterface,
     return avg[b.x0:b.x1]
 
 
-def histbpf(b: core.BpfInterface, numbins=10, numsamples=200, interpolation='linear'
-            ) -> core.BpfInterface:
+def histbpf(b: core.BpfInterface, numbins=20, numsamples=400
+            ) -> core.Linear:
     """
     Create a historgram of *b*
 
@@ -1093,21 +1098,23 @@ def histbpf(b: core.BpfInterface, numbins=10, numsamples=200, interpolation='lin
         interpolation: the kind of interpolation of the returned bpf
 
     Returns:
-        a bpf representing the percentile associated with a given value of *b*
-        Percentiles are given between 0 and 1
+        a bpf mapping values to percentiles. The returned bpf can be inverted
+        (see example) to map percentiles to values
 
     Example
     ~~~~~~~
 
     >>> from sndfileio import *
+    >>> import bpf4
     >>> samples, sr = sndread("path/to/soundfile.wav")
-    >>> dbcurve = rmsbpf(samples, sr=sr).amp2db()
-    >>> dbhist = histbpf(dbcurve)
+    >>> dbcurve = bpf4.util.rmsbpf(samples, sr=sr).amp2db()
+    >>> dbval2hist = bpf4.util.histbpf(dbcurve)
     # Find the db percentile at a given time, this gives a measurement of the
     # relative strength of the sound at a given moment
     >>> dur = len(samples)/sr
-    >>> percentile = dbhist(dur*0.5)
-    0.312
+    >>> percentile = dbval2hist(dur*0.5)
+    0.312Z
+    >>> dbhist2val = dbval2hist.inverted()
 
     This indicates that at the middle of the sound the amplitude is at percentile ~30
 
@@ -1121,3 +1128,45 @@ def histbpf(b: core.BpfInterface, numbins=10, numsamples=200, interpolation='lin
         return core.NoInterpol(hist, percentile)
     else:
         raise ValueError("Only 'linear' or 'nointerpol' are supported")
+
+
+def split_fragments(b: core.BpfBase) -> list[core.BpfBase]:
+    """
+    Split a bpf into its fragments
+
+    A fragmented bpf is one with nan values, dividing the bpf
+    into fragments left and right from nan values. A fragment
+    must at least have two items
+
+    Args:
+        b: the bpf to split.
+
+    Returns:
+        a list of bpfs representing the fragments
+
+    ## Example
+
+    ```python
+
+    >>> a = bpf.linear(0, 0, 1, 10, 2, 5, 3, 30, 4, nan, 5, nan, 6, 0, 7, 1, 8, 0.5, 9, nan, 10, 2, 11, 3)
+    >>> split_fragments(a)
+    [Linear[0.0:3.0], Linear[6.0:8.0], Linear[10.0:11.0]]
+    ```
+    """
+    xs, ys = b.points()
+    parts = []
+    lastpart: list[tuple[float, float]] = None
+    for x, y in zip(xs, ys):
+        if not isnan(y):
+            if lastpart is None:
+                lastpart = []
+                parts.append(lastpart)
+            lastpart.append((x, y))
+        else:
+            lastpart = None
+    cls = b.__class__
+    bpfs = []
+    for part in parts:
+        xs, ys = zip(*part)
+        bpfs.append(cls(xs, ys))
+    return bpfs
