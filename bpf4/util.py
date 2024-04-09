@@ -986,7 +986,7 @@ def smoothen(b: core.BpfInterface, window: float, N=1000, interpol='linear') -> 
         >>> axes = b.plot(show=False)
         >>> bsmooth.plot(axes=axes)
 
-    .. image:: assets/smoothen.png
+    ![](assets/smoothen.png)
 
     """
     dx = min((b.x1 - b.x0) / N, window/7)
