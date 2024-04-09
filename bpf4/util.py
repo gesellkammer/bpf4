@@ -964,34 +964,48 @@ def blendwithceil(b, mix=0.5) -> core._BpfBlend:
     return core.blend(b, asbpf(b(maximum(b))), mix)[b.x0:b.x1]
     
 
-def smoothen(b: core.BpfInterface, window:int, N=1000, interpol='linear') -> core.BpfInterface:
+def smoothen(b: core.BpfInterface, window: float, N=1000, interpol='linear') -> core.BpfInterface:
     """
-    Return a linear bpf representing a smooth version of b
+    Return a bpf representing a smooth version of b
 
     Args:
         b: a bpf
         window: the width (in x coords) of the smoothing window
         N: number of points to resample the bpf
-        interpol: the interpolation to use. One of 'linear', 'smooth', 'halfcos'
+        interpol: the interpolation to use. One of 'linear' or 'smooth'
 
     Returns:
         a bpf representing a smoother version of b
+
+    Example
+    ~~~~~~~
+
+        >>> import bpf4 as bpf
+        >>> b = bpf.linear(0, 0, 0.1, 1, 0.2, 10, 0.3, 1, 0.5, 3, 0.8, -2)
+        >>> bsmooth = bpf.util.smoothen(b, window=0.05)
+        >>> axes = b.plot(show=False)
+        >>> bsmooth.plot(axes=axes)
+
+    .. image:: assets/smoothen.png
+
     """
     dx = min((b.x1 - b.x0) / N, window/7)
     nwin = int(window / dx)
     box = np.ones(nwin)/nwin
-    Y = b[::dx].ys
-    Y2 = np.convolve(Y, box, mode="same")
-    X = np.linspace(b.x0, b.x1, len(Y2))
+    Y0 = b[::dx].ys
+
+    Ypad = np.ones(shape=(nwin,), dtype='float') * Y0[-1]
+    Y = np.concatenate((Y0, Ypad))
+    Ysmooth = np.convolve(Y, box, mode="same")[:len(Y0)]
+    X = np.linspace(b.x0, b.x1, len(Ysmooth))
+
     if interpol == 'linear':
-        return core.Linear(X, Y2)
+        return core.Linear(X, Ysmooth)
     elif interpol == 'smooth':
-        return core.Smooth(X, Y2)
-    elif interpol == 'halfcos':
-        return core.Halfcos(X, Y2)
+        return core.Smooth(X, Ysmooth)
     else:
-        raise ValueError(f"Interpolation {interpol} not supported here. "
-                          "Possible values: linear, smooth, halfcos")
+        raise ValueError(f"Interpolation '{interpol}' not supported here. "
+                          "Possible values: linear, smooth")
 
 
 def zigzag(b0: core.BpfInterface,
