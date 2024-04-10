@@ -1168,5 +1168,7 @@ def split_fragments(b: core.BpfBase) -> list[core.BpfBase]:
     bpfs = []
     for part in parts:
         xs, ys = zip(*part)
-        bpfs.append(cls(xs, ys))
+        if len(xs) >= 2:
+            bpfs.append(cls(xs, ys))
     return bpfs
+
