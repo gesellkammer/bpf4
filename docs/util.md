@@ -11,8 +11,8 @@ Utilities for bpf4
 | :-------  | :----------- |
 | `asbpf` | Convert obj to a bpf |
 | `binarymask` | Creates a binary mask |
-| `blendwithceil` |  |
-| `blendwithfloor` |  |
+| `blendwithceil` | Returns a blend of b with its maximum y value |
+| `blendwithfloor` | Returns a blend of b with its minimum y value |
 | `bpf_to_csv` | Write this bpf as a csv representation |
 | `bpf_to_dict` | convert a bpf to a dict with the following format |
 | `bpf_to_json` | convert this bpf to json format. |
@@ -39,7 +39,8 @@ Utilities for bpf4
 | `rms` | The rms of this bpf |
 | `rmsbpf` | Return a bpf representing the rms of the given samples as a function of time |
 | `select` | Create a new bpf which interpolates between adjacent bpfs given |
-| `smoothen` | Return a linear bpf representing a smooth version of b |
+| `smoothen` | Return a bpf representing a smooth version of b |
+| `split_fragments` | Split a bpf into its fragments |
 | `sum_` | Return a bpf representing the sum of elements |
 | `warped` | Represents the curvature of a linear space. |
 | `zigzag` | Creates a curve formed of lines from b0(x) to b1(x) for each x in xs |
@@ -126,6 +127,9 @@ def blendwithceil(b, mix: float = 0.5) -> core._BpfBlend
 ```
 
 
+Returns a blend of b with its maximum y value
+
+
 
 **Args**
 
@@ -144,6 +148,9 @@ def blendwithceil(b, mix: float = 0.5) -> core._BpfBlend
 def blendwithfloor(b: core.BpfInterface, mix: float = 0.5) -> core._BpfBlend
 
 ```
+
+
+Returns a blend of b with its minimum y value
 
 
 
@@ -494,8 +501,8 @@ The bpf can then be reconstructed via `loadbpf`
 
 ```python
 
-def histbpf(b: core.BpfInterface, numbins: int = 10, numsamples: int = 200, 
-            interpolation: str = linear) -> core.BpfInterface
+def histbpf(b: core.BpfInterface, numbins: int = 20, numsamples: int = 400
+            ) -> core.Linear
 
 ```
 
@@ -503,18 +510,23 @@ def histbpf(b: core.BpfInterface, numbins: int = 10, numsamples: int = 200,
 Create a historgram of *b*
 
 
-Example
-~~~~~~~
+### Example
+
+```python
 
 >>> from sndfileio import *
+>>> import bpf4
 >>> samples, sr = sndread("path/to/soundfile.wav")
->>> dbcurve = rmsbpf(samples, sr=sr).amp2db()
->>> dbhist = histbpf(dbcurve)
-### Find the db percentile at a given time, this gives a measurement of the
-### relative strength of the sound at a given moment
+>>> dbcurve = bpf4.util.rmsbpf(samples, sr=sr).amp2db()
+>>> dbval2hist = bpf4.util.histbpf(dbcurve)
+# Find the db percentile at a given time, this gives a measurement of the
+# relative strength of the sound at a given moment
 >>> dur = len(samples)/sr
->>> percentile = dbhist(dur*0.5)
-0.312
+>>> percentile = dbval2hist(dur*0.5)
+0.312Z
+>>> dbhist2val = dbval2hist.inverted()
+
+```
 
 This indicates that at the middle of the sound the amplitude is at percentile ~30
 
@@ -523,15 +535,13 @@ This indicates that at the middle of the sound the amplitude is at percentile ~3
 **Args**
 
 * **b** (`core.BpfInterface`): the bpf
-* **numbins** (`int`): the number of bins (*default*: `10`)
+* **numbins** (`int`): the number of bins (*default*: `20`)
 * **numsamples** (`int`): how many samples to take to determine the histogram
-    (*default*: `200`)
-* **interpolation** (`str`): the kind of interpolation of the returned bpf
-    (*default*: `linear`)
+    (*default*: `400`)
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;(`core.BpfInterface`) a bpf representing the percentile associated with a given value of *b* Percentiles are given between 0 and 1
+&nbsp;&nbsp;&nbsp;&nbsp;(`core.Linear`) a bpf mapping values to percentiles. The returned bpf can be inverted (see example) to map percentiles to values
 
 
 ---------
@@ -896,8 +906,10 @@ Create a random bpf
 if randombw is 0.1 and center is 1, the bpf will render values 
 between 0.95 and 1.05
 
-**NB**: this bpf will always be different, since the random numbers
-are calculated as needed. Sample it to freeze it to a known state.
+!!! note
+
+    This bpf will always be different, since the random numbers
+    are calculated as needed. Sample it to freeze it to a known state.
 
 **Example**
 
@@ -956,8 +968,8 @@ The rms of this bpf
 
 ```python
 
-def rmsbpf(samples: np.ndarray, sr: int, dt: float = 0.01, overlap: int = 1
-           ) -> core.Sampled
+def rmsbpf(samples: np.ndarray, sr: int, dt: float = 0.01, overlap: int = 2, 
+           smoothen: float = 0.0) -> core.BpfInterface
 
 ```
 
@@ -971,11 +983,13 @@ Return a bpf representing the rms of the given samples as a function of time
 * **samples** (`np.ndarray`): the audio samples
 * **sr** (`int`): the sample rate
 * **dt** (`float`): analysis time period (*default*: `0.01`)
-* **overlap** (`int`): overlap of analysis frames (*default*: `1`)
+* **overlap** (`int`): overlap of analysis frames (*default*: `2`)
+* **smoothen** (`float`): if given, the returned bpf is smoothen using the given
+    value as window (*default*: `0.0`)
 
 **Returns**
 
-&nbsp;&nbsp;&nbsp;&nbsp;(`core.Sampled`) a samples bpf
+&nbsp;&nbsp;&nbsp;&nbsp;(`core.BpfInterface`) a sampled bpf if not smoothening operation is performed, or a linear bpf if smoothening is required
 
 
 ---------
@@ -1029,27 +1043,80 @@ Create a new bpf which interpolates between adjacent bpfs given
 
 ```python
 
-def smoothen(b: core.BpfInterface, window: int, N: int = 1000, 
+def smoothen(b: core.BpfInterface, window: float, N: int = 1000, 
              interpol: str = linear) -> core.BpfInterface
 
 ```
 
 
-Return a linear bpf representing a smooth version of b
+Return a bpf representing a smooth version of b
+
+
+### Example
+
+```python
+>>> import bpf4 as bpf
+>>> b = bpf.linear(0, 0, 0.1, 1, 0.2, 10, 0.3, 1, 0.5, 3, 0.8, -2)
+>>> bsmooth = bpf.util.smoothen(b, window=0.05)
+>>> axes = b.plot(show=False)
+>>> bsmooth.plot(axes=axes)
+```
+
+![](assets/smoothen.png)
 
 
 
 **Args**
 
 * **b** (`core.BpfInterface`): a bpf
-* **window** (`int`): the width (in x coords) of the smoothing window
+* **window** (`float`): the width (in x coords) of the smoothing window
 * **N** (`int`): number of points to resample the bpf (*default*: `1000`)
-* **interpol** (`str`): the interpolation to use. One of 'linear', 'smooth',
-    'halfcos' (*default*: `linear`)
+* **interpol** (`str`): the interpolation to use. One of 'linear' or 'smooth'
+    (*default*: `linear`)
 
 **Returns**
 
 &nbsp;&nbsp;&nbsp;&nbsp;(`core.BpfInterface`) a bpf representing a smoother version of b
+
+
+---------
+
+
+## split\_fragments
+
+
+```python
+
+def split_fragments(b: core.BpfBase) -> list[core.BpfBase]
+
+```
+
+
+Split a bpf into its fragments
+
+
+A fragmented bpf is one with nan values, dividing the bpf
+into fragments left and right from nan values. A fragment
+must at least have two items
+
+### Example
+
+```python
+
+>>> a = bpf.linear(0, 0, 1, 10, 2, 5, 3, 30, 4, nan, 5, nan, 6, 0, 7, 1, 8, 0.5, 9, nan, 10, 2, 11, 3)
+>>> split_fragments(a)
+[Linear[0.0:3.0], Linear[6.0:8.0], Linear[10.0:11.0]]
+```
+
+
+
+**Args**
+
+* **b** (`core.BpfBase`): the bpf to split.
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`list[core.BpfBase]`) a list of bpfs representing the fragments
 
 
 ---------
@@ -1168,7 +1235,7 @@ def zigzag(b0: core.BpfInterface, b1: core.BpfInterface, xs: Sequence[float],
 Creates a curve formed of lines from b0(x) to b1(x) for each x in xs
 
 
-::
+```
 
    *.
     *...  b0
@@ -1193,6 +1260,8 @@ Creates a curve formed of lines from b0(x) to b1(x) for each x in xs
                                      -----------*----------      .**
                                                            -----------
     x0            x1              x2                       x3
+
+```
 
 
 

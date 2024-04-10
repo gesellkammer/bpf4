@@ -10,7 +10,7 @@
 | `BpfInterface` | Base class for all Break-Point Functions |
 | `BpfInversionError` |  |
 | `BpfPointsError` |  |
-| `Const` | Const(double value, bounds: tuple[float, float] = None) |
+| `Const` | Const(double value, tuple bounds: tuple[float, float] = None) |
 | `Expon` | Expon(xs, ys, double exp, int numiter=1) |
 | `Exponm` | Exponm(xs, ys, double exp, int numiter=1) |
 | `Halfcos` | Halfcos(xs, ys, double exp=1.0, int numiter=1) |
@@ -71,8 +71,10 @@ Base class for all Break-Point Functions
 
 | Property  | Description  |
 | :-------- | :----------- |
-| x0 | The lower bound of the x coordinate |
-| x1 | The upper bound of the x coordinate |
+| x0 | BpfInterface.x0: float
+The lower bound of the x coordinate |
+| x1 | BpfInterface.x1: float
+The upper bound of the x coordinate |
 
 
 | Method  | Description  |
@@ -95,7 +97,7 @@ Base class for all Break-Point Functions
 | [f2m](#f2m) | Returns a bpf converting frequencies to midinotes |
 | [fit_between](#fit_between) | Returns a view of this bpf fitted within the interval `x0:x1` |
 | [floor](#floor) | Returns a bpf representing the floor of this bpf |
-| [fromseq](#fromseq) | BpfInterface.fromseq(type cls, *points, **kws) |
+| [fromseq](#fromseq) | BpfInterface.fromseq(cls, *points, **kws) |
 | [integrate](#integrate) | Return the result of the integration of this bpf. |
 | [integrate_between](#integrate_between) | Integrate this bpf between x0 and x1 |
 | [integrated](#integrated) | Return a bpf representing the integration of this bpf at a given point |
@@ -135,8 +137,8 @@ Base class for all Break-Point Functions
 
 **Attributes**
 
-* **x0**: The lower bound of the x coordinate
-* **x1**: The upper bound of the x coordinate
+* **x0**: BpfInterface.x0: float The lower bound of the x coordinate
+* **x1**: BpfInterface.x1: float The upper bound of the x coordinate
 
 
 ---------
@@ -339,8 +341,8 @@ array([0.        , 0.        , 0.        , 0.        , 0.        ,
 
 **Args**
 
-* **y0** (`float`): the min. *y* value
-* **y1** (`float`): the max. *y* value
+* **y0** (`float`): the min. *y* value (*default*: `-inf`)
+* **y1** (`float`): the max. *y* value (*default*: `inf`)
 
 **Returns**
 
@@ -678,7 +680,7 @@ def fromseq(points: ndarray | list[float], kws) -> BpfBase
 ```
 
 
-BpfInterface.fromseq(type cls, *points, **kws)
+BpfInterface.fromseq(cls, *points, **kws)
 
 
 A helper constructor with points given as tuples or as a flat sequence. 
@@ -763,7 +765,7 @@ Integrate this bpf between x0 and x1
 
 * **x0**: start x of the integration range
 * **x1**: end x of the integration range
-* **N**: number of intervals to use for integration
+* **N** (`int`): number of intervals to use for integration (*default*: `0`)
 
 **Returns**
 
@@ -874,7 +876,7 @@ a.plot(color="black", linewidth=3)
 **Args**
 
 * **epsilon** (`float`): an epsilon value to use when deriving the         this
-    bpf to calculate its slope
+    bpf to calculate its slope (*default*: `0.0001`)
 
 **Returns**
 
@@ -898,7 +900,7 @@ Returns a bpf representing the log of this bpf
 
 **Args**
 
-* **base** (`float`): the base of the log
+* **base** (`float`): the base of the log (*default*: `2.718281828459045`)
 
 **Returns**
 
@@ -991,7 +993,7 @@ bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
     evenly spaced grid between the bounds of this bpf
 * **out** (`ndarray`): if given, an attempt will be done to use it as
     destination         for the result. The user should not trust that this
-    actually happens         (see example)
+    actually happens         (see example) (*default*: `None`)
 
 ----------
 
@@ -1026,7 +1028,7 @@ out = thisbpf.mapn_between(100, 0, 10, out)
 * **n**:
 * **x0** (`float`): lower bound to map this bpf
 * **x1** (`float`): upper bound to map this bpf
-* **out** (`ndarray`): if included, results are placed here.
+* **out** (`ndarray`): if included, results are placed here. (*default*: `None`)
 
 **Returns**
 
@@ -1293,15 +1295,20 @@ a.plot(axes=ax)
 
 **Args**
 
-* **kind** (`str`): one of 'line', 'bar'
-* **n** (`int`): the number of points to plot
+* **kind** (`str`): one of 'line', 'bar' (*default*: `line`)
+* **n** (`int`): the number of points to plot (*default*: `-1`)
 * **show** (`bool`): if the plot should be shown immediately after (default is
     True).         If you want to display multiple BPFs sharing an axes you can
     call          plot on each of the bpfs with show=False, and then either
-    call the last one with plot=True or call bpf4.plot.show().
+    call the last one with plot=True or call bpf4.plot.show(). (*default*:
+    `True`)
 * **axes** (`matplotlib.pyplot.Axes`): if given, will be used to plot onto it,
-    otherwise an ad-hoc axes is created
+    otherwise an ad-hoc axes is created (*default*: `None`)
 * **keys**:
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;the pyplot.Axes object. This will be the axes passed as argument, if given, or a new axes created for this plot
 
 ----------
 
@@ -1414,7 +1421,7 @@ Sampled[0.0:12.566370614359172]
     bpf is returned depending on the `interpolation` parameter (see below).
     In the second case a `Sampled` bpf is returned.
 * **interpolation** (`str`): the interpoltation type of the returned bpf.
-    One of 'linear', 'nointerpol'
+    One of 'linear', 'nointerpol' (*default*: `linear`)
 
 **Returns**
 
@@ -1478,7 +1485,7 @@ This is the same as `a.mapn_between(11, 0, 10)`
 * **x1** (`float`): point to stop sampling (included)
 * **dx** (`float`): the sampling period
 * **out** (`ndarray`): if given, the result will be placed here and no new array
-    will         be allocated
+    will         be allocated (*default*: `None`)
 
 **Returns**
 
@@ -1525,7 +1532,7 @@ bpf[:10:0.1]  # samples this bpf between (x0, 10) at a dx of 0.1
 * **dx** (`float`): the sample interval
 * **interpolation** (`str`): the interpolation kind. One of 'linear',
     'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
-    exponential passed to the interpolation function)
+    exponential passed to the interpolation function) (*default*: `linear`)
 
 **Returns**
 
@@ -1557,7 +1564,8 @@ Sample a portion of this bpf, returns a `Sampled` bpf
 * **dx** (`float`): the sampling period
 * **interpolation** (`str`): the interpolation kind. One of 'linear',
     'nointerpol', 'halfcos', 'expon(XX)', 'halfcos(XX)' (where         XX is an
-    exponential passed to the interpolation function). For
+    exponential passed to the interpolation function). For  (*default*:
+    `linear`)
 
 **Returns**
 
@@ -1687,7 +1695,7 @@ Stretch the shape of the bpf, but preserve the start position
 **Args**
 
 * **rx** (`float`): the stretch factor
-* **fixpoint** (`float`): the point to use as reference
+* **fixpoint** (`float`): the point to use as reference (*default*: `0.0`)
 
 **Returns**
 
@@ -1758,16 +1766,17 @@ Find the zeros of this bpf
 
 **Args**
 
-* **h**: the accuracy to scan for zero-crossings. If two zeros are within
-    this distance, they will be resolved as one.
-* **N**: alternatively, you can give the number of intervals to scan.         h
-    will be derived from this
-* **x0**: the point to start searching. If not given, the starting point of this
-    bpf         will be used
-* **x1**: the point to stop searching. If not given, the end point of this bpf
-    is used
-* **maxzeros**: if > 0, stop the search when this number of zeros have been
-    found
+* **h** (`float`): the accuracy to scan for zero-crossings. If two zeros are
+    within         this distance, they will be resolved as one. (*default*:
+    `0.01`)
+* **N** (`int`): alternatively, you can give the number of intervals to scan.
+    h will be derived from this (*default*: `0`)
+* **x0** (`float`): the point to start searching. If not given, the starting
+    point of this bpf         will be used (*default*: `nan`)
+* **x1** (`float`): the point to stop searching. If not given, the end point of
+    this bpf is used (*default*: `nan`)
+* **maxzeros** (`int`): if > 0, stop the search when this number of zeros have
+    been found (*default*: `0`)
 
 **Returns**
 
@@ -1800,8 +1809,12 @@ BpfBase(xs, ys)
 
 | Property  | Description  |
 | :-------- | :----------- |
-| descriptor | A string describing the interpolation function of this bpf |
-| exp | The exponential of the interpolation function of this bpf |
+| descriptor | BpfBase.descriptor: str
+
+        A string describing the interpolation function of this bpf |
+| exp | BpfBase.exp: float
+
+        The exponential of the interpolation function of this bpf |
 
 
 | Method  | Description  |
@@ -1823,8 +1836,10 @@ BpfBase(xs, ys)
 
 **Attributes**
 
-* **descriptor**: A string describing the interpolation function of this bpf
-* **exp**: The exponential of the interpolation function of this bpf
+* **descriptor**: BpfBase.descriptor: str          A string describing the
+  interpolation function of this bpf
+* **exp**: BpfBase.exp: float          The exponential of the interpolation
+  function of this bpf
 
 
 ---------
@@ -1917,7 +1932,7 @@ Return **a copy** of this bpf with the point `(x, y)` inserted
 
 ```python
 
-def mapn_between(self, n, xstart, xend, out) -> None
+def mapn_between(self, n, xstart, xend, out=None) -> None
 
 ```
 
@@ -1931,7 +1946,7 @@ BpfBase.mapn_between(self, int n, double xstart, double xend, ndarray out=None) 
 * **n**:
 * **xstart**:
 * **xend**:
-* **out**:
+* **out**:  (*default*: `None`)
 
 ----------
 
@@ -2479,7 +2494,7 @@ Integrate this bpf between the given x coords
 
 * **x0** (`float`): start of integration
 * **x1** (`float`): end of integration
-* **N** (`int`): number of integration steps
+* **N** (`int`): number of integration steps (*default*: `0`)
 
 **Returns**
 
@@ -2803,7 +2818,7 @@ b.plot(axes=axes[1])
 
 ```python
 
-Const(double value, bounds: tuple[float, float] = None)
+Const(double value, tuple bounds: tuple[float, float] = None)
 
 ```
 
@@ -2854,7 +2869,7 @@ def __init__(value: float) -> None
 
 ```python
 
-def mapn_between(self, n, x0, x1, out) -> None
+def mapn_between(self, n, x0, x1, out=None) -> None
 
 ```
 
@@ -2868,7 +2883,7 @@ Const.mapn_between(self, int n, double x0, double x1, ndarray out=None) -> ndarr
 * **n**:
 * **x0**:
 * **x1**:
-* **out**:
+* **out**:  (*default*: `None`)
 
 
 
@@ -2999,10 +3014,16 @@ a given function: linear, expon(x), halfcos, halfcos(x), etc.
 
 | Property  | Description  |
 | :-------- | :----------- |
-| dx | The sampling period (delta x) |
+| dx | Sampled.dx: float
+
+        The sampling period (delta x) |
 | interpolation | - |
-| samplerate | The samplerate of this bpf |
-| xs | The x-coord array of this bpf |
+| samplerate | Sampled.samplerate: float
+
+        The samplerate of this bpf |
+| xs | Sampled.xs: numpy.ndarray
+
+        The x-coord array of this bpf |
 | ys | - |
 
 
@@ -3025,10 +3046,10 @@ a given function: linear, expon(x), halfcos, halfcos(x), etc.
 
 **Attributes**
 
-* **dx**: The sampling period (delta x)
+* **dx**: Sampled.dx: float          The sampling period (delta x)
 * **interpolation**
-* **samplerate**: The samplerate of this bpf
-* **xs**: The x-coord array of this bpf
+* **samplerate**: Sampled.samplerate: float          The samplerate of this bpf
+* **xs**: Sampled.xs: numpy.ndarray          The x-coord array of this bpf
 * **ys**
 
 
@@ -3171,7 +3192,7 @@ It is effectively the same as `bpf[x0:x1].integrate()`, but more efficient
 
 * **x0**:
 * **x1**:
-* **N**:
+* **N** (`int`):  (*default*: `0`)
 
 ----------
 
@@ -3232,7 +3253,7 @@ The x coordinates at which this bpf is evaluated are equivalent to `linspace(xst
 * **n** (`int`): the number of elements to generate
 * **x0** (`float`): x to start mapping
 * **x1** (`float`): x to end mapping
-* **out** (`ndarray`): if given, result is put here
+* **out** (`ndarray`): if given, result is put here (*default*: `None`)
 
 **Returns**
 
@@ -3436,7 +3457,7 @@ The x coordinates at which this bpf is evaluated are equivalent to `linspace(x0,
 * **n** (`int`): the number of elements to generate
 * **x0** (`float`): x to start mapping
 * **x1** (`float`): x to end mapping
-* **out** (`ndarray`): if given, result is put here
+* **out** (`ndarray`): if given, result is put here (*default*: `None`)
 
 **Returns**
 
@@ -3655,7 +3676,7 @@ def __init__(xs: ndarray, ys: ndarray) -> None
 
 ```python
 
-def map(self, xs, out) -> None
+def map(self, xs, out=None) -> None
 
 ```
 
@@ -3667,7 +3688,7 @@ USpline.map(self, xs, ndarray out=None) -> ndarray
 **Args**
 
 * **xs**:
-* **out**:
+* **out**:  (*default*: `None`)
 
 ----------
 
@@ -3693,7 +3714,7 @@ The x coordinates at which this bpf is evaluated are equivalent to `linspace(x0,
 * **n** (`int`): the number of elements to generate
 * **x0** (`float`): x to start mapping
 * **x1** (`float`): x to end mapping
-* **out** (`ndarray`): if given, result is put here
+* **out** (`ndarray`): if given, result is put here (*default*: `None`)
 
 **Returns**
 
@@ -3941,8 +3962,8 @@ c.plot(color="green")
 
 * **a** (`BpfInterface`): first bpf
 * **b** (`BpfInterface`): second bpf
-* **mix** (`float | BpfInterface`): how to mix the bpfs. Can be fixed or
-    itself a bpf (or any function) returning a value between 0-1
+* **mix** (`float`): how to mix the bpfs. Can be fixed or         itself a bpf
+    (or any function) returning a value between 0-1  (*default*: `0.5`)
 
 **Returns**
 
@@ -3970,13 +3991,14 @@ Return the zeros if b in the interval defined
 
 * **b** (`BpfInterface`): a bpf
 * **h** (`float`): the interval to scan for zeros. for each interval only one
-    zero will be found
+    zero will be found (*default*: `0.01`)
 * **N** (`int`): alternatively you can give the number of intervals to scan. *h*
     will be calculated         from *N* (the *h* parameter is not used)
-* **x0** (`float`): If given, the bounds to search within
-* **x1** (`float`): If given, the bounds to search within
+    (*default*: `0`)
+* **x0** (`float`): If given, the bounds to search within (*default*: `nan`)
+* **x1** (`float`): If given, the bounds to search within (*default*: `nan`)
 * **maxzeros** (`int`): if given, search will stop if this number of zeros is
-    found
+    found (*default*: `0`)
 
 **Returns**
 

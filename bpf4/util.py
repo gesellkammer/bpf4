@@ -944,8 +944,10 @@ def randombw(bw: float | core.BpfInterface,
     if randombw is 0.1 and center is 1, the bpf will render values 
     between 0.95 and 1.05
 
-    **NB**: this bpf will always be different, since the random numbers
-    are calculated as needed. Sample it to freeze it to a known state.
+    !!! note
+
+        This bpf will always be different, since the random numbers
+        are calculated as needed. Sample it to freeze it to a known state.
 
     **Example**
     
@@ -961,10 +963,16 @@ def randombw(bw: float | core.BpfInterface,
     
 
 def blendwithfloor(b: core.BpfInterface, mix=0.5) -> core._BpfBlend:
-    return core.blend(b, asbpf(b(maximum(b))), mix)[b.x0:b.x1]
+    """
+    Returns a blend of b with its minimum y value
+    """
+    return core.blend(b, asbpf(b(minimum(b))), mix)[b.x0:b.x1]
     
     
 def blendwithceil(b, mix=0.5) -> core._BpfBlend:
+    """
+    Returns a blend of b with its maximum y value
+    """
     return core.blend(b, asbpf(b(maximum(b))), mix)[b.x0:b.x1]
     
 
@@ -1030,7 +1038,7 @@ def zigzag(b0: core.BpfInterface,
     Returns:
         The resulting bpf
 
-    ::
+    ```
 
        *.
         *...  b0
@@ -1056,6 +1064,7 @@ def zigzag(b0: core.BpfInterface,
                                                                -----------
         x0            x1              x2                       x3
 
+    ```
     """
     curves = []
     for x0, x1 in pairwise(xs):
@@ -1101,8 +1110,9 @@ def histbpf(b: core.BpfInterface, numbins=20, numsamples=400
         a bpf mapping values to percentiles. The returned bpf can be inverted
         (see example) to map percentiles to values
 
-    Example
-    ~~~~~~~
+    ## Example
+
+    ```python
 
     >>> from sndfileio import *
     >>> import bpf4
@@ -1115,6 +1125,8 @@ def histbpf(b: core.BpfInterface, numbins=20, numsamples=400
     >>> percentile = dbval2hist(dur*0.5)
     0.312Z
     >>> dbhist2val = dbval2hist.inverted()
+
+    ```
 
     This indicates that at the middle of the sound the amplitude is at percentile ~30
 

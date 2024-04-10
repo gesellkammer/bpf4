@@ -9,3 +9,4 @@ __pycache__
 *.so
 wheelhouse
 site
+*.kate*
