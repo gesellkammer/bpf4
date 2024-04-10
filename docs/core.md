@@ -4,8 +4,45 @@
 ---------
 
 
-## BpfInterface
+| Class  | Description  |
+| :----  | :----------- |
+| `BpfBase` | BpfBase(xs, ys) |
+| `BpfInterface` | Base class for all Break-Point Functions |
+| `BpfInversionError` |  |
+| `BpfPointsError` |  |
+| `Const` | Const(double value, bounds: tuple[float, float] = None) |
+| `Expon` | Expon(xs, ys, double exp, int numiter=1) |
+| `Exponm` | Exponm(xs, ys, double exp, int numiter=1) |
+| `Halfcos` | Halfcos(xs, ys, double exp=1.0, int numiter=1) |
+| `HalfcosExp` | Halfcos(xs, ys, double exp=1.0, int numiter=1) |
+| `Halfcosm` | Halfcosm(xs, ys, double exp=1.0, int numiter=1) |
+| `Linear` | Linear(xs, ys) |
+| `Max` | Max(*bpfs) |
+| `Min` | Min(*bpfs) |
+| `Multi` | Multi(xs, ys, interpolations) |
+| `Nearest` | Nearest(xs, ys) |
+| `NoInterpol` | NoInterpol(xs, ys) |
+| `Sampled` | Sampled(samples, double dx, double x0=0, unicode interpolation=u'linear') |
+| `Slope` | Slope(double slope, double offset=0, tuple bounds=None) |
+| `Smooth` | Smooth(xs, ys, int numiter=1) |
+| `Smoother` | Smoother(xs, ys) |
+| `Spline` | Spline(xs, ys) |
+| `Stack` | Stack(bpfs) |
+| `USpline` | USpline(xs, ys) |
 
+| Function  | Description  |
+| :-------  | :----------- |
+| `blend` | Blend these BPFs |
+| `bpf_zero_crossings` | Return the zeros if b in the interval defined |
+| `brentq` | Calculate the zero of `bpf + x0` in the interval `(xa, xb)` using brentq algorithm |
+| `setA4` | Set the reference freq used |
+
+
+
+---------
+
+
+## BpfInterface
 ### 
 
 
@@ -22,12 +59,83 @@ Base class for all Break-Point Functions
 !!! note
 
     BpfInterace is an abstract class. It is not possible to create 
-    an instance of it. 
+    an instance of it.
+
+
+---------
+
+
+**Summary**
+
+
+
+| Property  | Description  |
+| :-------- | :----------- |
+| x0 | The lower bound of the x coordinate |
+| x1 | The upper bound of the x coordinate |
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [abs](#abs) | Returns a bpf representing the absolute value of this bpf |
+| [acos](#acos) | Returns a bpf representing the arc cosine of this bpf |
+| [amp2db](#amp2db) | Returns a bpf converting linear amplitudes to decibels |
+| [apply](#apply) | Create a bpf where `func` is applied to the result of this pdf |
+| [asin](#asin) | Returns a bpf representing the arc sine of this bpf |
+| [bounds](#bounds) | Returns a tuple (xstart, xend) representing the bounds of this bpf |
+| [ceil](#ceil) | Returns a bpf representing the ceil of this bpf |
+| [clip](#clip) | Return a bpf clipping the result between y0 and y1 |
+| [concat](#concat) | Concatenate this bpf to other |
+| [copy](#copy) | Create a copy of this bpf |
+| [cos](#cos) | Returns a bpf representing the cosine of this bpf |
+| [db2amp](#db2amp) | Returns a bpf converting decibels to linear amplitudes |
+| [derivative](#derivative) | Create a curve which represents the derivative of this curve |
+| [dxton](#dxton) | Split the bounds of this bpf according to a given sampling period *dx* |
+| [expon](#expon) | Returns a bpf representing the exp operation with this bpf |
+| [f2m](#f2m) | Returns a bpf converting frequencies to midinotes |
+| [fit_between](#fit_between) | Returns a view of this bpf fitted within the interval `x0:x1` |
+| [floor](#floor) | Returns a bpf representing the floor of this bpf |
+| [fromseq](#fromseq) | BpfInterface.fromseq(type cls, *points, **kws) |
+| [integrate](#integrate) | Return the result of the integration of this bpf. |
+| [integrate_between](#integrate_between) | Integrate this bpf between x0 and x1 |
+| [integrated](#integrated) | Return a bpf representing the integration of this bpf at a given point |
+| [inverted](#inverted) | Return a view on this bpf with the coords inverted |
+| [keep_slope](#keep_slope) | A view of this bpf where the slope is continued outside its bounds |
+| [log](#log) | Returns a bpf representing the log of this bpf |
+| [log10](#log10) | Returns a bpf representing the log10 of this bpf |
+| [m2f](#m2f) | Returns a bpf converting from midinotes to frequency |
+| [map](#map) | The same as map(self, xs) but faster |
+| [mapn_between](#mapn_between) | Calculate an array of `n` values representing this bpf between `x0` and `x1` |
+| [max](#max) | Returns a bpf representing `max(self, b)` |
+| [mean](#mean) | Calculate the mean value of this bpf. |
+| [min](#min) | Returns a bpf representing `min(self, b)` |
+| [ntodx](#ntodx) | Calculate the sampling period `dx` |
+| [outbound](#outbound) | Return a new Bpf with the given values outside the bounds |
+| [periodic](#periodic) | Create a new bpf which replicates this in a periodic way |
+| [plot](#plot) | Plot the bpf using matplotlib.pyplot. Any key is passed to plot.plot_coords |
+| [preapply](#preapply) | Create a bpf where `func` is applied to the argument before it is passed |
+| [rand](#rand) | A bpf representing rand(self(x)) |
+| [render](#render) | Create a new bpf representing this bpf rendered at the given points |
+| [round](#round) | A bpf representing round(self(x)) |
+| [sample_between](#sample_between) | Sample this bpf at an interval of dx between x0 and x1 |
+| [sampled](#sampled) | Sample this bpf at a regular interval, returns a Sampled bpf |
+| [sampled_between](#sampled_between) | Sample a portion of this bpf, returns a `Sampled` bpf |
+| [shifted](#shifted) | Returns a view of this bpf shifted by `dx` over the x-axes |
+| [sin](#sin) | Returns a bpf representing the sine of this bpf |
+| [sinh](#sinh) | Returns a bpf representing the sinh of this bpf |
+| [sqrt](#sqrt) | Returns a bpf representing the sqrt of this bpf |
+| [stretched](#stretched) | Returns a view of this bpf stretched over the x axis. |
+| [tan](#tan) | Returns a bpf representing the tan of this bpf |
+| [tanh](#tanh) | Returns a bpf representing the tanh of this bpf |
+| [zeros](#zeros) | Find the zeros of this bpf |
+
+
+---------
+
 
 **Attributes**
 
 * **x0**: The lower bound of the x coordinate
-
 * **x1**: The upper bound of the x coordinate
 
 
@@ -1666,11 +1774,11 @@ Find the zeros of this bpf
 &nbsp;&nbsp;&nbsp;&nbsp;(`List[float]`) A list with the zeros of this bpf
 
 
+
 ---------
 
 
 ## BpfBase
-
  - Base Class: [BpfInterface](#bpfinterface)
 
 ### 
@@ -1682,10 +1790,40 @@ BpfBase(xs, ys)
 
 ```
 
+
+---------
+
+
+**Summary**
+
+
+
+| Property  | Description  |
+| :-------- | :----------- |
+| descriptor | A string describing the interpolation function of this bpf |
+| exp | The exponential of the interpolation function of this bpf |
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [__init__](#__init__) | Base constructor for bpfs |
+| [clone_with_new_data](#clone_with_new_data) | Create a new bpf with the same attributes as self but with new data |
+| [insertpoint](#insertpoint) | Return **a copy** of this bpf with the point `(x, y)` inserted |
+| [mapn_between](#mapn_between) | BpfBase.mapn_between(self, int n, double xstart, double xend, ndarray out=None) -> ndarray |
+| [outbound](#outbound) | Set the values **inplace** returned when this bpf is evaluated outside its bounds. |
+| [points](#points) | Returns a tuple with the points defining this bpf |
+| [removepoint](#removepoint) | Return a copy of this bpf with point at x removed |
+| [segments](#segments) | Return an iterator over the segments of this bpf |
+| [shift](#shift) | Shift the bpf along the x-coords, **INPLACE** |
+| [stretch](#stretch) | Stretch or compress this bpf in the x-coordinate **INPLACE** |
+
+
+---------
+
+
 **Attributes**
 
 * **descriptor**: A string describing the interpolation function of this bpf
-
 * **exp**: The exponential of the interpolation function of this bpf
 
 
@@ -1961,11 +2099,11 @@ Stretch or compress this bpf in the x-coordinate **INPLACE**
 * **rx** (`float`): the stretch/compression factor
 
 
+
 ---------
 
 
 ## Expon
-
  - Base Class: [BpfBase](#bpfbase)
 
 ### 
@@ -2004,6 +2142,21 @@ plot.show()
 ---------
 
 
+**Summary**
+
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [__init__](#__init__) | - |
+
+
+---------
+
+
+---------
+
+
 **Methods**
 
 ### \_\_init\_\_
@@ -2025,11 +2178,11 @@ def __init__(xs: ndarray, ys: ndarray, exp: float, numiter: int) -> None
 * **numiter** (`int`): how many times to apply the interpolation
 
 
+
 ---------
 
 
 ## Exponm
-
  - Base Class: [Expon](#expon)
 
 ### 
@@ -2066,6 +2219,21 @@ plot.show()
 ---------
 
 
+**Summary**
+
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [__init__](#__init__) | - |
+
+
+---------
+
+
+---------
+
+
 **Methods**
 
 ### \_\_init\_\_
@@ -2087,11 +2255,11 @@ def __init__(xs: ndarray, ys: ndarray, exp: float, numiter: int) -> None
 * **numiter** (`int`): how many times to apply the interpolation
 
 
+
 ---------
 
 
 ## Halfcos
-
  - Base Class: [BpfBase](#bpfbase)
 
 ### 
@@ -2125,6 +2293,21 @@ c.plot(axes=axes[2])
 ---------
 
 
+**Summary**
+
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [__init__](#__init__) | - |
+
+
+---------
+
+
+---------
+
+
 **Methods**
 
 ### \_\_init\_\_
@@ -2146,11 +2329,11 @@ def __init__(xs: ndarray, ys: ndarray, exp: float, numiter: int) -> None
 * **numiter** (`int`): how many times to apply the interpolation
 
 
+
 ---------
 
 
 ## Halfcosm
-
  - Base Class: [Halfcos](#halfcos)
 
 ### 
@@ -2179,11 +2362,11 @@ b.plot(axes=axes[1])
 ![](assets/Halfcosm.png)
 
 
+
 ---------
 
 
 ## Linear
-
  - Base Class: [BpfBase](#bpfbase)
 
 ### 
@@ -2205,6 +2388,25 @@ a = core.Linear([0, 2, 3.5, 10], [0.1, 0.5, -3.5,  4])
 a.plot()
 ```
 ![](assets/Linear.png)
+
+
+---------
+
+
+**Summary**
+
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [__init__](#__init__) | - |
+| [flatpairs](#flatpairs) | Returns a flat 1D array with x and y values interlaced |
+| [integrate_between](#integrate_between) | Integrate this bpf between the given x coords |
+| [inverted](#inverted) | Return a new Linear bpf where x and y coordinates are inverted. |
+| [sliced](#sliced) | Cut this bpf at the given points |
+
+
+---------
 
 
 ---------
@@ -2342,11 +2544,11 @@ bpf. In this case a real `Linear` bpf is returned.
 &nbsp;&nbsp;&nbsp;&nbsp;(`Linear`) Copy of this bpf cut at the given x-coords
 
 
+
 ---------
 
 
 ## Nearest
-
  - Base Class: [BpfBase](#bpfbase)
 
 ### 
@@ -2377,6 +2579,21 @@ c.plot(axes=axes[2])
 ---------
 
 
+**Summary**
+
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [__init__](#__init__) | A bpf with nearest interpolation |
+
+
+---------
+
+
+---------
+
+
 **Methods**
 
 ### \_\_init\_\_
@@ -2399,11 +2616,11 @@ A bpf with nearest interpolation
 * **ys** (`ndarray`): the y coord data
 
 
+
 ---------
 
 
 ## NoInterpol
-
  - Base Class: [BpfBase](#bpfbase)
 
 ### 
@@ -2434,6 +2651,21 @@ c.plot(axes=axes[2])
 ---------
 
 
+**Summary**
+
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [__init__](#__init__) | A bpf without interpolation |
+
+
+---------
+
+
+---------
+
+
 **Methods**
 
 ### \_\_init\_\_
@@ -2456,11 +2688,11 @@ A bpf without interpolation
 * **ys** (`ndarray`): the y coord data
 
 
+
 ---------
 
 
 ## Smooth
-
  - Base Class: [BpfBase](#bpfbase)
 
 ### 
@@ -2493,6 +2725,21 @@ A bpf with smoothstep interpolation.
 ---------
 
 
+**Summary**
+
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [__init__](#__init__) | - |
+
+
+---------
+
+
+---------
+
+
 **Methods**
 
 ### \_\_init\_\_
@@ -2513,11 +2760,11 @@ def __init__(xs: ndarray, ys: ndarray, numiter: int) -> None
 * **numiter** (`int`): the number of smoothstep steps
 
 
+
 ---------
 
 
 ## Smoother
-
  - Base Class: [BpfBase](#bpfbase)
 
 ### 
@@ -2544,11 +2791,11 @@ b.plot(axes=axes[1])
 ![](assets/Smoother.png)
 
 
+
 ---------
 
 
 ## Const
-
  - Base Class: [BpfInterface](#bpfinterface)
 
 ### 
@@ -2562,6 +2809,22 @@ Const(double value, bounds: tuple[float, float] = None)
 
 
 A bpf representing a constant value
+
+
+---------
+
+
+**Summary**
+
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [__init__](#__init__) | - |
+| [mapn_between](#mapn_between) | Const.mapn_between(self, int n, double x0, double x1, ndarray out=None) -> ndarray |
+
+
+---------
 
 
 ---------
@@ -2608,11 +2871,11 @@ Const.mapn_between(self, int n, double x0, double x1, ndarray out=None) -> ndarr
 * **out**:
 
 
+
 ---------
 
 
 ## Multi
-
  - Base Class: [BpfInterface](#bpfinterface)
 
 ### 
@@ -2631,6 +2894,22 @@ A bpf where each segment can have its own interpolation kind
 ---------
 
 
+**Summary**
+
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [__init__](#__init__) | !!! note |
+| [segments](#segments) | Returns an iterator over the segments of this bpf |
+
+
+---------
+
+
+---------
+
+
 **Methods**
 
 ### \_\_init\_\_
@@ -2641,6 +2920,9 @@ A bpf where each segment can have its own interpolation kind
 def __init__(xs: ndarray, ys: ndarray, interpolations: list[str]) -> None
 
 ```
+
+
+!!! note
 
 
 !!! note
@@ -2684,11 +2966,11 @@ Returns an iterator over the segments of this bpf
 &nbsp;&nbsp;&nbsp;&nbsp;(`Iterator[tuple[float, float, str, float]]`) An iterator of segments, where each segment has the form `(x, y, interpoltype:str, exponent)`
 
 
+
 ---------
 
 
 ## Sampled
-
  - Base Class: [BpfInterface](#bpfinterface)
 
 ### 
@@ -2707,16 +2989,46 @@ A bpf with regularly sampled data
 When evaluated, values between the samples are interpolated with
 a given function: linear, expon(x), halfcos, halfcos(x), etc.
 
+
+---------
+
+
+**Summary**
+
+
+
+| Property  | Description  |
+| :-------- | :----------- |
+| dx | The sampling period (delta x) |
+| interpolation | - |
+| samplerate | The samplerate of this bpf |
+| xs | The x-coord array of this bpf |
+| ys | - |
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [__init__](#__init__) | - |
+| [derivative](#derivative) | Return a curve which represents the derivative of this curve |
+| [flatpairs](#flatpairs) | Returns a flat 1D array with x and y values interlaced |
+| [integrate](#integrate) | Return the result of the integration of this bpf. |
+| [integrate_between](#integrate_between) | The same as integrate() but between the (included) bounds x0-x1 |
+| [inverted](#inverted) | Return a view on this bpf with the coords inverted |
+| [mapn_between](#mapn_between) | Return an array of `n` elements resulting of evaluating this bpf regularly |
+| [points](#points) | Returns a tuple with the points defining this bpf |
+| [segments](#segments) | Returns an iterator over the segments of this bpf |
+| [set_interpolation](#set_interpolation) | Sets the interpolation of this Sampled bpf, inplace |
+
+
+---------
+
+
 **Attributes**
 
 * **dx**: The sampling period (delta x)
-
 * **interpolation**
-
 * **samplerate**: The samplerate of this bpf
-
 * **xs**: The x-coord array of this bpf
-
 * **ys**
 
 
@@ -3015,11 +3327,11 @@ sampled = bpf[x0:x1:dx].set_interpolation('expon(2)')
 &nbsp;&nbsp;&nbsp;&nbsp;(`Sampled`) self
 
 
+
 ---------
 
 
 ## Slope
-
  - Base Class: [BpfInterface](#bpfinterface)
 
 ### 
@@ -3045,10 +3357,32 @@ Slope[-inf:inf]
 ```
 ![](assets/slope-plot.png)
 
+
+---------
+
+
+**Summary**
+
+
+
+| Property  | Description  |
+| :-------- | :----------- |
+| offset | offset: 'double' |
+| slope | slope: 'double' |
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [__init__](#__init__) | A bpf representing a linear equation `y = slope * x + offset` |
+| [mapn_between](#mapn_between) | Return an array of `n` elements resulting of evaluating this bpf regularly |
+
+
+---------
+
+
 **Attributes**
 
 * **offset**: offset: 'double'
-
 * **slope**: slope: 'double'
 
 
@@ -3109,11 +3443,11 @@ The x coordinates at which this bpf is evaluated are equivalent to `linspace(x0,
 &nbsp;&nbsp;&nbsp;&nbsp;(`ndarray`) An array of this bpf evaluated at a grid [x0:x1:dx], where *dx* is `(xend-xstart)/n`
 
 
+
 ---------
 
 
 ## Spline
-
  - Base Class: [BpfInterface](#bpfinterface)
 
 ### 
@@ -3143,6 +3477,23 @@ a.plot(axes=axes[0], show=False)
 b.plot(axes=axes[1])
 ```
 ![](assets/Spline.png)
+
+
+---------
+
+
+**Summary**
+
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [__init__](#__init__) | A bpf with cubic spline interpolation |
+| [points](#points) | Returns a tuple with the points defining this bpf |
+| [segments](#segments) | Returns an iterator over the segments of this bpf |
+
+
+---------
 
 
 ---------
@@ -3227,11 +3578,11 @@ Each segment is a tuple `(float x, float y, str interpolation_type, float expone
 &nbsp;&nbsp;&nbsp;&nbsp;(`Iterable[tuple[float, float, str, float]]`) An iterator of segments, where each segment has the form `(x, y, interpoltype:str, exponent)`
 
 
+
 ---------
 
 
 ## USpline
-
  - Base Class: [BpfInterface](#bpfinterface)
 
 ### 
@@ -3256,6 +3607,24 @@ a.plot(axes=axes[0], show=False)
 b.plot(axes=axes[1])
 ```
 ![](assets/Uspline.png)
+
+
+---------
+
+
+**Summary**
+
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [__init__](#__init__) | - |
+| [map](#map) | USpline.map(self, xs, ndarray out=None) -> ndarray |
+| [mapn_between](#mapn_between) | Return an array of `n` elements resulting of evaluating this bpf regularly |
+| [segments](#segments) | Returns an iterator over the segments of this bpf |
+
+
+---------
 
 
 ---------
@@ -3351,11 +3720,11 @@ Returns an iterator over the segments of this bpf
 &nbsp;&nbsp;&nbsp;&nbsp;(`Iterable[tuple[float, float, str, float]]`) An iterator of segments, where each segment has the form `(x, y, interpoltype:str, exponent)`
 
 
+
 ---------
 
 
 ## \_MultipleBpfs
-
  - Base Class: [BpfInterface](#bpfinterface)
 
 ### 
@@ -3368,11 +3737,11 @@ _MultipleBpfs(bpfs)
 ```
 
 
+
 ---------
 
 
 ## Max
-
  - Base Class: [_MultipleBpfs](#_multiplebpfs)
 
 ### 
@@ -3398,11 +3767,11 @@ core.Max((a, b)).plot(color="black", linewidth=4, alpha=0.8, linestyle='dotted')
 ![](assets/Max.png)
 
 
+
 ---------
 
 
 ## Min
-
  - Base Class: [_MultipleBpfs](#_multiplebpfs)
 
 ### 
@@ -3428,11 +3797,11 @@ core.Min((a, b)).plot(color="black", linewidth=4, alpha=0.8, linestyle='dotted')
 ![](assets/Min.png)
 
 
+
 ---------
 
 
 ## Stack
-
  - Base Class: [_MultipleBpfs](#_multiplebpfs)
 
 ### 
@@ -3481,6 +3850,21 @@ s.plot(axes=ax, linewidth=2, color="#000", linestyle='dotted')
 ---------
 
 
+**Summary**
+
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [__init__](#__init__) | - |
+
+
+---------
+
+
+---------
+
+
 **Methods**
 
 ### \_\_init\_\_
@@ -3499,6 +3883,7 @@ def __init__(bpfs: list|tuple) -> None
 * **bpfs** (`list|tuple`): A sequence of bpfs. The order defined the evaluation
     order. The first bpf is on top, the last bpf is on bottom. Only         the
     last bpf is evaluated outside its bounds
+
 
 
 ---------

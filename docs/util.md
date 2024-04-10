@@ -7,6 +7,48 @@ Utilities for bpf4
 ---------
 
 
+| Function  | Description  |
+| :-------  | :----------- |
+| `asbpf` | Convert obj to a bpf |
+| `binarymask` | Creates a binary mask |
+| `blendwithceil` |  |
+| `blendwithfloor` |  |
+| `bpf_to_csv` | Write this bpf as a csv representation |
+| `bpf_to_dict` | convert a bpf to a dict with the following format |
+| `bpf_to_json` | convert this bpf to json format. |
+| `bpf_to_yaml` | Convert this bpf to json format. |
+| `bpfavg` | Return a Bpf which is the average of b over the range `dx` |
+| `calculate_projection` | Calculate a projection needed to map the interval x0:x1 to p0:p1 |
+| `concat_bpfs` | Concatenate these bpfs together, one after the other |
+| `csv_to_bpf` | Read a bpf from a csv file |
+| `dict_to_bpf` | Convert a dict to a bpf |
+| `dumpbpf` | Dump the data of this bpf as human readable text |
+| `histbpf` | Create a historgram of *b* |
+| `jagged_band` | Create a jagged bpf between lowerbpf and upperbpf at the x values given |
+| `loadbpf` | Load a bpf saved with dumpbpf |
+| `makebpf` | Create a bpf from the given descriptor and points |
+| `max_` | Return a bpf representing the max over the given elements |
+| `maximum` | return the x where bpf(x) is the maximum of bpf |
+| `min_` | Return a bpf representing the min over elements |
+| `minimum` | Find the x where bpf(x) is minimized |
+| `multi_parseargs` | Parse args of a multi bpf |
+| `parseargs` | Convert the args and kws to the canonical form (xs, ys, kws) |
+| `parsedescr` | Parse interpolation description |
+| `projection_fixedpoint` | Returns the fixed point given the projection parameters |
+| `randombw` | Create a random bpf |
+| `rms` | The rms of this bpf |
+| `rmsbpf` | Return a bpf representing the rms of the given samples as a function of time |
+| `select` | Create a new bpf which interpolates between adjacent bpfs given |
+| `smoothen` | Return a linear bpf representing a smooth version of b |
+| `sum_` | Return a bpf representing the sum of elements |
+| `warped` | Represents the curvature of a linear space. |
+| `zigzag` | Creates a curve formed of lines from b0(x) to b1(x) for each x in xs |
+
+
+
+---------
+
+
 ## asbpf
 
 
@@ -261,8 +303,12 @@ Return a Bpf which is the average of b over the range `dx`
 
 **Args**
 
-* **b** (`core.BpfInterface`):
-* **dx** (`float`):
+* **b** (`core.BpfInterface`): the bpf
+* **dx** (`float`): the period to average *b* over
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`core.BpfInterface`) a bpf representing the average of *b* along the bounds of *b* over a sliding period of *dx*
 
 
 ---------
@@ -438,6 +484,54 @@ The bpf can then be reconstructed via `loadbpf`
 **Returns**
 
 &nbsp;&nbsp;&nbsp;&nbsp;(`str`) the text representation according to the format
+
+
+---------
+
+
+## histbpf
+
+
+```python
+
+def histbpf(b: core.BpfInterface, numbins: int = 10, numsamples: int = 200, 
+            interpolation: str = linear) -> core.BpfInterface
+
+```
+
+
+Create a historgram of *b*
+
+
+Example
+~~~~~~~
+
+>>> from sndfileio import *
+>>> samples, sr = sndread("path/to/soundfile.wav")
+>>> dbcurve = rmsbpf(samples, sr=sr).amp2db()
+>>> dbhist = histbpf(dbcurve)
+### Find the db percentile at a given time, this gives a measurement of the
+### relative strength of the sound at a given moment
+>>> dur = len(samples)/sr
+>>> percentile = dbhist(dur*0.5)
+0.312
+
+This indicates that at the middle of the sound the amplitude is at percentile ~30
+
+
+
+**Args**
+
+* **b** (`core.BpfInterface`): the bpf
+* **numbins** (`int`): the number of bins (*default*: `10`)
+* **numsamples** (`int`): how many samples to take to determine the histogram
+    (*default*: `200`)
+* **interpolation** (`str`): the kind of interpolation of the returned bpf
+    (*default*: `linear`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`core.BpfInterface`) a bpf representing the percentile associated with a given value of *b* Percentiles are given between 0 and 1
 
 
 ---------
@@ -852,6 +946,36 @@ The rms of this bpf
 **Returns**
 
 &nbsp;&nbsp;&nbsp;&nbsp;(`core.BpfInterface`) a bpf representing the rms of this bpf at any x coord
+
+
+---------
+
+
+## rmsbpf
+
+
+```python
+
+def rmsbpf(samples: np.ndarray, sr: int, dt: float = 0.01, overlap: int = 1
+           ) -> core.Sampled
+
+```
+
+
+Return a bpf representing the rms of the given samples as a function of time
+
+
+
+**Args**
+
+* **samples** (`np.ndarray`): the audio samples
+* **sr** (`int`): the sample rate
+* **dt** (`float`): analysis time period (*default*: `0.01`)
+* **overlap** (`int`): overlap of analysis frames (*default*: `1`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`core.Sampled`) a samples bpf
 
 
 ---------

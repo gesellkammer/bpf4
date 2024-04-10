@@ -26,6 +26,31 @@ c = core.Linear([0, 1, 3], [0, 2.5, 10])
 ---------
 
 
+| Function  | Description  |
+| :-------  | :----------- |
+| `blendshape` | Create a bpf blending two interpolation forms |
+| `const` | A bpf which always returns a constant value |
+| `expon` | Construct an Expon bpf (a bpf with exponential interpolation) |
+| `halfcos` | Construct a half-cosine bpf (a bpf with half-cosine interpolation) |
+| `halfcosexp` | Construct a half-cosine bpf (a bpf with half-cosine interpolation) |
+| `halfcosm` | Halfcos interpolation with symmetric exponent |
+| `linear` | Construct a Linear bpf. |
+| `multi` | A bpf with a per-pair interpolation |
+| `nearest` | A bpf with floor interpolation |
+| `nointerpol` | A bpf with floor interpolation |
+| `pchip` | Monotonic Cubic Hermite Intepolation |
+| `slope` | Generate a straight line with the given slope and offset |
+| `smooth` | A bpf with smoothstep interpolation. |
+| `smoother` | A bpf with smootherstep interpolation |
+| `spline` | Construct a cubic-spline bpf |
+| `stack` | A bpf representing a stack of bpf |
+| `uspline` | Construct a univariate cubic-spline bpf |
+
+
+
+---------
+
+
 ## blendshape
 
 
