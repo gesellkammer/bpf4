@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import bpf4
 from emlib import doctools
 import os
