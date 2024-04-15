@@ -20,6 +20,7 @@
 | `Max` | Max(*bpfs) |
 | `Min` | Min(*bpfs) |
 | `Multi` | Multi(xs, ys, interpolations) |
+| `NanMask` | NanMask(BpfInterface a, double masked=0.) |
 | `Nearest` | Nearest(xs, ys) |
 | `NoInterpol` | NoInterpol(xs, ys) |
 | `Sampled` | Sampled(samples, double dx, double x0=0, unicode interpolation=u'linear') |
@@ -111,6 +112,7 @@ The upper bound of the x coordinate |
 | [max](#max) | Returns a bpf representing `max(self, b)` |
 | [mean](#mean) | Calculate the mean value of this bpf. |
 | [min](#min) | Returns a bpf representing `min(self, b)` |
+| [nanmask](#nanmask) | A nan mask from this bpf |
 | [ntodx](#ntodx) | Calculate the sampling period `dx` |
 | [outbound](#outbound) | Return a new Bpf with the given values outside the bounds |
 | [periodic](#periodic) | Create a new bpf which replicates this in a periodic way |
@@ -586,7 +588,7 @@ Returns a bpf representing the exp operation with this bpf
 
 ```python
 
-BpfInterface.f2m(self) -> _BpfF2M
+BpfInterface.f2m(self, double a4=0.)
 
 ```
 
@@ -605,6 +607,11 @@ array([69.        , 70.82403712, 72.47407941, 73.98044999, 75.3661766 ,
 ```
 
 
+
+**Args**
+
+* **a4** (`float`): frequency value for A4. If not given, uses the
+    global value (see setA4) (*default*: `0.0`)
 
 **Returns**
 
@@ -927,7 +934,7 @@ Returns a bpf representing the log10 of this bpf
 
 ```python
 
-BpfInterface.m2f(self) -> _BpfM2F
+BpfInterface.m2f(self, double a4=0.)
 
 ```
 
@@ -948,6 +955,11 @@ array([262.81477242, 271.38531671, 280.23535149, 289.37399111,
 ```
 
 
+
+**Args**
+
+* **a4** (`float`): frequency value for A4. If not given, uses the
+    global value (see setA4) (*default*: `0.0`)
 
 **Returns**
 
@@ -1136,6 +1148,42 @@ Returns a bpf representing `min(self, b)`
 **Returns**
 
 &nbsp;&nbsp;&nbsp;&nbsp;(`Min`) A Min bpf representing `min(self, b)`, which can be evaluated at any x coord
+
+----------
+
+### nanmask
+
+
+```python
+
+BpfInterface.nanmask(self, double masked=0.) -> NanMask
+
+```
+
+
+A nan mask from this bpf
+
+
+A nan mask returns nan whenever this bpf returns the masked value,
+otherwise it returns its original value.
+
+#### Example
+
+Create a mask for a frequency bpf `b`, to set it to nan whenever
+the frequency is lower than 50 Hz
+
+```python
+>>> b = bpf.linear(0, 440, 1, 440, 2, 100, 3, 40, 5, 80, 6, 440)
+>>> bmasked = b * (b >= 50).nanmask()
+>>> bmasked.plot()
+>>> bpf4.util.split_fragments(bmasked)
+```
+
+
+
+**Args**
+
+* **masked** (`float`): the value to convert to NAN (*default*: `0.0`)
 
 ----------
 
@@ -1828,6 +1876,7 @@ BpfBase(xs, ys)
 | [removepoint](#removepoint) | Return a copy of this bpf with point at x removed |
 | [segments](#segments) | Return an iterator over the segments of this bpf |
 | [shift](#shift) | Shift the bpf along the x-coords, **INPLACE** |
+| [split](#split) | Split this bpf into fragments separated by nan y values |
 | [stretch](#stretch) | Stretch or compress this bpf in the x-coordinate **INPLACE** |
 
 
@@ -2089,6 +2138,30 @@ Use [.shifted](#shifted) to create a new bpf
 **Args**
 
 * **dx** (`float`): the shift interval
+
+----------
+
+### split
+
+
+```python
+
+BpfBase.split(self, double sep=NAN)
+
+```
+
+
+Split this bpf into fragments separated by nan y values
+
+
+
+**Args**
+
+* **sep** (`float`): the separator to use (*default*: `nan`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`list[BpfBase]`) A list of fragments
 
 ----------
 
@@ -2418,6 +2491,7 @@ a.plot()
 | [flatpairs](#flatpairs) | Returns a flat 1D array with x and y values interlaced |
 | [integrate_between](#integrate_between) | Integrate this bpf between the given x coords |
 | [inverted](#inverted) | Return a new Linear bpf where x and y coordinates are inverted. |
+| [simplify](#simplify) | Simplify this bpf |
 | [sliced](#sliced) | Cut this bpf at the given points |
 
 
@@ -2525,6 +2599,36 @@ a `ValueError` is thrown
 **Returns**
 
 &nbsp;&nbsp;&nbsp;&nbsp;(`Linear`) The inverted bpf
+
+----------
+
+### simplify
+
+
+```python
+
+Linear.simplify(self, threshold=0., ratio=0.) -> Linear
+
+```
+
+
+Simplify this bpf
+
+
+Either threshold or ratio must be given, but not both
+
+
+
+**Args**
+
+* **threshold** (`float`): the simplification threshold (*default*: `0.0`)
+* **ratio** (`float`): the simplification ratio. If given, simplification
+    is done by ratio, the higher this value the more the         shape is
+    simplified (*default*: `0.0`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`Linear`) a new Linear bpf with its points simplified by the given parameter. Notice that the start and end points are never simplified
 
 ----------
 
@@ -3030,6 +3134,7 @@ a given function: linear, expon(x), halfcos, halfcos(x), etc.
 | Method  | Description  |
 | :------ | :----------- |
 | [__init__](#__init__) | - |
+| [aslinear](#aslinear) | A linear version of this bpf |
 | [derivative](#derivative) | Return a curve which represents the derivative of this curve |
 | [flatpairs](#flatpairs) | Returns a flat 1D array with x and y values interlaced |
 | [integrate](#integrate) | Return the result of the integration of this bpf. |
@@ -3039,6 +3144,7 @@ a given function: linear, expon(x), halfcos, halfcos(x), etc.
 | [points](#points) | Returns a tuple with the points defining this bpf |
 | [segments](#segments) | Returns an iterator over the segments of this bpf |
 | [set_interpolation](#set_interpolation) | Sets the interpolation of this Sampled bpf, inplace |
+| [split](#split) | Split this Sampled bpf into fragments separated by nan y values |
 
 
 ---------
@@ -3077,6 +3183,26 @@ def __init__(samples: ndarray, dx: float, x0: float, interpolation: str) -> None
 * **interpolation** (`str`): the interpolation function used. One of 'linear',
     'nointerpol', 'expon(X)', 'halfcos', 'halfcos(X)', 'smooth',
     'halfcosm', etc.
+
+----------
+
+### aslinear
+
+
+```python
+
+Sampled.aslinear(self, simplify=0.)
+
+```
+
+
+A linear version of this bpf
+
+
+
+**Args**
+
+* **simplify** (`float`):  (*default*: `0.0`)
 
 ----------
 
@@ -3346,6 +3472,30 @@ sampled = bpf[x0:x1:dx].set_interpolation('expon(2)')
 **Returns**
 
 &nbsp;&nbsp;&nbsp;&nbsp;(`Sampled`) self
+
+----------
+
+### split
+
+
+```python
+
+Sampled.split(self, double sep=NAN)
+
+```
+
+
+Split this Sampled bpf into fragments separated by nan y values
+
+
+
+**Args**
+
+* **sep** (`float`): the separator to use (*default*: `nan`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`list[Sampled]`) A list of fragments
 
 
 
@@ -3745,6 +3895,114 @@ Returns an iterator over the segments of this bpf
 ---------
 
 
+## \_BpfUnaryOp
+ - Base Class: [BpfInterface](#bpfinterface)
+
+### 
+
+
+```python
+
+_BpfUnaryOp(BpfInterface a)
+
+```
+
+
+A bpf representing a unary operation on a bpf
+
+
+---------
+
+
+**Summary**
+
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [map](#map) | the same as map(self, xs) but somewhat faster |
+| [mapn_between](#mapn_between) | _BpfUnaryOp.mapn_between(self, int n, double x0, double x1, ndarray out=None) -> ndarray |
+
+
+---------
+
+
+---------
+
+
+**Methods**
+
+### map
+
+
+```python
+
+_BpfUnaryOp.map(self, xs, ndarray out=None) -> ndarray
+
+```
+
+
+the same as map(self, xs) but somewhat faster
+
+
+xs can also be a number, in which case it is interpreted as
+the number of elements to calculate in an evenly spaced
+grid between the bounds of this bpf.
+bpf.map(10) == bpf.map(numpy.linspace(x0, x1, 10))
+( this is the same as bpf.mapn_between(10, bpf.x0, bpf.x1) )
+
+
+
+**Args**
+
+* **xs**:
+* **out**:  (*default*: `None`)
+
+----------
+
+### mapn\_between
+
+
+```python
+
+def mapn_between(self, n, x0, x1, out=None) -> None
+
+```
+
+
+_BpfUnaryOp.mapn_between(self, int n, double x0, double x1, ndarray out=None) -> ndarray
+
+
+
+**Args**
+
+* **n**:
+* **x0**:
+* **x1**:
+* **out**:  (*default*: `None`)
+
+
+
+---------
+
+
+## NanMask
+ - Base Class: [_BpfUnaryOp](#_bpfunaryop)
+
+### 
+
+
+```python
+
+NanMask(BpfInterface a, double masked=0.)
+
+```
+
+
+
+---------
+
+
 ## \_MultipleBpfs
  - Base Class: [BpfInterface](#bpfinterface)
 
@@ -3786,6 +4044,48 @@ b.plot(show=False, color="blue", linewidth=4, alpha=0.3)
 core.Max((a, b)).plot(color="black", linewidth=4, alpha=0.8, linestyle='dotted')
 ```
 ![](assets/Max.png)
+
+
+---------
+
+
+**Summary**
+
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [mapn_between](#mapn_between) | Max.mapn_between(self, int n, double x0, double x1, ndarray out=None) -> ndarray |
+
+
+---------
+
+
+---------
+
+
+**Methods**
+
+### mapn\_between
+
+
+```python
+
+def mapn_between(self, n, x0, x1, out=None) -> None
+
+```
+
+
+Max.mapn_between(self, int n, double x0, double x1, ndarray out=None) -> ndarray
+
+
+
+**Args**
+
+* **n**:
+* **x0**:
+* **x1**:
+* **out**:  (*default*: `None`)
 
 
 

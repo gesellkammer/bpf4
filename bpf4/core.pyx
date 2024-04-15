@@ -5264,7 +5264,7 @@ cdef class _MultipleBpfs(BpfInterface):
         return (self._bpfs,)
 
 
-cdef class _MultipleBpfReduce:
+cdef class _MultipleBpfReduce(_MultipleBpfs):
 
     cpdef ndarray mapn_between(self, int n, double x0, double x1, ndarray out=None):
         cdef c_numpy.ndarray[DTYPE_t, ndim=1] outarr = <ndarray>out if out is not None else EMPTY1D(n)
@@ -5272,8 +5272,6 @@ cdef class _MultipleBpfReduce:
         cdef int i
         columns = [b.mapn_between(n, x0, x1) for b in self._bpfs]
         cdef DTYPE_t[:, :] data = numpy.column_stack(columns)
-        # cdef c_numpy.ndarray[DTYPE_t, ndim=2] B = numpy.column_stack(columns)
-        # self._apply(<DTYPE_t*>A.data, <DTYPE_t*>B.data, n, self._numbpfs)
         self._process(outarr, data)
         return outarr
 
@@ -5298,7 +5296,7 @@ cdef class Max(_MultipleBpfReduce):
     def __init__(self, *bpfs):
         if len(bpfs) == 1 and isinstance(bpfs[0], (list, tuple)):
             bpfs = bpfs[0]
-        _MultipleBpfs.__init__(self, bpfs)
+        _MultipleBpfReduce.__init__(self, bpfs)
 
     cdef double __ccall__(self, double x) noexcept nogil:
         cdef double y = INFNEG
@@ -5341,7 +5339,7 @@ cdef class Min(_MultipleBpfReduce):
     def __init__(self, *bpfs):
         if len(bpfs) == 1 and isinstance(bpfs[0], (list, tuple)):
             bpfs = bpfs[0]
-        _MultipleBpfs.__init__(self, bpfs)
+        _MultipleBpfReduce.__init__(self, bpfs)
     
     cdef double __ccall__(self, double x) noexcept nogil:
         cdef double y = INF

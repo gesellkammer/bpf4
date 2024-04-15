@@ -38,7 +38,8 @@ Utilities for bpf4
 | `randombw` | Create a random bpf |
 | `rms` | The rms of this bpf |
 | `rmsbpf` | Return a bpf representing the rms of the given samples as a function of time |
-| `select` | Create a new bpf which interpolates between adjacent bpfs given |
+| `select` | Create a new bpf which interpolates between adjacent bpfs |
+| `simplify_linear_coords` | Simplify the linear bpf defined by the points xs and ys |
 | `smoothen` | Return a bpf representing a smooth version of b |
 | `split_fragments` | Split a bpf into its fragments |
 | `sum_` | Return a bpf representing the sum of elements |
@@ -1006,7 +1007,7 @@ def select(which: core.BpfInterface, bpfs: Sequence[core.BpfInterface],
 ```
 
 
-Create a new bpf which interpolates between adjacent bpfs given
+Create a new bpf which interpolates between adjacent bpfs
 
 
 **Example**
@@ -1033,6 +1034,39 @@ Create a new bpf which interpolates between adjacent bpfs given
 **Returns**
 
 &nbsp;&nbsp;&nbsp;&nbsp;(`core._BpfSelect`) a BpfSelect
+
+
+---------
+
+
+## simplify\_linear\_coords
+
+
+```python
+
+def simplify_linear_coords(xs: np.ndarray, ys: np.ndarray, 
+                           threshold: float = 0.0, ratio: float = 0.0
+                           ) -> tuple[np.ndarray, np.ndarray]
+
+```
+
+
+Simplify the linear bpf defined by the points xs and ys
+
+
+
+**Args**
+
+* **xs** (`np.ndarray`): the x coord array
+* **ys** (`np.ndarray`): the y coord array
+* **threshold** (`float`): the simplification threshold. Points which deviate
+    less than this         value will be simplified. The first and last points
+    are never simplified (*default*: `0.0`)
+* **ratio** (`float`):  (*default*: `0.0`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`tuple[np.ndarray, np.ndarray]`) the simplified line as a tuple (xs, ys)
 
 
 ---------
@@ -1087,7 +1121,7 @@ Return a bpf representing a smooth version of b
 
 ```python
 
-def split_fragments(b: core.BpfBase) -> list[core.BpfBase]
+def split_fragments(b: core.BpfBase, sep: float = nan) -> list[core.BpfBase]
 
 ```
 
@@ -1095,9 +1129,8 @@ def split_fragments(b: core.BpfBase) -> list[core.BpfBase]
 Split a bpf into its fragments
 
 
-A fragmented bpf is one with nan values, dividing the bpf
-into fragments left and right from nan values. A fragment
-must at least have two items
+Fragments are defined by the separator, which is NAN by default. This separator
+splits the points in this bpf into fragments. A fragment must at least have two items
 
 ### Example
 
@@ -1112,7 +1145,10 @@ must at least have two items
 
 **Args**
 
-* **b** (`core.BpfBase`): the bpf to split.
+* **b** (`core.BpfBase`): the bpf to split. This bpf must be a Linear, Sampled
+    or any other BpfBase         subclass (HalfCos, Smooth, etc.). For any other
+    bpf the bpf needs to be         sampled (`bpf[::period]`)
+* **sep** (`float`): the separator to use (*default*: `nan`)
 
 **Returns**
 
