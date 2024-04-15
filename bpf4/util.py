@@ -576,7 +576,7 @@ def sum_(*elements):
 
 def select(which: core.BpfInterface, bpfs: Sequence[core.BpfInterface], shape='linear') -> core._BpfSelect:
     """
-    Create a new bpf which interpolates between adjacent bpfs given
+    Create a new bpf which interpolates between adjacent bpfs
     
     Args:
         which: returns at any x, which bpf from bpfs should return the result
@@ -1142,16 +1142,18 @@ def histbpf(b: core.BpfInterface, numbins=20, numsamples=400
         raise ValueError("Only 'linear' or 'nointerpol' are supported")
 
 
-def split_fragments(b: core.BpfBase) -> list[core.BpfBase]:
+def split_fragments(b: core.BpfBase, sep=float('nan')) -> list[core.BpfBase]:
     """
     Split a bpf into its fragments
 
-    A fragmented bpf is one with nan values, dividing the bpf
-    into fragments left and right from nan values. A fragment
-    must at least have two items
+    Fragments are defined by the separator, which is NAN by default. This separator
+    splits the points in this bpf into fragments. A fragment must at least have two items
 
     Args:
-        b: the bpf to split.
+        b: the bpf to split. This bpf must be a Linear, Sampled or any other BpfBase
+            subclass (HalfCos, Smooth, etc.). For any other bpf the bpf needs to be
+            sampled (`bpf[::period]`)
+        sep: the separator to use
 
     Returns:
         a list of bpfs representing the fragments
@@ -1165,22 +1167,66 @@ def split_fragments(b: core.BpfBase) -> list[core.BpfBase]:
     [Linear[0.0:3.0], Linear[6.0:8.0], Linear[10.0:11.0]]
     ```
     """
+    if not isinstance(b, core.BpfBase):
+        raise TypeError(f"This function only works for subclasses of BpfBase (Linear, Sampled, etc.), "
+                        f"got {b}.")
     xs, ys = b.points()
     parts = []
     lastpart: list[tuple[float, float]] = None
-    for x, y in zip(xs, ys):
-        if not isnan(y):
-            if lastpart is None:
-                lastpart = []
-                parts.append(lastpart)
-            lastpart.append((x, y))
-        else:
-            lastpart = None
+    if isnan(sep):
+        for x, y in zip(xs, ys):
+            if not isnan(y):
+                if lastpart is None:
+                    lastpart = []
+                    parts.append(lastpart)
+                lastpart.append((x, y))
+            else:
+                lastpart = None
+    else:
+        for x, y in zip(xs, ys):
+            if y == sep:
+                if lastpart is None:
+                    lastpart = []
+                    parts.append(lastpart)
+                lastpart.append((x, y))
+            else:
+                lastpart = None
     cls = b.__class__
     bpfs = []
+
     for part in parts:
         xs, ys = zip(*part)
-        if len(xs) >= 2:
+        if len(xs) <= 1:
+            continue
+        if cls is core.Sampled:
+            bpfs.append(core.Samped(ys, x0=xs[0], dx=xs[1]-xs[0]))
+        else:
             bpfs.append(cls(xs, ys))
     return bpfs
 
+
+def simplify_linear_coords(xs: np.ndarray, ys: np.ndarray, threshold=0., ratio=0.) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Simplify the linear bpf defined by the points xs and ys
+
+    Args:
+        xs: the x coord array
+        ys: the y coord array
+        threshold: the simplification threshold. Points which deviate less than this
+            value will be simplified. The first and last points are never simplified
+
+    Returns:
+        the simplified line as a tuple (xs, ys)
+    """
+    if len(xs) <= 2:
+        return (xs, ys)
+    import visvalingamwyatt as vw
+    points = np.column_stack((xs, ys))
+    simp = vw.Simplifier(points)
+    if threshold:
+        simplified_points = simp.by_threshold(threshold)
+    elif ratio:
+        simplified_points = simp.by_ratio(ratio)
+    else:
+        raise ValueError(f"Either threshold or ratio should be given")
+    return simplified_points[:, 0], simplified_points[:, 1]
