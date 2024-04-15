@@ -4003,17 +4003,50 @@ NanMask(BpfInterface a, double masked=0.)
 ---------
 
 
-## \_MultipleBpfs
- - Base Class: [BpfInterface](#bpfinterface)
+## \_MultipleBpfReduce
+ - Base Class: [_MultipleBpfs](#_multiplebpfs)
 
-### 
+
+---------
+
+
+**Summary**
+
+
+
+| Method  | Description  |
+| :------ | :----------- |
+| [mapn_between](#mapn_between) | _MultipleBpfReduce.mapn_between(self, int n, double x0, double x1, ndarray out=None) -> ndarray |
+
+
+---------
+
+
+---------
+
+
+**Methods**
+
+### mapn\_between
 
 
 ```python
 
-_MultipleBpfs(bpfs)
+def mapn_between(self, n, x0, x1, out=None) -> None
 
 ```
+
+
+_MultipleBpfReduce.mapn_between(self, int n, double x0, double x1, ndarray out=None) -> ndarray
+
+
+
+**Args**
+
+* **n**:
+* **x0**:
+* **x1**:
+* **out**:  (*default*: `None`)
 
 
 
@@ -4021,7 +4054,7 @@ _MultipleBpfs(bpfs)
 
 
 ## Max
- - Base Class: [_MultipleBpfs](#_multiplebpfs)
+ - Base Class: [_MultipleBpfReduce](#_multiplebpfreduce)
 
 ### 
 
@@ -4046,54 +4079,12 @@ core.Max((a, b)).plot(color="black", linewidth=4, alpha=0.8, linestyle='dotted')
 ![](assets/Max.png)
 
 
----------
-
-
-**Summary**
-
-
-
-| Method  | Description  |
-| :------ | :----------- |
-| [mapn_between](#mapn_between) | Max.mapn_between(self, int n, double x0, double x1, ndarray out=None) -> ndarray |
-
-
----------
-
-
----------
-
-
-**Methods**
-
-### mapn\_between
-
-
-```python
-
-def mapn_between(self, n, x0, x1, out=None) -> None
-
-```
-
-
-Max.mapn_between(self, int n, double x0, double x1, ndarray out=None) -> ndarray
-
-
-
-**Args**
-
-* **n**:
-* **x0**:
-* **x1**:
-* **out**:  (*default*: `None`)
-
-
 
 ---------
 
 
 ## Min
- - Base Class: [_MultipleBpfs](#_multiplebpfs)
+ - Base Class: [_MultipleBpfReduce](#_multiplebpfreduce)
 
 ### 
 
@@ -4116,6 +4107,23 @@ b.plot(show=False, color="blue", linewidth=4, alpha=0.3)
 core.Min((a, b)).plot(color="black", linewidth=4, alpha=0.8, linestyle='dotted')
 ```
 ![](assets/Min.png)
+
+
+
+---------
+
+
+## \_MultipleBpfs
+ - Base Class: [BpfInterface](#bpfinterface)
+
+### 
+
+
+```python
+
+_MultipleBpfs(bpfs)
+
+```
 
 
 
