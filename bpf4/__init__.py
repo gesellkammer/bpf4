@@ -2,7 +2,7 @@ from . import core
 from .core import (
     BpfInterface,
     BpfBase,
-    BpfLinear,
+    Linear,
     Smooth,
     Smoother,
     Halfcos,

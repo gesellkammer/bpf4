@@ -6,30 +6,30 @@
 
 | Class  | Description  |
 | :----  | :----------- |
-| `BpfBase` | BpfBase(xs, ys) |
-| `BpfInterface` | Base class for all Break-Point Functions |
-| `BpfInversionError` |  |
-| `BpfPointsError` |  |
-| `Const` | Const(double value, tuple bounds: tuple[float, float] = None) |
-| `Expon` | Expon(xs, ys, double exp, int numiter=1) |
-| `Exponm` | Exponm(xs, ys, double exp, int numiter=1) |
-| `Halfcos` | Halfcos(xs, ys, double exp=1.0, int numiter=1) |
-| `HalfcosExp` | Halfcos(xs, ys, double exp=1.0, int numiter=1) |
-| `Halfcosm` | Halfcosm(xs, ys, double exp=1.0, int numiter=1) |
-| `Linear` | Linear(xs, ys) |
-| `Max` | Max(*bpfs) |
-| `Min` | Min(*bpfs) |
-| `Multi` | Multi(xs, ys, interpolations) |
-| `NanMask` | NanMask(BpfInterface a, double masked=0.) |
-| `Nearest` | Nearest(xs, ys) |
-| `NoInterpol` | NoInterpol(xs, ys) |
-| `Sampled` | Sampled(samples, double dx, double x0=0, unicode interpolation=u'linear') |
-| `Slope` | Slope(double slope, double offset=0, tuple bounds=None) |
-| `Smooth` | Smooth(xs, ys, int numiter=1) |
-| `Smoother` | Smoother(xs, ys) |
-| `Spline` | Spline(xs, ys) |
-| `Stack` | Stack(bpfs) |
-| `USpline` | USpline(xs, ys) |
+|  [BpfBase](#bpfbase) | BpfBase(xs, ys) |
+|  [BpfInterface](#bpfinterface) | Base class for all Break-Point Functions |
+|  [BpfInversionError](#bpfinversionerror) |  |
+|  [BpfPointsError](#bpfpointserror) |  |
+|  [Const](#const) | Const(double value, tuple bounds: tuple[float, float] = None) |
+|  [Expon](#expon) | Expon(xs, ys, double exp, int numiter=1) |
+|  [Exponm](#exponm) | Exponm(xs, ys, double exp, int numiter=1) |
+|  [Halfcos](#halfcos) | Halfcos(xs, ys, double exp=1.0, int numiter=1) |
+|  [HalfcosExp](#halfcosexp) | Halfcos(xs, ys, double exp=1.0, int numiter=1) |
+|  [Halfcosm](#halfcosm) | Halfcosm(xs, ys, double exp=1.0, int numiter=1) |
+|  [Linear](#linear) | Linear(xs, ys) |
+|  [Max](#max) | Max(*bpfs) |
+|  [Min](#min) | Min(*bpfs) |
+|  [Multi](#multi) | Multi(xs, ys, interpolations) |
+|  [NanMask](#nanmask) | NanMask(BpfInterface a, double masked=0.) |
+|  [Nearest](#nearest) | Nearest(xs, ys) |
+|  [NoInterpol](#nointerpol) | NoInterpol(xs, ys) |
+|  [Sampled](#sampled) | Sampled(samples, double dx, double x0=0, unicode interpolation=u'linear') |
+|  [Slope](#slope) | Slope(double slope, double offset=0, tuple bounds=None) |
+|  [Smooth](#smooth) | Smooth(xs, ys, int numiter=1) |
+|  [Smoother](#smoother) | Smoother(xs, ys) |
+|  [Spline](#spline) | Spline(xs, ys) |
+|  [Stack](#stack) | Stack(bpfs) |
+|  [USpline](#uspline) | USpline(xs, ys) |
 
 | Function  | Description  |
 | :-------  | :----------- |

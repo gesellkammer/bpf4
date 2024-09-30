@@ -9,3 +9,32 @@ requires = [
 
 build-backend = "setuptools.build_meta"
 
+[project]
+version = "1.11.0"
+name = "bpf4"
+description = "Piece-wise interpolation and lazy evaluation in cython"
+authors = [
+	{ name = "Eduardo Moguillansky", email = "eduardo.moguillansky@gmail.com" },
+]
+license = { file = "LICENSE.md" }
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+	"Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    'Topic :: Multimedia :: Sound/Audio',
+]
+
+dependencies = [
+	'numpy>=1.8', 
+	'matplotlib', 
+	'scipy', 
+	'visvalingamwyatt'
+]
+
+[tool.setuptools]
+packages = ["bpf4"]
+
+[project.urls]
+
+Homepage = "https://github.com/gesellkammer/bpf4"

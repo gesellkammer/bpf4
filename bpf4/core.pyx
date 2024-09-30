@@ -1768,9 +1768,22 @@ cdef class BpfInterface:
         """
         return _BpfKeepSlope(self, epsilon)
 
-    def outbound(self, double y0, double y1):
+    def outbound(self, double y0, y1=None):
         """
         Return a new Bpf with the given values outside the bounds
+
+        Used like `bpf.outbound(0, 0) + fallbackbpf` it can be used
+        to give a fallback bpf for values outside this bpf (see example)
+
+        Args:
+            y0 (float): returned for x values lower than the lower bound
+            y1 (float): returned for x values higher than the upper bound.
+                If not given, the same value for `y0` is used
+
+        Returns:
+            (BpfInterface) a bpf where inside the bounds it returns
+            the values of this bpf and outside the bounds the values
+            given here
 
         ## Examples
         
@@ -1793,6 +1806,8 @@ cdef class BpfInterface:
         ```
         ![](assets/outbound1.png)
         """
+        if y1 is None:
+            y1 = y0
         return _BpfCrop_new(self, self._x0, self._x1, OUTBOUND_SET, y0, y1)
 
     def apply(self, func):
@@ -2012,6 +2027,31 @@ cdef class BpfInterface:
     cpdef BpfInterface _slice(self, double x0, double x1):
         return _BpfCrop_new(self, x0, x1, OUTBOUND_DEFAULT, 0, 0)
 
+    def crop(self, double x0, double x1, y0=None, y1=None):
+        """
+        Crop this bpf at the given x values (x0, x1)
+
+        Args:
+            x0 (float): the lower bound to cut this bpf at
+            x1 (float): the upper bound to cut this bpf
+            y0 (float): if given, the value returned for x < x0
+            y1 (float): if given, the value returned for x > x1
+
+        Returns:
+            (_BpfCrop) this bpf cropped to the interval x0:x1. If
+            y0 and/our y1 are given, then these values are returned
+            for any x outside the given bounds, otherwise the
+            value returned by this bpf at x0 is extended for any
+            x < x0 and the same for the upper bound
+
+        !!! note
+
+            This is the same as taking a slice `bpf[lowerbound:upperbound]`
+            but this method allows to explicitely set the outbound values.
+            These two statements are the same: `bpf[x0:x1].outbound(y0, y1)`
+            and `bpf.slice(x0, x1, y0, y1)`
+        """
+
     def __getitem__(self, slice):
         cdef double x0, x1
         cdef BpfInterface out
@@ -2183,14 +2223,22 @@ cdef class BpfBase(BpfInterface):
             self.outbound0 = (<DTYPE_t *>(self.ys_data))[0]
             self.outbound1 = (<DTYPE_t *>(self.ys_data))[last_index]
         
-    def outbound(self, double y0, double y1):
+    def outbound(self, double y0, y1=None):
         """
         Set the values **inplace** returned when this bpf is evaluated outside its bounds.
 
         The default behaviour is to interpret the values at the bounds to extend to infinity.
-
         In order to not change this bpf inplace, use `b.copy().outbound(y0, y1)`
+
+        Args:
+            y0 (float): the value for the lower bound
+            y1 (float | None): the value for the upper bound (y0 if not given)
+
+        Returns:
+            (BpfInterface) self
         """
+        if y1 is None:
+            y1 = y0
         self.outbound_mode = OUTBOUND_SET
         self.outbound0 = y0
         self.outbound1 = y1
@@ -5109,27 +5157,26 @@ cdef class _BpfCrop(BpfInterface):
         self.bpf, x0, x1, self.outbound_mode, self._y0, self._y1 = state
         self._set_bounds(x0, x1)
 
-    cpdef _BpfCrop outbound_set(self, double y0, double y1):
+    def outbound(self, double y0, y1=None):
         """
-        set the value returned by this BPF outside its defined bounds (inplace)
+        Set the values returned outside the bounds
+
+        Args:
+            y0 (float): the value for the lower bound, or for both
+                if y1 is not given
+            y1 (float): the value for the upper bound, or y0 if
+                not given
+
+        Returns:
+            (BpfInterface) returns self
+
         """
+        if y1 is None:
+            y1 = y0
         self.outbound_mode = OUTBOUND_SET
         self._y0 = y0
         self._y1 = y1
         return self
-
-    def outbound(self, double y0, y1=None):
-        """
-        return a new Bpf with the given values outside the bounds
-
-        !!! note
-    
-            One can specify one value for lower and one for upper bounds, 
-            or just one value for both
-        """
-        if y1 is None:
-            y1 = y0
-        return _BpfCrop_new(self.bpf, self._x0, self._x1, OUTBOUND_SET, y0, y1)
 
     cpdef double integrate_between(self, double x0, double x1, size_t N=0):
         if x0 >= self.bpf._x0 and x1 <= self.bpf._x1:
