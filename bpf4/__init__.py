@@ -2,8 +2,18 @@ from . import core
 from .core import (
     BpfInterface,
     BpfBase,
+    BpfLinear,
+    Smooth,
+    Smoother,
+    Halfcos,
+    Expon,
+    Nearest,
+    Sampled,
+    Slope,
+    Spline,
+    Max,
+    Min,
     blend,
-    
 )
 
 from .api import *
