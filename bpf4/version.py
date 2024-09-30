@@ -1,4 +1,7 @@
-__version__ = (1, 10, 2)
+__version__ = (1, 11, 0)
+
     
-def versionstr():
-    return ("%d.%d.%d" % __version__)
+def versionstr() -> str:
+    major, minor, patch = __version__
+    return f"{major}.{minor}.{patch}"
+    
