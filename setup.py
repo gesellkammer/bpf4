@@ -46,7 +46,7 @@ setup(
     include_dirs = get_includes(),
     install_requires = ['numpy>=1.8', 'matplotlib', 'scipy', 'visvalingamwyatt'],
     packages = ['bpf4'],
-    package_data={'bpf4': ['core.pyi', 'py.typed']},
+    package_data={'bpf4': ['core.pyi', '__init__.pyi', 'py.typed']},
     include_package_data=True,
     # metadata
     version          = versionstr,
