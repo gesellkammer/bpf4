@@ -6,13 +6,12 @@ import operator as _operator
 import os as _os
 import itertools as _itertools
 from functools import reduce
-from typing import Sequence
 from math import isnan, sqrt
-
 import numpy as np
-from scipy.integrate import quad as _quad
-from scipy.optimize import brentq as _brentq
+
 from . import core
+
+from typing import Sequence
 
 
 _CSV_COLUMN_NAMES = ('x', 'y', 'interpolation', 'exponent')
@@ -40,24 +39,6 @@ def _isiterable(obj) -> bool:
     except TypeError:
         return False
 
-
-def _iflatten(seq):
-    """
-    Return an iterator to the flattened items of sequence s
-    
-    Strings are not flattened
-    """
-    try:
-        iter(seq)
-    except TypeError:
-        yield seq
-    else:
-        for elem in seq:
-            if isinstance(elem, str):
-                yield elem
-            else:
-                for subelem in _iflatten(elem):
-                    yield subelem
 
 def csv_to_bpf(csvfile: str) -> core.BpfInterface:
     """
@@ -115,7 +96,7 @@ def bpf_to_dict(bpf: core.BpfInterface) -> dict:
         bpf: the bpf to convert to a dict
 
     Returns:
-        (dict) The bpf as a dictionary
+        The bpf as a dictionary
 
     ```python
 
@@ -351,8 +332,13 @@ def asbpf(obj, bounds=(-np.inf, np.inf)) -> core.BpfInterface:
     """
     Convert obj to a bpf
 
-    obj can be a function, a dict, a constant, or a bpf (in which case it
-    is returned as is)
+    Args:
+        obj: the object to convert to a bpf (a function, a dict, a constant
+            or a bpf, in which case it is returned as is)
+        bounds: the lower and upper bounds where this bpf is defined
+
+    Returns:
+        the resulting bpf
     """
     if isinstance(obj, core.BpfInterface):
         return obj
@@ -697,6 +683,7 @@ def warped(bpf: core.BpfInterface, dx:float=None, numpoints=1000) -> core.Sample
     ```
     ![](assets/warped-hist2.png)
     """
+    from scipy.optimize import brentq as _brentq
 
     x0, x1 = bpf.bounds()
     if dx is None:
