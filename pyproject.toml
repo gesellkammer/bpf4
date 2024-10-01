@@ -3,7 +3,7 @@
 requires = [
     "setuptools>=42",
     "wheel",
-    "cython",
+    "cython>=3.0",
     "numpy>=1.22"
 ]
 
@@ -34,6 +34,12 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["bpf4"]
+
+ext-modules = [
+	{name="bpf4.core", sources=["bpf4/core.pyx"], include-dirs=["bpf4"], py-limited-api=true}
+]
+
+
 
 [project.urls]
 
