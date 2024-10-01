@@ -23,11 +23,14 @@ jobs:
             CIBW_BUILD: 'cp39-* cp310-* cp311-* cp312-*'
             CIBW_SKIP: 'pp* *686* *-musllinux_*'
             CIBW_ARCHS_MACOS: 'x86_64 arm64'
+            CIBW_BUILD_VERBOSITY: 2
+
         run: |
             python -m cibuildwheel --output-dir wheelhouse
       - uses: actions/upload-artifact@v4
         with:
           path: ./wheelhouse/*.whl
+          overwrite: true
       - name: Upload wheels
         env:
             TWINE_USERNAME: __token__
