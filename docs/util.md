@@ -64,15 +64,17 @@ def asbpf(obj, bounds: tuple = (-inf, inf)) -> core.BpfInterface
 Convert obj to a bpf
 
 
-obj can be a function, a dict, a constant, or a bpf (in which case it
-is returned as is)
-
-
 
 **Args**
 
-* **obj**:
-* **bounds** (`tuple`):  (*default*: `(-inf, inf)`)
+* **obj**: the object to convert to a bpf (a function, a dict, a constant
+    or a bpf, in which case it is returned as is)
+* **bounds** (`tuple`): the lower and upper bounds where this bpf is defined
+    (*default*: `(-inf, inf)`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`core.BpfInterface`) the resulting bpf
 
 
 ---------

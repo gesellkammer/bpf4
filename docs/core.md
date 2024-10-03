@@ -91,6 +91,7 @@ The upper bound of the x coordinate |
 | [concat](#concat) | Concatenate this bpf to other |
 | [copy](#copy) | Create a copy of this bpf |
 | [cos](#cos) | Returns a bpf representing the cosine of this bpf |
+| [crop](#crop) | Crop this bpf at the given x values (x0, x1) |
 | [db2amp](#db2amp) | Returns a bpf converting decibels to linear amplitudes |
 | [derivative](#derivative) | Create a curve which represents the derivative of this curve |
 | [dxton](#dxton) | Split the bounds of this bpf according to a given sampling period *dx* |
@@ -430,6 +431,41 @@ a = slope(1).cos()
 a[0:8*pi].plot()
 ```
 ![](assets/cos.png)
+
+----------
+
+### crop
+
+
+```python
+
+BpfInterface.crop(self, double x0, double x1, y0=None, y1=None)
+
+```
+
+
+Crop this bpf at the given x values (x0, x1)
+
+
+!!! note
+
+    This is the same as taking a slice `bpf[lowerbound:upperbound]`
+    but this method allows to explicitely set the outbound values.
+    These two statements are the same: `bpf[x0:x1].outbound(y0, y1)`
+    and `bpf.slice(x0, x1, y0, y1)`
+
+
+
+**Args**
+
+* **x0** (`float`): the lower bound to cut this bpf at
+* **x1** (`float`): the upper bound to cut this bpf
+* **y0** (`float`): if given, the value returned for x < x0 (*default*: `None`)
+* **y1** (`float`): if given, the value returned for x > x1 (*default*: `None`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`_BpfCrop`) this bpf cropped to the interval x0:x1. If y0 and/our y1 are given, then these values are returned for any x outside the given bounds, otherwise the value returned by this bpf at x0 is extended for any x < x0 and the same for the upper bound
 
 ----------
 
@@ -1239,13 +1275,16 @@ Calculate the sampling period `dx`
 
 ```python
 
-BpfInterface.outbound(self, double y0, double y1)
+BpfInterface.outbound(self, double y0, y1=None)
 
 ```
 
 
 Return a new Bpf with the given values outside the bounds
 
+
+Used like `bpf.outbound(0, 0) + fallbackbpf` it can be used
+to give a fallback bpf for values outside this bpf (see example)
 
 #### Examples
 
@@ -1272,8 +1311,13 @@ Return a new Bpf with the given values outside the bounds
 
 **Args**
 
-* **y0**:
-* **y1**:
+* **y0** (`float`): returned for x values lower than the lower bound
+* **y1** (`float`): returned for x values higher than the upper bound.
+    If not given, the same value for `y0` is used (*default*: `None`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`BpfInterface`) a bpf where inside the bounds it returns the values of this bpf and outside the bounds the values given here
 
 ----------
 
@@ -2004,7 +2048,7 @@ BpfBase.mapn_between(self, int n, double xstart, double xend, ndarray out=None) 
 
 ```python
 
-BpfBase.outbound(self, double y0, double y1)
+BpfBase.outbound(self, double y0, y1=None)
 
 ```
 
@@ -2013,15 +2057,19 @@ Set the values **inplace** returned when this bpf is evaluated outside its bound
 
 
 The default behaviour is to interpret the values at the bounds to extend to infinity.
-
 In order to not change this bpf inplace, use `b.copy().outbound(y0, y1)`
 
 
 
 **Args**
 
-* **y0**:
-* **y1**:
+* **y0** (`float`): the value for the lower bound
+* **y1** (`float | None`): the value for the upper bound (y0 if not given)
+    (*default*: `None`)
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;(`BpfInterface`) self
 
 ----------
 
