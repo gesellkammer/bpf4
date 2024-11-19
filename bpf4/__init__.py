@@ -16,6 +16,20 @@ from .core import (
     blend,
 )
 
-from .api import *
-from .config import CONFIG
+from .api import (
+    linear,
+    expon,
+    halfcos,
+    spline,
+    halfcosm,
+    uspline,
+    nointerpol,
+    nearest,
+    smooth,
+    smoother,
+    multi,
+    pchip,
+)
+
+
 from .util import asbpf

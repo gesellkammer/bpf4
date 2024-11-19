@@ -2,7 +2,7 @@
 ## High-level API for bpf4
 
 The API allows a high-level and flexible interface to the core of bpf4,
-which is implemented in cython for efficiency. 
+which is implemented in cython for efficiency.
 
 ### API vs core
 
@@ -26,7 +26,6 @@ from . import core
 from . import util
 
 
-
 def linear(*args) -> core.Linear:
     """
     Construct a Linear bpf.
@@ -35,7 +34,7 @@ def linear(*args) -> core.Linear:
         args: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
             a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
             or two arrays `xs` and `ys`
-    
+
     A bpf can be constructed in multiple ways, all of which result
     in the same Linear instance:
 
@@ -60,7 +59,7 @@ def linear(*args) -> core.Linear:
     if kws:
         raise ValueError("linear does not take any keyword")
     return core.Linear(X, Y)
-    
+
 
 def expon(*args, **kws) -> core.Expon:
     """
@@ -72,7 +71,7 @@ def expon(*args, **kws) -> core.Expon:
             or two arrays `xs` and `ys`
         exp: the exponent to use
         numiter: Number of iterations. A higher number accentuates the effect
-        
+
     A bpf can be constructed in multiple ways:
 
     ```python
@@ -81,7 +80,7 @@ def expon(*args, **kws) -> core.Expon:
     expon((x0, y0), (x1, y1), ..., exp=exponent)
     expon({x0:y0, x1:y1, ...}, exp=exponent)
     ```
-    
+
     Example
     -------
 
@@ -96,7 +95,7 @@ def expon(*args, **kws) -> core.Expon:
         expon(0, 0, 1, 1, exp=1/exp).plot(show=False, axes=axs[1, i])
         axs[0, i].set_title(f'{exp=}')
         axs[1, i].set_title(f'exp={1/exp:.2f}')
-        
+
     plot.show()
     ```
     ![](assets/expon-grid.png)
@@ -105,7 +104,7 @@ def expon(*args, **kws) -> core.Expon:
     X, Y, kws = util.parseargs(*args, **kws)
     assert "exp" in kws
     return core.Expon(X, Y, **kws)
-    
+
 
 def halfcos(*args, exp=1, numiter=1, **kws) -> core.Halfcos:
     """
@@ -117,7 +116,7 @@ def halfcos(*args, exp=1, numiter=1, **kws) -> core.Halfcos:
             or two arrays `xs` and `ys`
         exp: the exponent to use
         numiter: Number of iterations. A higher number accentuates the effect
-    
+
     A bpf can be constructed in multiple ways:
 
     ```python
@@ -138,10 +137,10 @@ def halfcos(*args, exp=1, numiter=1, **kws) -> core.Halfcos:
     ```
     ![](assets/Halfcos.png)
 
-    
+
     """
     X, Y, kws = util.parseargs(*args, **kws)
-    return core.Halfcos(X, Y, exp=exp, numiter=numiter, **kws)  
+    return core.Halfcos(X, Y, exp=exp, numiter=numiter, **kws)
 
 
 halfcosexp = halfcos
@@ -151,7 +150,7 @@ def halfcosm(*args, **kws) -> core.Halfcosm:
     """
     Halfcos interpolation with symmetric exponent
 
-    When used with an exponent, the exponent is inverted for downwards 
+    When used with an exponent, the exponent is inverted for downwards
     segments `(y1 > y0)`
 
     Args:
@@ -161,7 +160,7 @@ def halfcosm(*args, **kws) -> core.Halfcosm:
         exp: exponent to apply prior to cosine interpolation. The higher the exponent, the
             more skewed to the right the shape will be
         numiter: Number of iterations. A higher number accentuates the effect
-    
+
     Returns:
         (core.Halfcosm) A bpf with symmetric cosine interpolation
 
@@ -197,16 +196,16 @@ def halfcosm(*args, **kws) -> core.Halfcosm:
 
 def spline(*args) -> core.Spline:
     """
-    Construct a cubic-spline bpf 
+    Construct a cubic-spline bpf
 
     Args:
         args: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
             a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
             or two arrays `xs` and `ys`
-    
+
     Returns:
         (core.Spline) A Spline bpf
-    
+
 
     A bpf can be constructed in multiple ways:
 
@@ -230,15 +229,15 @@ def spline(*args) -> core.Spline:
     return core.Spline(X, Y)
 
 
-def uspline(*args) -> core.USpline: 
+def uspline(*args) -> core.USpline:
     """
-    Construct a univariate cubic-spline bpf 
+    Construct a univariate cubic-spline bpf
 
     Args:
         args: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
             a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
             or two arrays `xs` and `ys`
-    
+
     Returns:
         (core.USpline) A USpline bpf
 
@@ -254,7 +253,7 @@ def uspline(*args) -> core.USpline:
     from bpf4 import *
     a = spline(0, 0.1, 1, 0.5, 3, -3.5, 10, 1)
     b = uspline(*a.points())
-    
+
     fig, axes = plt.subplots(1, 2, figsize=(12, 4), sharey=True, tight_layout=True)
     a.plot(axes=axes[0], show=False)
     b.plot(axes=axes[1])
@@ -279,7 +278,7 @@ def nointerpol(*args) -> core.NoInterpol:
         args: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
             a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
             or two arrays `xs` and `ys`
-    
+
     A bpf can be constructed in multiple ways:
 
         nointerpol(x0, y0, x1, y1, ...)
@@ -299,7 +298,7 @@ def nointerpol(*args) -> core.NoInterpol:
     """
     X, Y, kws = util.parseargs(*args)
     return core.NoInterpol(X, Y, **kws)
-    
+
 
 def nearest(*args) -> core.Nearest:
     """
@@ -333,13 +332,13 @@ def nearest(*args) -> core.Nearest:
 
 def smooth(*args, numiter=1) -> core.Smooth:
     """
-    A bpf with smoothstep interpolation. 
+    A bpf with smoothstep interpolation.
 
     Args:
         args: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
             a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
             or two arrays `xs` and `ys`
-        numiter: determines the number of smoothstep steps applied 
+        numiter: determines the number of smoothstep steps applied
             (see https://en.wikipedia.org/wiki/Smoothstep)
 
     Returns:
@@ -363,7 +362,7 @@ def smooth(*args, numiter=1) -> core.Smooth:
 
 def smoother(*args) -> core.Smoother:
     """
-    A bpf with smootherstep interpolation 
+    A bpf with smootherstep interpolation
 
     This bpf uses Perlin's variation on smoothstep,
     see https://en.wikipedia.org/wiki/Smoothstep)
@@ -372,16 +371,16 @@ def smoother(*args) -> core.Smoother:
         args: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
             a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
             or two arrays `xs` and `ys`
-    
+
     Returns:
         (core.Smoother) A bpf with smootherstep interpolation
-    
+
 
     ```python
     from bpf4 import *
-    a = smooth(0, 0.1, 
-               1, 0.5, 
-               3, -3.5, 
+    a = smooth(0, 0.1,
+               1, 0.5,
+               3, -3.5,
                10, 1)
     b = smoother(*a.points())
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
@@ -402,20 +401,20 @@ def multi(*args):
     -------
 
     ```python
-    
+
     # (0,0) --linear-- (1,10) --expon(3)-- (2,3) --expon(3)-- (10, -1) --halfcos-- (20,0)
 
-    multi(0, 0,   'linear' 
-          1, 10,  'expon(3)', 
-          2, 3,   # assumes previous interpolation 
-          10, -1, 'halfcos'      
+    multi(0, 0,   'linear'
+          1, 10,  'expon(3)',
+          2, 3,   # assumes previous interpolation
+          10, -1, 'halfcos'
           20, 0)
-    
+
     # also the following syntax is possible
     multi((0, 0, 'linear')
-          (1, 10, 'expon(3)'), 
-          (2, 3), 
-          (10, -1, 'halfcos'), 
+          (1, 10, 'expon(3)'),
+          (2, 3),
+          (10, -1, 'halfcos'),
           (20, 0))
     ```
     """
@@ -431,7 +430,7 @@ def pchip(*args):
         args: either a flat list of coordinates in the form `x0, y0, x1, y1, ...`,
             a list of tuples `(x0, y0), (x1, y1), ...`, a dict `{x0:y0, x1:y1, ...}`
             or two arrays `xs` and `ys`
-    
+
     A bpf can be constructed in multiple ways:
 
     ```python
@@ -449,54 +448,12 @@ def pchip(*args):
     >>> a.plot(axes=axes[0], show=False)
     >>> b.plot(axes=axes[1], show=False)
     >>> c.plot()
-    ``` 
-    ![](assets/pchip.png)   
+    ```
+    ![](assets/pchip.png)
     """
     from . import pyinterp
     xs, ys, kws = util.parseargs(*args)
     return pyinterp.Pchip(xs, ys, **kws)
-
-
-def const(value) -> core.Const:
-    """
-    A bpf which always returns a constant value
-
-    Args:
-        value: the constant value
-
-    Example
-    -------
-
-    ```python
-    
-    >>> c5 = const(5)
-    >>> c5(10) 
-    5
-    ```
-    
-    """
-    return core.Const(value)
-
-
-def slope(slope:float, offset=0., bounds: tuple[float, float] = None) -> core.Slope:
-    """
-    Generate a straight line with the given slope and offset 
-
-    This is the same as linear(0, offset, 1, slope)
-
-    Example
-    -------
-
-    ```python
-
-    >>> a = slope(0.5, 1)
-    >>> a
-    Slope[-inf:inf]
-    >>> a[0:10].plot()
-    ```
-    ![](assets/slope-plot.png)
-    """
-    return core.Slope(slope, offset, bounds=bounds)
 
 
 def stack(*bpfs) -> core.Stack:
@@ -545,14 +502,14 @@ def stack(*bpfs) -> core.Stack:
     return core.Stack(bpfs)
 
 
-def blendshape(shape0:str, shape1:str, mix, points) -> core.BpfInterface:
+def blendshape(shape0: str, shape1: str, mix, points) -> core.BpfInterface:
     """
     Create a bpf blending two interpolation forms
 
     Args:
         shape0: a description of the first interpolation
         shape1: a description of the second interpolation
-        mix (float | core.BpfInterface): blend factor. 
+        mix (float | core.BpfInterface): blend factor.
             A value between 0 (use only `shape0`)
             and 1 (use only `shape1`). A value of `0.5` will result in
             an average between the first and second interpolation kind.
@@ -578,8 +535,6 @@ def blendshape(shape0:str, shape1:str, mix, points) -> core.BpfInterface:
     ![](assets/blend1.png)
     """
     X, Y, kws = util.parseargs(*points)
-    a = makebpf(shape0, X, Y)
-    b = makebpf(shape1, X, Y)
+    a = util.makebpf(shape0, X, Y)
+    b = util.makebpf(shape1, X, Y)
     return core.blend(a, b, mix)
-
-
