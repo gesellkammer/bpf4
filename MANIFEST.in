@@ -1,1 +1,2 @@
 include bpf4/*.pyi
+include bpf4/py.typed
