@@ -40,57 +40,9 @@ def _isiterable(obj) -> bool:
         return False
 
 
-def csv_to_bpf(csvfile: str) -> core.BpfInterface:
-    """
-    Read a bpf from a csv file
-    """
-    from emlib import csvtools
-    rows = csvtools.readcsv(csvfile)
-    interpolation = rows[0].interpolation
-    if all(row.interpolation == interpolation for row in rows[:-1]):
-        # all of the same type
-        if interpolation in ('expon', 'halfcosexp', 'halfcos2'):
-            exp = rows[0].exponent
-            constructor = get_bpf_constructor("%s(%.3f)" % (interpolation, exp))
-        else:
-            constructor = get_bpf_constructor(interpolation)
-        numrows = len(rows)
-        xs = np.empty((numrows,), dtype=float)
-        ys = np.empty((numrows,), dtype=float)
-        for i in range(numrows):
-            r = rows[i]
-            xs[i] = r.x
-            ys[i] = r.y
-        return constructor(xs, ys)
-    else:
-        # multitype
-        raise NotImplementedError("BPFs with multiple types not implemented YET")
-
-
-def bpf_to_csv(bpf: core.BpfInterface, csvfile: str) -> None:
-    """
-    Write this bpf as a csv representation
-
-    Args:
-        bpf: the bpf to write as csv
-        csvfile: the output filename
-    """
-    import csv
-    csvfile = _os.path.splitext(csvfile)[0] + '.csv'
-    try:
-        # it follows the 'segments' protocol, returning a seq of (x, y, interpoltype, exp)
-        segments = bpf.segments()
-        with open(csvfile, 'w') as f:
-            writer = csv.writer(f)
-            writer.writerow(_CSV_COLUMN_NAMES)
-            writer.writerows(segments)
-    except AttributeError:
-        raise TypeError("BPF must be rendered in order to be written as CSV")
-
-
 def bpf_to_dict(bpf: core.BpfInterface) -> dict:
     """
-    convert a bpf to a dict with the following format
+    Convert a bpf to a dict with the following format
 
     Args:
         bpf: the bpf to convert to a dict
@@ -98,31 +50,33 @@ def bpf_to_dict(bpf: core.BpfInterface) -> dict:
     Returns:
         The bpf as a dictionary
 
-    ```python
+    Example
+    ~~~~~~~
 
-    >>> b = bpf.expon(3.0, 0, 0, 1, 10, 2, 20)
-    >>> bpf_to_dict(b)
-    {
-        'interpolation': 'expon(3.0)',
-        'points': [0, 0, 1, 10, 20, 20]  # [x0, y0, x1, y1, ...]
-    }
+    .. code-block:: python
 
-    >>> b = bpf.multi(0, 0, 'linear',
-                      1, 10, 'expon(2)',
-                      3, 25)
-    >>> bpf_to_dict(b)
-    {
-        'interpolation': 'multi',
-        'segments': [
-            [0, 0, 'linear'],
-            [1, 10, 'expon(2)',
-            [3, 25, '']]
-    }
-    ```
+        >>> b = bpf.expon(3.0, 0, 0, 1, 10, 2, 20)
+        >>> bpf_to_dict(b)
+        {
+            'interpolation': 'expon(3.0)',
+            'points': [0, 0, 1, 10, 20, 20]  # [x0, y0, x1, y1, ...]
+        }
+
+        >>> b = bpf.multi(0, 0, 'linear',
+                        1, 10, 'expon(2)',
+                        3, 25)
+        >>> bpf_to_dict(b)
+        {
+            'interpolation': 'multi',
+            'segments': [
+                [0, 0, 'linear'],
+                [1, 10, 'expon(2)',
+                [3, 25, '']]
+        }
     """
     try:
         segments = list(bpf.segments())
-    except:
+    except AttributeError:
         raise TypeError("this kind of BPF cannot be translated. It must be rendered first.")
     d = {}
     interpolation = segments[0][2]
@@ -165,56 +119,7 @@ def bpf_to_dict(bpf: core.BpfInterface) -> dict:
     return d
 
 
-def bpf_to_json(bpf: core.BpfInterface, outfile: str = None) -> str:
-    """
-    convert this bpf to json format.
-
-    If outfile is not given, it returns a string, as in dumps
-
-    Args:
-        bpf: the bpf to dump as json
-        outfile: the output filename. If given, output is saved here
-
-    Returns:
-        (str) The json text
-    """
-    import json
-    asdict = bpf_to_dict(bpf)
-    jsontxt = json.dumps(asdict)
-    if outfile:
-        open(outfile, 'w').write(jsontxt)
-    return jsontxt
-        
-
-def bpf_to_yaml(bpf: core.BpfInterface, outfile: str = None) -> str:
-    """
-    Convert this bpf to json format. 
-
-    Args:
-        bpf: the bpf to convert
-        outfile: if given, the yaml text is saved to this file
-
-    Returns:
-        (str) The yaml text
-    """
-    from io import StringIO
-    import yaml
-    d = bpf_to_dict(bpf)
-    if outfile is None:
-        stream = StringIO()
-    else:
-        outfile = _os.path.splitext(outfile)[0] + '.yaml'
-        stream = open(outfile, 'w')
-    dumper = yaml.Dumper(stream)
-    dumper.add_representer(tuple, lambda du, instance: du.represent_list(instance))
-    dumper.add_representer(np.float64, lambda du, instance: du.represent_float(instance))
-    dumper.open()
-    dumper.represent(d)
-    dumper.close()
-    return stream.getvalue()
-
-
-def dict_to_bpf(d: dict) -> bpf.BpfInterface:
+def dict_to_bpf(d: dict) -> core.BpfInterface:
     """
     Convert a dict to a bpf
 
@@ -225,7 +130,7 @@ def dict_to_bpf(d: dict) -> bpf.BpfInterface:
         the converted bpf
 
 
-    **Format 1** 
+    **Format 1**
 
     ```python
 
@@ -275,7 +180,6 @@ def dict_to_bpf(d: dict) -> bpf.BpfInterface:
     if 'points' in d:
         # format 2
         interpolation = d.get('interpolation', 'linear')
-        constructor = get_bpf_constructor(interpolation)
         points = d['points']
         if isinstance(points[0], (int, float)):
             # format 2a
@@ -284,7 +188,9 @@ def dict_to_bpf(d: dict) -> bpf.BpfInterface:
         elif isinstance(points[0], (list, tuple)):
             X = [point[0] for point in points]
             Y = [point[1] for point in points]
-        return constructor.fromxy(X, Y)
+        else:
+            raise ValueError(f"Invalid points format, expected list or tuple, got {points}")
+        return makebpf(interpolation, X, Y)
     elif 'segments' in d and d['interpolation'] == 'multi':
         segments = d['segments']
         X = [s[0] for s in segments]
@@ -294,38 +200,10 @@ def dict_to_bpf(d: dict) -> bpf.BpfInterface:
     else:
         # format 1
         interpolation = d.get('interpolation', 'linear')
-        constructor = get_bpf_constructor(interpolation)
         points = [(k, v) for k, v in d.items() if isinstance(k, (int, float))]
         points.sort()
         X, Y = list(zip(*points))
-        return constructor.fromxy(X, Y)
-
-
-def loadbpf(path: str, fmt='auto') -> core.BpfInterface:
-    """
-    Load a bpf saved with dumpbpf
-
-    Possible formats: auto, csv, yaml, json
-
-    Args:
-        path: the path of the saved bpf
-        fmt: the format used to save the bpf ('auto' to detect the format)
-
-    Returns:
-        a bpf
-    """
-    if fmt == 'auto':
-        fmt = _os.path.splitext(path)[-1].lower()[1:]
-    assert fmt in ('csv', 'yaml', 'json')
-    if fmt == 'yaml':
-        import yaml
-        d = yaml.load(open(path))
-    elif fmt == 'json':
-        import json
-        d = json.load(path)
-    elif fmt == 'csv':
-        return csv_to_bpf(path)
-    return dict_to_bpf(d)  
+        return makebpf(interpolation, X, Y)
 
 
 def asbpf(obj, bounds=(-np.inf, np.inf)) -> core.BpfInterface:
@@ -348,15 +226,15 @@ def asbpf(obj, bounds=(-np.inf, np.inf)) -> core.BpfInterface:
         return core.Const(float(obj))
     else:
         raise TypeError("can't wrap %s" % str(obj))
- 
+
 
 def parseargs(*args, **kws) -> tuple[list[float], list[float], dict]:
     """
     Convert the args and kws to the canonical form (xs, ys, kws)
-    
+
     Returns:
         (tuple[list[float], list[float], dict]) A tuple `(xs, ys, kws)`
-    
+
     Raises ValueError if failed
 
     All the following variants result in the same result:
@@ -364,10 +242,10 @@ def parseargs(*args, **kws) -> tuple[list[float], list[float], dict]:
     ```python
 
     x0, y0, x1, y1, …, exp=0.5
-    (x0, y0), (x1, y1), …, exp=0.5           
-    {x0:y0, x1:y1, …}, exp=0.5               
-    [x0, x1, …], [y0, y1, …], exp=0.5        
-    
+    (x0, y0), (x1, y1), …, exp=0.5
+    {x0:y0, x1:y1, …}, exp=0.5
+    [x0, x1, …], [y0, y1, …], exp=0.5
+
     Result: [x0, x1, …], [y0, y1, …], {exp:0.5}
     ```
     """
@@ -387,7 +265,7 @@ def parseargs(*args, **kws) -> tuple[list[float], list[float], dict]:
         if len(args[0]) > 2:   # <--  (xs, ys)
             xs, ys = args
         else:                  # <--  ((x0, y0), (x1, y1), ...)
-            xs, ys = list(zip(*args))    
+            xs, ys = list(zip(*args))
     elif not any(map(_isiterable, args)):
         # (x0, y0, x1, y1, ...)
         if L % 2 == 0:  # even
@@ -405,7 +283,7 @@ def parseargs(*args, **kws) -> tuple[list[float], list[float], dict]:
     else:
         raise ValueError("could not parse arguments")
     return xs, ys, kws
-        
+
 
 
 def parsedescr(descr: str, validate=True) -> tuple[str, dict]:
@@ -458,7 +336,7 @@ def makebpf(descr: str, X: Sequence[float], Y: Sequence[float]) -> core.BpfInter
     if bpfclass is None:
         raise ValueError(f"descr {descr} is not valid")
     return bpfclass(X, Y, **kws)
-    
+
 
 def multi_parseargs(args) -> tuple[list[float], list[float], list[str]]:
     """
@@ -497,7 +375,7 @@ def multi_parseargs(args) -> tuple[list[float], list[float], list[str]]:
     else:
         # it is of the type (x0, y0, interpolation), (x1, y1), ...
         assert all(isinstance(arg, tuple) and 2 <= len(arg) <= 3 for arg in args)
-        
+
         for arg in args[:-1]:
             if len(arg) == 2:
                 x, y = arg
@@ -511,12 +389,12 @@ def multi_parseargs(args) -> tuple[list[float], list[float], list[str]]:
         xs.append(x)
         ys.append(y)
     assert all(isinstance(x, (int, float)) for x in xs)
-    assert all(isinstance(y, (int, float)) for x in ys) 
+    assert all(isinstance(y, (int, float)) for x in ys)
     assert all(isinstance(i, str) for i in interpolations)
     assert len(xs) == len(ys) == len(interpolations)+1
-    return xs, ys, interpolations    
-    
-    
+    return xs, ys, interpolations
+
+
 def max_(*elements) -> core.Max:
     """
     Return a bpf representing the max over the given elements
@@ -530,7 +408,7 @@ def max_(*elements) -> core.Max:
     bpfs = list(map(asbpf, elements))
     return core.Max(*bpfs)
 
-    
+
 def min_(*elements) -> core.Min:
     """
     Return a bpf representing the min over elements
@@ -544,7 +422,7 @@ def min_(*elements) -> core.Min:
     bpfs = list(map(asbpf, elements))
     return core.Min(*bpfs)
 
-    
+
 def sum_(*elements):
     """
     Return a bpf representing the sum of elements
@@ -554,7 +432,7 @@ def sum_(*elements):
 
     Returns:
         a bpf representing the sum of all elements
-    
+
     """
     bpfs = list(map(asbpf, elements))
     return reduce(_operator.add, bpfs)
@@ -563,7 +441,7 @@ def sum_(*elements):
 def select(which: core.BpfInterface, bpfs: Sequence[core.BpfInterface], shape='linear') -> core._BpfSelect:
     """
     Create a new bpf which interpolates between adjacent bpfs
-    
+
     Args:
         which: returns at any x, which bpf from bpfs should return the result
         bpfs: a list of bpfs
@@ -574,7 +452,7 @@ def select(which: core.BpfInterface, bpfs: Sequence[core.BpfInterface], shape='l
 
     **Example**
 
-    ```python   
+    ```python
 
     >>> which = nointerpol(0, 0, 5, 1)
     >>> bpfs = [linear(0, 0, 10, 10), linear(0, 10, 10, 0)]
@@ -585,19 +463,19 @@ def select(which: core.BpfInterface, bpfs: Sequence[core.BpfInterface], shape='l
     """
     return core._BpfSelect(asbpf(which), list(map(asbpf, bpfs)), shape)
 
-    
+
 def dumpbpf(bpf: core.BpfInterface, fmt='yaml') -> str:
     """
-    Dump the data of this bpf as human readable text 
+    Dump the data of this bpf as human readable text
 
-    
+
     Args:
         bpf: the bpf to dump
         fmt: the format, one of 'csv', 'yaml', 'json'
-        
+
     Returns:
-        the text representation according to the format 
-    
+        the text representation according to the format
+
     The bpf can then be reconstructed via `loadbpf`
 
     """
@@ -611,8 +489,8 @@ def dumpbpf(bpf: core.BpfInterface, fmt='yaml') -> str:
         return bpf_to_yaml(bpf, outfile)
     else:
         raise ValueError(f"Format {fmt} not supported")
-        
-            
+
+
 def concat_bpfs(bpfs: list[core.BpfInterface]) -> core._BpfConcat:
     """
     Concatenate these bpfs together, one after the other
@@ -630,10 +508,10 @@ def concat_bpfs(bpfs: list[core.BpfInterface]) -> core._BpfConcat:
 
 def warped(bpf: core.BpfInterface, dx:float=None, numpoints=1000) -> core.Sampled:
     """
-    Represents the curvature of a linear space. 
+    Represents the curvature of a linear space.
 
     The result is a warped bpf so that:
-    
+
     ```
     position_bpf | warped_bpf = corresponding position after warping
     ```
@@ -645,14 +523,14 @@ def warped(bpf: core.BpfInterface, dx:float=None, numpoints=1000) -> core.Sample
 
     Returns:
         (core.Sampled) The warped bpf
-    
+
 
     Example
     -------
 
-    Find the theoretical position of a given point according to a 
+    Find the theoretical position of a given point according to a
     probability distribution
-    
+
     ```python
     >>> from bpf4 import *
     >>> import matplotlib.pyplot as plt
@@ -663,7 +541,7 @@ def warped(bpf: core.BpfInterface, dx:float=None, numpoints=1000) -> core.Sample
 
     ```
     ![](assets/warped.png)
-    
+
     Now plot the histrogram of the warped bpf. It should resemble the
     original distribution
     ```python
@@ -691,7 +569,7 @@ def warped(bpf: core.BpfInterface, dx:float=None, numpoints=1000) -> core.Sample
     integrated = bpf.integrated()[::dx]
     integrated_at_x1 = integrated(bpf.x1)
     # N = int((x1 + dx - x0) / dx + 0.5)
-    xs = np.arange(x0, x1+dx, dx)    
+    xs = np.arange(x0, x1+dx, dx)
     ys = np.ones_like(xs) * np.nan
     for i in range(len(xs)):
         try:
@@ -700,7 +578,7 @@ def warped(bpf: core.BpfInterface, dx:float=None, numpoints=1000) -> core.Sample
             pass
     return core.Sampled(ys, dx=dx, x0=x0)
 
-        
+
 def _minimize(bpf, N: int, func=min, debug=False) -> float | None:
     x0, x1 = bpf.bounds()
     xs = np.linspace(x0, x1, N)
@@ -713,11 +591,11 @@ def _minimize(bpf, N: int, func=min, debug=False) -> float | None:
         return float(func(mins2)[1])
     return None
 
-    
+
 def minimum(bpf: core.BpfInterface, N=10) -> float | None:
     """
     Find the x where bpf(x) is minimized
-    
+
     Args:
         bpf: the bpf to analyze
         N: the number of estimates
@@ -736,21 +614,21 @@ def maximum(bpf: core.BpfInterface, N=10) -> float | None:
 
     Args:
         bpf: the bpf to analyze
-    
+
     Returns:
         the *x* value where bpf(x) is the maximum. Returns `None` if
         no maximum found
 
     """
     return _minimize(-bpf, N, min)
-    
+
 
 def rms(bpf: core.BpfInterface, rmstime=0.1) -> core.BpfInterface:
     """
     The rms of this bpf
 
     Args:
-        bpf: the bpf 
+        bpf: the bpf
         rmstime: the time to calculate the rms over
 
     Returns:
@@ -804,7 +682,7 @@ def calculate_projection(x0, x1, p0, p1):
     dx = x0
     offset = p0
     return rx, dx, offset
-    
+
 
 def projection_fixedpoint(rx, dx, offset):
     """
@@ -815,8 +693,8 @@ def projection_fixedpoint(rx, dx, offset):
     For a fixed point, x2 == x
     """
     return (-offset*rx + dx)/(1-rx)
-    
-    
+
+
 
 def binarymask(mask: str | list[int],
                durs: Sequence[float]=None,
@@ -836,7 +714,7 @@ def binarymask(mask: str | list[int],
     **Example**
 
     ```python
-        
+
     >>> mask = binarymask("x--x-x---")
     ```
 
@@ -872,12 +750,12 @@ def _pairwise(iterable):
         pass
     return zip(a, b)
 
-    
+
 def jagged_band(xs: list[float], upperbpf: core.BpfInterface, lowerbpf=0, curve='linear'
                 ) -> core.BpfInterface:
     """
     Create a jagged bpf between lowerbpf and upperbpf at the x values given
-    
+
     At each x in xs the, the value is equal to lowerbpf, sweeping
     with curvature 'curve' to upperbpf just before the next x
 
@@ -885,7 +763,7 @@ def jagged_band(xs: list[float], upperbpf: core.BpfInterface, lowerbpf=0, curve=
     -------
 
     ```python
-    
+
     from bpf4 import *
     import numpy as np
     a = expon(0, 0, 1, 10, exp=2)
@@ -897,7 +775,7 @@ def jagged_band(xs: list[float], upperbpf: core.BpfInterface, lowerbpf=0, curve=
     """
     upperbpf = asbpf(upperbpf)
     lowerbpf = asbpf(lowerbpf)
-    if not isinstance(xs, list): 
+    if not isinstance(xs, list):
         xs = list(xs)
     EPSILON = 1e-12
     fragments = []
@@ -913,22 +791,22 @@ def jagged_band(xs: list[float], upperbpf: core.BpfInterface, lowerbpf=0, curve=
     x1 = xs[-1]
     fragments.append(makebpf(curve, [x0, x1], [lowerbpf(x0), upperbpf(x1)])[x0:x1].outbound(0, 0))
     return max_(*fragments)
-    
+
 
 def randombw(bw: float | core.BpfInterface,
              center: float | core.BpfInterface
              ) -> core.BpfInterface:
     """
     Create a random bpf
-    
+
     Args:
         bw: a (time-varying) bandwidth
         center: the center of the random distribution
 
     Returns:
         a bpf
-        
-    if randombw is 0.1 and center is 1, the bpf will render values 
+
+    if randombw is 0.1 and center is 1, the bpf will render values
     between 0.95 and 1.05
 
     !!! note
@@ -937,7 +815,7 @@ def randombw(bw: float | core.BpfInterface,
         are calculated as needed. Sample it to freeze it to a known state.
 
     **Example**
-    
+
     ```python
 
     >>> l = bpf.linear(0, 0, 1, 1)
@@ -947,21 +825,21 @@ def randombw(bw: float | core.BpfInterface,
     """
     bw = asbpf(bw)
     return (bw.rand() + (center - bw*0.5))[bw.x0:bw.x1]
-    
+
 
 def blendwithfloor(b: core.BpfInterface, mix=0.5) -> core._BpfBlend:
     """
     Returns a blend of b with its minimum y value
     """
     return core.blend(b, asbpf(b(minimum(b))), mix)[b.x0:b.x1]
-    
-    
+
+
 def blendwithceil(b, mix=0.5) -> core._BpfBlend:
     """
     Returns a blend of b with its maximum y value
     """
     return core.blend(b, asbpf(b(maximum(b))), mix)[b.x0:b.x1]
-    
+
 
 def smoothen(b: core.BpfInterface, window: float, N=1000, interpol='linear') -> core.BpfInterface:
     """
@@ -1119,14 +997,9 @@ def histbpf(b: core.BpfInterface, numbins=20, numsamples=400
 
     """
     samples = b.map(numsamples)
-    edges, hist = np.histogram(b, bins=numbins)
+    edges, hist = np.histogram(samples, bins=numbins)
     percentile = np.linspace(0, 1, len(hist))
-    if interpolation == 'linear':
-        return core.Linear(hist, percentile)
-    elif interpolation == 'nointerpol':
-        return core.NoInterpol(hist, percentile)
-    else:
-        raise ValueError("Only 'linear' or 'nointerpol' are supported")
+    return core.Linear(hist, percentile)
 
 
 def split_fragments(b: core.BpfBase, sep=float('nan')) -> list[core.BpfBase]:
@@ -1159,7 +1032,7 @@ def split_fragments(b: core.BpfBase, sep=float('nan')) -> list[core.BpfBase]:
                         f"got {b}.")
     xs, ys = b.points()
     parts = []
-    lastpart: list[tuple[float, float]] = None
+    lastpart: list[tuple[float, float]] | None = None
     if isnan(sep):
         for x, y in zip(xs, ys):
             if not isnan(y):
@@ -1186,7 +1059,7 @@ def split_fragments(b: core.BpfBase, sep=float('nan')) -> list[core.BpfBase]:
         if len(xs) <= 1:
             continue
         if cls is core.Sampled:
-            bpfs.append(core.Samped(ys, x0=xs[0], dx=xs[1]-xs[0]))
+            bpfs.append(core.Sampled(ys, x0=xs[0], dx=xs[1]-xs[0]))
         else:
             bpfs.append(cls(xs, ys))
     return bpfs
@@ -1215,5 +1088,5 @@ def simplify_linear_coords(xs: np.ndarray, ys: np.ndarray, threshold=0., ratio=0
     elif ratio:
         simplified_points = simp.by_ratio(ratio)
     else:
-        raise ValueError(f"Either threshold or ratio should be given")
+        raise ValueError("Either threshold or ratio should be given")
     return simplified_points[:, 0], simplified_points[:, 1]
