@@ -10,7 +10,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-version = "1.13.0"
+version = "1.13.1"
 name = "bpf4"
 description = "Piece-wise interpolation and lazy evaluation in cython"
 authors = [
@@ -38,7 +38,6 @@ packages = ["bpf4"]
 ext-modules = [
 	{name="bpf4.core", sources=["bpf4/core.pyx"], include-dirs=["bpf4"], py-limited-api=true}
 ]
-
 
 
 [project.urls]
