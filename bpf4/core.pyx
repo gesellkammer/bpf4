@@ -1444,6 +1444,33 @@ cdef class BpfInterface:
         """
         return NanMask(self, masked)
 
+    def linlin(self, double u0, double u1, double v0, double v1) -> PostLinLin:
+        """
+        Linearly map the input range [u0, u1] to the output range [v0, v1]
+
+        Args:
+            u0 (float): the lower bound of the input range
+            u1 (float): the upper bound of the input range
+            v0 (float): the lower bound of the output range
+            v1 (float): the upper bound of the output range
+
+        Returns:
+            (BpfInterface) The linearly mapped bpf
+
+        ## Example
+
+        ```python
+
+        >>> a = linear(0, 5, 10, 20)
+        >>> b = a.linlin(5, 20, 0, 1)
+        >>> b(5)
+        0.0
+        >>> b(20)
+        1.0
+        ```
+        """
+        return PostLinLin(self, u0, u1, v0, v1)
+
     cpdef _BpfLambdaClip clip(self, double y0=INFNEG, double y1=INF):
         """
         Return a bpf clipping the result between y0 and y1
@@ -1940,33 +1967,6 @@ cdef class BpfInterface:
         cdef double p0 = (x0 - fixpoint)*rx + fixpoint
         cdef double p1 = (x1 - x0) * rx + p0
         return self.fit_between(p0, p1)
-
-    def linlin(self, double u0, double u1, double v0, double v1) -> PostLinLin:
-        """
-        Linearly map the input range [u0, u1] to the output range [v0, v1]
-
-        Args:
-            u0 (float): the lower bound of the input range
-            u1 (float): the upper bound of the input range
-            v0 (float): the lower bound of the output range
-            v1 (float): the upper bound of the output range
-
-        Returns:
-            (BpfInterface) The linearly mapped bpf
-
-        ## Example
-
-        ```python
-
-        >>> a = linear(0, 5, 10, 20)
-        >>> b = a.linlin(5, 20, 0, 1)
-        >>> b(5)
-        0.0
-        >>> b(20)
-        1.0
-        ```
-        """
-        return PostLinLin(self, u0, u1, v0, v1)
 
     cpdef BpfInterface fit_between(self, double x0, double x1):
         """
