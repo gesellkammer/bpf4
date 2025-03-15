@@ -3,7 +3,6 @@ Utilities for bpf4
 """
 from __future__ import annotations
 import operator as _operator
-import os as _os
 import itertools as _itertools
 from functools import reduce
 from math import isnan, sqrt
@@ -74,9 +73,9 @@ def bpf_to_dict(bpf: core.BpfInterface) -> dict:
                 [3, 25, '']]
         }
     """
-    try:
+    if hasattr(bpf, 'segments'):
         segments = list(bpf.segments())
-    except AttributeError:
+    else:
         raise TypeError("this kind of BPF cannot be translated. It must be rendered first.")
     d = {}
     interpolation = segments[0][2]
@@ -103,13 +102,11 @@ def bpf_to_dict(bpf: core.BpfInterface) -> dict:
         segments = [normalize_segment(seg) for seg in segments]
         d['segments'] = segments
     else:
-        try:
+        if hasattr(bpf, 'exp'):
             exp = bpf.exp
             if exp != 1:
                 assert "(" not in interpolation
                 interpolation = "{interp}({exp})".format(interp=interpolation, exp=exp)
-        except AttributeError:
-            pass
         d['interpolation'] = interpolation
         points = []
         for segment in segments:
