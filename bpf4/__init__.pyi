@@ -99,18 +99,6 @@ class BpfInterface:
     def fromseq(cls, *points: Union[Tuple[float, float], float], **kws: Any) -> 'BpfInterface': ...
 
 class BpfBase(BpfInterface):
-    xs: NDArray[np.float64]
-    ys: NDArray[np.float64]
-    xs_data: Any  # DTYPE_t*
-    ys_data: Any  # DTYPE_t*
-    outbound_mode: int
-    outbound0: float
-    outbound1: float
-    lastbin_x0: float
-    lastbin_x1: float
-    interpol_func: Any  # InterpolFunc*
-    xs_size: int
-    lastbin_idx1: int
 
     def __init__(self, xs: Union[List[float], NDArray[np.float64]],
                  ys: Union[List[float], NDArray[np.float64]]) -> None: ...
