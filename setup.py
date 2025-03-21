@@ -22,4 +22,5 @@ setup(
     # package_data={'bpf4': ['core.pyi', '__init__.pyi', 'py.typed']},
     package_data={'bpf4': ['__init__.pyi', 'py.typed']},
     include_package_data=True,
+    license='GPLv3'
 )

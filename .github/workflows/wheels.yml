@@ -13,10 +13,13 @@ jobs:
       - uses: actions/checkout@v4
 
       # Used to host cibuildwheel
-      - uses: actions/setup-python@v4
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
         
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel twine virtualenv
+        run: python -m pip install -U cibuildwheel twine virtualenv packaging
 
       - name: Build wheels
         env: 
@@ -39,4 +42,5 @@ jobs:
             echo $TWINE_USERNAME
             echo $TWINE_PASSWORD
             twine upload --skip-existing wheelhouse/*.whl
+
         continue-on-error: true
