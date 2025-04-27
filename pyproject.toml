@@ -10,7 +10,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-version = "1.13.4"
+version = "1.14.0"
 name = "bpf4"
 description = "Piece-wise interpolation and lazy evaluation in cython"
 authors = [

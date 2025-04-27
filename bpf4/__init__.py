@@ -1,6 +1,3 @@
-from . import core
-from . import util
-
 
 from .core import (
     BpfInterface,
@@ -9,6 +6,7 @@ from .core import (
     Smooth,
     Smoother,
     Halfcos,
+    Halfcosm,
     Expon,
     Nearest,
     Sampled,
@@ -17,8 +15,11 @@ from .core import (
     Max,
     Min,
     blend,
-    Const
+    Const,
+    NoInterpol,
+    USpline
 )
+
 
 from .api import (
     linear,
@@ -35,6 +36,8 @@ from .api import (
     pchip,
 )
 
+from . import core
+from . import util
 
 from .util import asbpf
 
@@ -48,6 +51,7 @@ __all__ = [
     'Smooth',
     'Smoother',
     'Halfcos',
+    'Halfcosm',
     'Expon',
     'Nearest',
     'Sampled',
@@ -55,6 +59,8 @@ __all__ = [
     'Spline',
     'Max',
     'Min',
+    'NoInterpol',
+    'USpline',
     'blend',
     'Const',
     'linear',
