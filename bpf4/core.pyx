@@ -5384,6 +5384,9 @@ cdef class Max(_MultipleBpfReduce):
     """
     A bpf which returns the max of multiple bpfs at a given point
 
+    Args:
+        bpfs: a sequence of bpfs
+
     ```python
     a = linear(0, 0, 1, 0.5, 2, 0)
     b = expon(0, 0, 2, 1, exp=3)
@@ -5393,11 +5396,6 @@ cdef class Max(_MultipleBpfReduce):
     ```
     ![](assets/Max.png)
     """
-    def __init__(self, *bpfs):
-        if len(bpfs) == 1 and isinstance(bpfs[0], (list, tuple)):
-            bpfs = bpfs[0]
-        _MultipleBpfReduce.__init__(self, bpfs)
-
     cdef double __ccall__(self, double x) noexcept nogil:
         cdef double y = INFNEG
         cdef double res
@@ -5426,6 +5424,9 @@ cdef class Min(_MultipleBpfReduce):
     """
     A bpf which returns the min of multiple bpfs at a given point
 
+    Args:
+        bpfs: a seq. of bpfs
+
     ```python
     a = linear(0, 0, 1, 0.5, 2, 0)
     b = expon(0, 0, 2, 1, exp=3)
@@ -5436,11 +5437,6 @@ cdef class Min(_MultipleBpfReduce):
     ![](assets/Min.png)
 
     """
-    def __init__(self, *bpfs):
-        if len(bpfs) == 1 and isinstance(bpfs[0], (list, tuple)):
-            bpfs = bpfs[0]
-        _MultipleBpfReduce.__init__(self, bpfs)
-
     cdef double __ccall__(self, double x) noexcept nogil:
         cdef double y = INF
         cdef double res
@@ -5549,11 +5545,11 @@ cdef class _BpfSelect(_MultipleBpfs):
         Interpolate between adjacent bpfs
 
         Args:
-            which: a bpf mapping x->bpf index, where the index can
+            which (BpfInterface): a bpf mapping x->bpf index, where the index can
                 be fractionl and will interpolate between adjacent
                 bpfs
-            bpfs: the bpfs to select from
-            shape: the interpolation shape when dealing with fractional indexes
+            bpfs (BpfInterface): the bpfs to select from
+            shape (str): the interpolation shape when dealing with fractional indexes
         """
         self.which = which
         self.numbpfs = len(bpfs)
